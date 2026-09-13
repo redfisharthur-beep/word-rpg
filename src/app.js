@@ -5,17 +5,14 @@ import { createBattle, chooseSkill, resolveAnswer } from './battle-engine.js';
 
 const app=document.querySelector('#app');
 let state=loadState();
-let view=state.session?.entered?'home':'login';
+let view=!state.session?.entered?'login':state.session.roleChosen?'home':'role';
 let battle=null;
 let toastTimer=null;
 
 function render(){
-  const content={login:renderLogin,home:renderHome,map:renderMap,battle:renderBattle,pet:renderPets,bag:renderBag,words:renderWords}[view]?.() || renderHome();
-  if(view==='login'){
-    app.innerHTML=content;
-  }else{
-    app.innerHTML=`<main class="app-shell">${content}${view!=='battle'?renderNav():''}</main>`;
-  }
+  const content={login:renderLogin,role:renderRoleSelect,home:renderHome,map:renderMap,battle:renderBattle,pet:renderPets,bag:renderBag,words:renderWords}[view]?.() || renderHome();
+  if(view==='login') app.innerHTML=content;
+  else app.innerHTML=`<main class="app-shell">${content}${!['battle','role'].includes(view)?renderNav():''}</main>`;
   bindEvents();
 }
 
@@ -29,6 +26,17 @@ function renderLogin(){
   </main>`;
 }
 
+function renderRoleSelect(){
+  return `<section class="role-select-screen">
+    <div class="section-title role-title"><h2>選擇勇者</h2><span>${escapeHtml(state.player.name||'勇者')}</span></div>
+    <div class="role-grid">${ROLES.map(role=>`<button class="role-card" data-role="${role.id}">
+      <div class="role-art-wrap">${visual(role.art,role.icon,'role-select-art')}</div>
+      <strong>${role.name}</strong>
+      <span>${shortBonus(role.bonus)}</span>
+    </button>`).join('')}</div>
+  </section>`;
+}
+
 function renderTop(title,meta=''){
   return `<div class="topbar"><div class="brand">${title}</div><div class="level-pill">Lv.${state.player.level}${meta?` · ${meta}`:''}</div></div>`;
 }
@@ -36,12 +44,13 @@ function renderTop(title,meta=''){
 function renderHome(){
   const role=ROLES.find(r=>r.id===state.player.role) || ROLES[0];
   const pet=PETS.find(p=>p.id===state.player.pet) || PETS[0];
+  const petState=state.pets?.[pet.id] || {level:1,evolved:false};
   const playerName=state.player.name||'勇者';
   return `${renderTop('WORD RPG')}
   <section class="hero-card">
     <div class="avatar-wrap">${visual(role.art,role.icon,'hero-art')}<div class="pet-bubble">${visual(pet.art,pet.icon,'pet-art')}</div></div>
     <div class="hero-title">${role.name}・${playerName}</div>
-    <div class="hero-sub">${role.bonus}</div>
+    <div class="hero-sub">${pet.name} Lv.${petState.level}${petState.evolved?' · ✦':''}</div>
     <button class="primary-btn" data-action="go-map">▶ 開始冒險</button>
     <div class="stats">
       <div class="stat"><strong>${state.progress.cleared.length}</strong><span>關卡</span></div>
@@ -73,10 +82,12 @@ function renderBattle(){
   const hp=Math.max(0,battle.enemy.currentHp/battle.enemy.hp*100);
   const br=Math.max(0,battle.enemy.break/battle.enemy.breakMax*100);
   if(battle.finished){
+    const reward=battle.rewardEarned?ITEMS.find(i=>i.id===battle.rewardEarned):null;
     return `${renderTop(stage.name)}<section class="hero-card result-card">
       <div class="result-icon">${battle.won?'🏆':'💤'}</div>
       <div class="hero-title">${battle.won?'勝利':'再試一次'}</div>
-      <div class="hero-sub">${battle.won?`獲得 ${rewardLabel(stage.reward)}`:'休息一下，再回來挑戰'}</div>
+      ${battle.won&&reward?`<div class="loot-reveal">${visual(reward.art,reward.icon,'loot-art')}<strong>${reward.name}</strong><span>${reward.kind}</span></div>`:''}
+      ${battle.won&&!reward?`<div class="hero-sub">已完成關卡</div>`:`<div class="hero-sub">${battle.won?'獎勵已收入背包':'休息一下，再回來挑戰'}</div>`}
       <button class="primary-btn" data-action="finish-battle">返回地圖</button>
     </section>`;
   }
@@ -110,11 +121,22 @@ function renderFeedback(result){
 }
 
 function renderPets(){
-  return `${renderTop('寵物')}
-  <div class="section-title"><h2>夥伴</h2><span>點選同行</span></div>
+  return `${renderTop('寵物',`🔹 ${state.player.stones}`)}
+  <div class="section-title"><h2>夥伴</h2><span>同行・升級・進化</span></div>
   <div class="pet-grid">${PETS.map(p=>{
     const active=state.player.pet===p.id;
-    return `<button class="card soft-btn pet-card ${active?'active-card':''}" data-pet="${p.id}">${visual(p.art,p.icon,'card-art')}<h3>${p.name}</h3><p>${p.passive}</p><div class="progress"><i style="width:${active?65:30}%"></i></div><span class="rarity">${active?'同行中':'可選擇'}</span></button>`;
+    const petState=state.pets?.[p.id] || {level:1,evolved:false};
+    const upgradeCost=Math.max(1,petState.level);
+    const canEvolve=!petState.evolved&&petState.level>=p.evolve&&state.inventory.includes('core');
+    return `<article class="card pet-card ${active?'active-card':''}">
+      <button class="pet-select" data-pet="${p.id}">${visual(p.art,p.icon,'card-art')}<h3>${p.name}${petState.evolved?' ✦':''}</h3><span class="pet-level">Lv.${petState.level}</span></button>
+      <p>${p.passive}</p>
+      <div class="pet-actions">
+        ${petState.level<10?`<button class="mini-action" data-upgrade-pet="${p.id}">🔹 ${upgradeCost} 升級</button>`:'<span class="mini-action disabled">MAX</span>'}
+        ${canEvolve?`<button class="mini-action evolve" data-evolve-pet="${p.id}">💠 進化</button>`:`<span class="mini-tag">${petState.evolved?'已進化':`Lv.${p.evolve} 進化`}</span>`}
+      </div>
+      <span class="rarity">${active?'同行中':'點角色同行'}</span>
+    </article>`;
   }).join('')}</div>`;
 }
 
@@ -144,11 +166,14 @@ function bindEvents(){
   document.querySelector('[data-action="enter-game"]')?.addEventListener('click',enterGame);
   document.querySelector('#player-name')?.addEventListener('keydown',event=>{if(event.key==='Enter') enterGame();});
   document.querySelector('[data-action="line-login"]')?.addEventListener('click',()=>toast('LINE 登入尚未串接'));
+  document.querySelectorAll('[data-role]').forEach(el=>el.addEventListener('click',()=>chooseRole(el.dataset.role)));
   document.querySelector('[data-action="go-map"]')?.addEventListener('click',()=>{view='map';render();});
   document.querySelectorAll('[data-stage]').forEach(el=>el.addEventListener('click',()=>startBattle(Number(el.dataset.stage))));
   document.querySelectorAll('[data-skill]').forEach(el=>el.addEventListener('click',()=>{battle=chooseSkill(battle,el.dataset.skill);render();}));
   document.querySelectorAll('[data-answer]').forEach(el=>el.addEventListener('click',()=>answer(el.dataset.answer)));
-  document.querySelectorAll('[data-pet]').forEach(el=>el.addEventListener('click',()=>{state.player.pet=el.dataset.pet;saveState(state);toast('已更換夥伴');render();}));
+  document.querySelectorAll('[data-pet]').forEach(el=>el.addEventListener('click',()=>selectPet(el.dataset.pet)));
+  document.querySelectorAll('[data-upgrade-pet]').forEach(el=>el.addEventListener('click',()=>upgradePet(el.dataset.upgradePet)));
+  document.querySelectorAll('[data-evolve-pet]').forEach(el=>el.addEventListener('click',()=>evolvePet(el.dataset.evolvePet)));
   document.querySelector('[data-action="finish-battle"]')?.addEventListener('click',()=>{battle=null;view='map';render();});
 }
 
@@ -157,9 +182,50 @@ function enterGame(){
   const name=(input?.value||'').trim();
   if(!name){toast('請輸入名字');input?.focus();return;}
   state.player.name=name.slice(0,12);
-  state.session={entered:true,loginMethod:'guest'};
+  state.session={...state.session,entered:true,loginMethod:'guest'};
+  saveState(state);
+  view=state.session.roleChosen?'home':'role';
+  render();
+}
+
+function chooseRole(roleId){
+  if(!ROLES.some(r=>r.id===roleId)) return;
+  state.player.role=roleId;
+  state.session.roleChosen=true;
   saveState(state);
   view='home';
+  render();
+}
+
+function selectPet(petId){
+  if(!PETS.some(p=>p.id===petId)) return;
+  state.player.pet=petId;
+  saveState(state);
+  toast('已更換夥伴');
+  render();
+}
+
+function upgradePet(petId){
+  const petState=state.pets?.[petId];
+  if(!petState || petState.level>=10) return;
+  const cost=Math.max(1,petState.level);
+  if(state.player.stones<cost){toast(`需要 ${cost} 顆星語石`);return;}
+  state.player.stones-=cost;
+  petState.level+=1;
+  saveState(state);
+  toast(`升到 Lv.${petState.level}`);
+  render();
+}
+
+function evolvePet(petId){
+  const pet=PETS.find(p=>p.id===petId);
+  const petState=state.pets?.[petId];
+  const coreIndex=state.inventory.indexOf('core');
+  if(!pet||!petState||petState.evolved||petState.level<pet.evolve||coreIndex<0) return;
+  petState.evolved=true;
+  state.inventory.splice(coreIndex,1);
+  saveState(state);
+  toast('進化成功 ✦');
   render();
 }
 
@@ -181,7 +247,10 @@ function answer(answerText){
   if(total>=3 && stats.correct/total>=.8 && !state.progress.masteredWords.includes(wordId)) state.progress.masteredWords.push(wordId);
 
   battle=resolveAnswer(battle,answerText);
-  if(battle.finished && battle.won) completeStage(battle.stageId);
+  if(battle.finished&&battle.won&&!battle.rewardProcessed){
+    battle.rewardEarned=completeStage(battle.stageId);
+    battle.rewardProcessed=true;
+  }
   saveState(state);
   toast(correct?'✓ 正確':'✕ '+battle.lastResult.zh);
   render();
@@ -189,19 +258,21 @@ function answer(answerText){
 
 function completeStage(stageId){
   const stage=STAGES.find(s=>s.id===stageId);
-  if(!state.progress.cleared.includes(stageId)){
-    state.progress.cleared.push(stageId);
-    state.progress.unlockedStage=Math.min(STAGES.length,Math.max(state.progress.unlockedStage,stageId+1));
-    if(stage.reward==='star-stone') state.player.stones+=2;
-    else if(!state.inventory.includes(stage.reward)) state.inventory.push(stage.reward);
-    state.player.exp+=40;
-    if(state.player.exp>=100){state.player.level+=1;state.player.exp-=100;}
-  }
+  if(!stage) return null;
+  const firstClear=!state.progress.cleared.includes(stageId);
+  state.player.exp+=20;
+  if(state.player.exp>=100){state.player.level+=1;state.player.exp-=100;}
+  if(!firstClear) return null;
+
+  state.progress.cleared.push(stageId);
+  state.progress.unlockedStage=Math.min(STAGES.length,Math.max(state.progress.unlockedStage,stageId+1));
+  if(stage.reward==='star-stone') state.player.stones+=2;
+  else if(!state.inventory.includes(stage.reward)) state.inventory.push(stage.reward);
+  return stage.reward;
 }
 
-function rewardLabel(id){
-  const item=ITEMS.find(i=>i.id===id);
-  return item?`${item.icon} ${item.name}`:'獎勵';
+function shortBonus(text){
+  return text.replace('時，',' · ').replace('有機率','').replace('額外','');
 }
 
 function shuffle(arr){
