@@ -84,7 +84,7 @@ function renderMap(){
     return `<button class="node ${!unlocked?'locked':''} ${stage.boss?'boss':''} ${cleared?'cleared':''}" ${unlocked?'data-preview-stage="'+stage.id+'"':''}>
       <span class="node-step">${stage.boss?'BOSS':String(index+1).padStart(2,'0')}</span>
       <span class="node-icon">${cleared?'✓':stage.icon}</span>
-      <small><b>${stage.name}</b><em>${stage.subtitle}</em>${stars?`<i>${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</i>`:''}</small>
+      <small><b>${stage.name}</b><em>${stage.subtitle} · ${stage.levelBand}</em>${stars?`<i>${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</i>`:''}</small>
     </button>`;
   }).join('')}</div></section>`;
 }
@@ -94,17 +94,20 @@ function renderStagePreview(){
   const stars=state.progress.stageStars?.[stage.id]||0;
   const reward=ITEMS.find(i=>i.id===stage.reward);
   const wordCount=stage.wordIds?.length||0;
+  const typeNames={meaning:'英翻中',reverse:'中翻英',listening:'聽力',spelling:'拼字'};
+  const typeText=(stage.questionTypes||[]).map(t=>typeNames[t]||t).join('・');
   return `${renderTop(stage.boss?'暮色試煉':stage.name,stage.threat)}
   <section class="stage-preview ${stage.boss?'boss-preview':''}">
     ${stage.boss?'<div class="boss-warning">FINAL BATTLE</div>':''}
     <button class="back-chip" data-action="back-map">← 地圖</button>
     <div class="preview-art ${stage.boss?'boss-art':''}">${visual(stage.enemy.art,stage.enemy.icon,'preview-enemy-art')}</div>
-    <div class="preview-kicker">${stage.subtitle}</div>
+    <div class="preview-kicker">${stage.subtitle} · ${stage.levelBand}</div>
     <div class="preview-name">${stage.enemy.name}</div>
     <div class="preview-stars">${stars?'★'.repeat(stars)+'☆'.repeat(3-stars):'☆☆☆'}</div>
     <div class="preview-grid"><div><strong>${stage.enemy.hp}</strong><span>HP</span></div><div><strong>${stage.enemy.breakMax}</strong><span>BREAK</span></div><div><strong>${wordCount}</strong><span>WORDS</span></div></div>
+    <div class="preview-hint">🎯 ${stage.objective}</div>
     <div class="preview-hint">${stage.boss?'👁 ':''}${stage.hint}</div>
-    <div class="preview-meta"><span>${reward?`${reward.icon} ${reward.name}`:'🎁 獎勵'}</span><span>${stage.boss?'錯題優先':'混合題型'}</span></div>
+    <div class="preview-meta"><span>${reward?`${reward.icon} ${reward.name}`:'🎁 獎勵'}</span><span>${typeText}</span></div>
     <button class="primary-btn battle-start-btn ${stage.boss?'boss-start':''}" data-start-stage="${stage.id}">${stage.boss?'⚔ 挑戰影語王':'⚔ 開始戰鬥'}</button>
   </section>`;
 }
@@ -171,11 +174,14 @@ function renderBag(){
 }
 
 function renderWords(){
-  return `${renderTop('單字圖鑑')}<div class="section-title"><h2>Word Book</h2><span>${state.progress.masteredWords.length}/${WORDS.length}</span></div><div class="word-grid">${WORDS.map(w=>{
+  const unlockedIds=new Set(STAGES.filter(s=>s.id<=state.progress.unlockedStage).flatMap(s=>s.wordIds||[]));
+  const unlockedWords=WORDS.filter(w=>unlockedIds.has(w.id));
+  const mastered=state.progress.masteredWords.filter(id=>unlockedIds.has(id)).length;
+  return `${renderTop('單字圖鑑')}<div class="section-title"><h2>Word Book</h2><span>${unlockedWords.length}/${WORDS.length} 已解鎖 · ${mastered} 熟練</span></div><div class="word-grid">${unlockedWords.map(w=>{
     const stats=state.progress.wordStats[w.id]||{correct:0,wrong:0};
     const total=stats.correct+stats.wrong;
     const rate=total?Math.round(stats.correct/total*100):0;
-    return `<div class="card word-card"><div class="word-badge">${rate>=80?'⭐':'🔤'}</div><h3>${w.word}</h3><p>${w.zh}</p><div class="progress"><i style="width:${rate}%"></i></div><span class="rarity">${rate}%</span></div>`;
+    return `<div class="card word-card"><div class="word-badge">${rate>=80&&total>=3?'⭐':'🔤'}</div><h3>${w.word}</h3><p>${w.zh}</p><div class="progress"><i style="width:${rate}%"></i></div><span class="rarity">Lv.${w.level} · ${rate}%</span></div>`;
   }).join('')}</div>`;
 }
 
