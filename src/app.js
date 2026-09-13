@@ -94,6 +94,7 @@ function renderStagePreview(){
   const stars=state.progress.stageStars?.[stage.id]||0;
   const reward=ITEMS.find(i=>i.id===stage.reward);
   const wordCount=stage.wordIds?.length||0;
+  const questionCount=questionLimitForStage(stage.id);
   const typeNames={meaning:'英翻中',reverse:'中翻英',listening:'聽力',spelling:'拼字'};
   const typeText=(stage.questionTypes||[]).map(t=>typeNames[t]||t).join('・');
   return `${renderTop(stage.boss?'暮色試煉':stage.name,stage.threat)}
@@ -104,7 +105,7 @@ function renderStagePreview(){
     <div class="preview-kicker">${stage.subtitle} · ${stage.levelBand}</div>
     <div class="preview-name">${stage.enemy.name}</div>
     <div class="preview-stars">${stars?'★'.repeat(stars)+'☆'.repeat(3-stars):'☆☆☆'}</div>
-    <div class="preview-grid"><div><strong>${stage.enemy.hp}</strong><span>HP</span></div><div><strong>${stage.enemy.breakMax}</strong><span>BREAK</span></div><div><strong>${wordCount}</strong><span>WORDS</span></div></div>
+    <div class="preview-grid"><div><strong>${stage.enemy.hp}</strong><span>HP</span></div><div><strong>${questionCount}</strong><span>QUESTIONS</span></div><div><strong>${wordCount}</strong><span>WORDS</span></div></div>
     <div class="preview-hint">🎯 ${stage.objective}</div>
     <div class="preview-hint">${stage.boss?'👁 ':''}${stage.hint}</div>
     <div class="preview-meta"><span>${reward?`${reward.icon} ${reward.name}`:'🎁 獎勵'}</span><span>${typeText}</span></div>
@@ -119,16 +120,20 @@ function renderBattle(){
   const hp=Math.max(0,battle.enemy.currentHp/battle.enemy.hp*100);
   const br=Math.max(0,battle.enemy.break/battle.enemy.breakMax*100);
   const energy=Math.max(0,Math.min(100,battle.player.energy||0));
+  const answered=battle.answeredCount||0;
+  const questionLimit=battle.questionLimit||questionLimitForStage(stage.id);
+  const learningProgress=Math.min(100,answered/questionLimit*100);
   if(battle.finished){
     const reward=battle.rewardEarned?ITEMS.find(i=>i.id===battle.rewardEarned):null;
     const stars=battle.won?'★'.repeat(battle.stars)+'☆'.repeat(3-battle.stars):'';
     const talentReady=battle.won&&pendingTalentTier();
-    return `${renderTop(stage.name)}<section class="hero-card result-card"><div class="result-icon">${battle.won?'🏆':'💤'}</div><div class="hero-title">${battle.won?'勝利':'再試一次'}</div>${battle.won?`<div class="hero-sub result-stars">${stars}</div>`:''}${talentReady?`<div class="level-up-badge">LEVEL UP · 天賦解鎖</div>`:''}${battle.won&&reward?`<div class="loot-reveal">${visual(reward.art,reward.icon,'loot-art')}<strong>${reward.name}</strong><span>${reward.kind}</span></div>`:''}${battle.won&&!reward?`<div class="hero-sub">已完成關卡</div>`:`<div class="hero-sub">${battle.won?'獎勵已收入背包':'休息一下，再回來挑戰'}</div>`}<button class="primary-btn" data-action="finish-battle">${talentReady?'選擇天賦':'返回地圖'}</button></section>`;
+    return `${renderTop(stage.name)}<section class="hero-card result-card"><div class="result-icon">${battle.won?'🏆':'💤'}</div><div class="hero-title">${battle.won?'勝利':'挑戰失敗'}</div>${battle.won?`<div class="hero-sub result-stars">${stars}</div>`:''}<div class="result-summary"><span><b>${battle.correctCount}</b>/${questionLimit}<small>答對</small></span><span><b>${battle.accuracy||0}%</b><small>正確率</small></span><span><b>${battle.player.hp}</b><small>剩餘 HP</small></span></div>${talentReady?`<div class="level-up-badge">LEVEL UP · 天賦解鎖</div>`:''}${battle.won&&reward?`<div class="loot-reveal">${visual(reward.art,reward.icon,'loot-art')}<strong>${reward.name}</strong><span>${reward.kind}</span></div>`:''}${battle.won&&!reward?`<div class="hero-sub">已完成關卡</div>`:`<div class="hero-sub">${battle.won?'獎勵已收入背包':'完成固定題數並擊倒敵人才算通關'}</div>`}<button class="primary-btn" data-action="finish-battle">${talentReady?'選擇天賦':'返回地圖'}</button></section>`;
   }
   const result=battle.lastResult;
   const fx=result?.effect==='ultimate'?'damage':result?.correct?result.effect:'enemy';
-  return `${renderTop(stage.name,`Turn ${battle.turn}`)}
+  return `${renderTop(stage.name,`${Math.min(answered+1,questionLimit)}/${questionLimit}`)}
   <section class="battle-stage ${stage.boss?'boss-battle':''} ${result?'has-feedback':''}">
+    <div class="learning-progress"><div><span>LEARNING</span><b>${answered}/${questionLimit}</b></div><div class="bar learning"><i style="width:${learningProgress}%"></i></div></div>
     <div class="enemy-box ${fx==='damage'?'hit':''} ${result?.broke?'broken':''}">
       ${stage.boss?'<div class="boss-aura"></div>':''}<div class="enemy-avatar">${visual(battle.enemy.art,battle.enemy.icon,'enemy-art')}</div>${result?renderFeedback(result):''}
       <div class="enemy-name">${battle.enemy.name}</div><div class="intent">👁 ${battle.enemy.intent}</div>
@@ -273,6 +278,7 @@ function completeStage(stageId,stars=1){
   return stage.reward;
 }
 
+function questionLimitForStage(stageId){return ({1:8,2:9,3:10,4:11,5:12})[stageId]||10;}
 function pendingTalentTier(){
   const owned=state.player.talents||[];
   const roleTalents=TALENTS[state.player.role]||[];
