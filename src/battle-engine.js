@@ -7,7 +7,7 @@ export function createBattle(stage,context={}){
   return {
     stageId:stage.id,
     enemy:{...stage.enemy,currentHp:stage.enemy.hp,break:0,broken:false,dodge:false,armor:0},
-    player:{hp:100,maxHp:100,guard:0,combo:0,roleId:context.roleId||'warrior',energy:0,maxEnergy:100},
+    player:{hp:100,maxHp:100,guard:0,combo:0,roleId:context.roleId||'warrior',energy:0,maxEnergy:100,talents:[...(context.talents||[])]},
     pet:{id:pet.id,name:pet.name,level:Math.max(1,context.petLevel||1),evolved:!!context.petEvolved,trait:pet.combat},
     inventory:[...(context.inventory||[])],
     wordStats:context.wordStats||{},wordIds,bossFocus:!!stage.bossFocus,
@@ -34,22 +34,23 @@ export function useUltimate(battle){
   next.player.energy=0;
 
   if(role==='warrior'){
-    const damage=58;
+    const damage=58+(hasTalent(next,'warrior-rage')?15:0);
     next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
     next.enemy.break=Math.min(next.enemy.breakMax,next.enemy.break+2);
     if(next.enemy.break>=next.enemy.breakMax){next.enemy.broken=true;result.broke=true;}
-    result.amount=damage;result.enemyDamage=damage;result.ultimateText='裂地斬・重擊 + Break 2';
+    result.amount=damage;result.enemyDamage=damage;result.ultimateText=`裂地斬・${damage} 傷害 + Break 2`;
   }else if(role==='mage'){
     const damage=42;
+    const guard=24+(hasTalent(next,'mage-starshield')?12:0);
     next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
-    next.player.guard=Math.min(40,next.player.guard+24);
-    result.amount=damage;result.enemyDamage=damage;result.ultimateText='星界爆發・傷害 + 護盾 24';
+    next.player.guard=Math.min(40,next.player.guard+guard);
+    result.amount=damage;result.enemyDamage=damage;result.ultimateText=`星界爆發・傷害 + 護盾 ${guard}`;
   }else{
-    const damage=54;
+    const damage=54+(hasTalent(next,'archer-volley')?18:0);
     next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
     next.enemy.dodge=false;
     next.player.combo+=3;
-    result.amount=damage;result.enemyDamage=damage;result.ultimateText='疾風連射・無視閃避 + Combo 3';
+    result.amount=damage;result.enemyDamage=damage;result.ultimateText=`疾風連射・${damage} 傷害 + Combo 3`;
   }
 
   if(next.enemy.currentHp<=0){finishBattle(next,true);next.lastResult=result;return next;}
@@ -64,10 +65,28 @@ export function resolveAnswer(battle,answer){
 
   if(correct){
     next.correctCount+=1;next.player.combo+=1;next.player.energy=Math.min(100,next.player.energy+22);let mult=1;
-    if(next.player.roleId==='mage'&&q.type==='spelling'){mult=1.35;next.player.energy=Math.min(100,next.player.energy+8);result.roleText='法師・拼字共鳴';}
-    if(next.player.roleId==='archer'&&elapsed<=7){next.player.combo+=1;next.player.energy=Math.min(100,next.player.energy+5);mult*=1.12;result.roleText='弓手・迅捷連擊';}
+
+    if(next.player.roleId==='mage'&&q.type==='spelling'){
+      mult=1.35;
+      next.player.energy=Math.min(100,next.player.energy+8+(hasTalent(next,'mage-spellflow')?12:0));
+      result.roleText=hasTalent(next,'mage-spellflow')?'法師・咒文循環':'法師・拼字共鳴';
+    }
+
+    if(next.player.roleId==='archer'){
+      const quickLimit=hasTalent(next,'archer-swift')?9:7;
+      if(elapsed<=quickLimit){
+        next.player.combo+=1+(hasTalent(next,'archer-momentum')?1:0);
+        next.player.energy=Math.min(100,next.player.energy+5);
+        mult*=1.12;
+        result.roleText=hasTalent(next,'archer-momentum')?'弓手・乘風連擊':'弓手・迅捷連擊';
+      }
+      if(hasTalent(next,'archer-focus')&&next.player.combo>=2&&skill.effect==='damage')mult*=1.15;
+    }
+
     if(next.player.roleId==='warrior'&&next.player.combo>=3)next.player.energy=Math.min(100,next.player.energy+4);
     if(next.inventory.includes('mist-blade')&&next.player.combo>=3&&skill.effect==='damage'){mult*=1.2;result.itemText='霧鋒・連擊強化';}
+    if(next.player.roleId==='mage'&&q.type==='spelling'&&hasTalent(next,'mage-arcane')&&skill.effect==='damage')mult*=1.2;
+    if(next.player.roleId==='warrior'&&next.enemy.broken&&hasTalent(next,'warrior-execution')&&skill.effect==='damage')mult*=1.25;
 
     if(skill.effect==='damage'){
       let dmg=Math.round(skill.value*(next.enemy.broken?1.8:1)*(next.player.combo>=3?1.2:1)*petCombo(next)*mult);
@@ -80,6 +99,7 @@ export function resolveAnswer(battle,answer){
       const before=next.enemy.break;let v=skill.value;
       if(next.player.combo>=3&&next.pet.trait?.kind==='combo')v+=next.pet.evolved?1:0;
       if(next.player.roleId==='warrior'&&next.player.combo>=2){v+=1;result.roleText='戰士・破勢';}
+      if(hasTalent(next,'warrior-breaker')&&next.player.roleId==='warrior'){v+=1;result.roleText='戰士・破甲專精';}
       if(next.player.roleId==='mage'&&q.type==='spelling')v+=1;
       if(next.inventory.includes('break-charm')&&!next.usedBreakCharm){v+=1;next.usedBreakCharm=true;result.itemText='裂紋符・Break +1';}
       next.enemy.break=Math.min(next.enemy.breakMax,next.enemy.break+v);result.amount=next.enemy.break-before;
@@ -87,7 +107,10 @@ export function resolveAnswer(battle,answer){
     }
 
     if(skill.effect==='guard'){
-      const before=next.player.guard;let v=skill.value;if(next.player.roleId==='mage'&&q.type==='spelling')v=Math.round(v*1.35);
+      const before=next.player.guard;let v=skill.value;
+      if(next.player.roleId==='mage'&&q.type==='spelling')v=Math.round(v*1.35);
+      if(next.player.roleId==='warrior'&&hasTalent(next,'warrior-bulwark'))v+=6;
+      if(next.player.roleId==='mage'&&hasTalent(next,'mage-ward'))v+=8;
       next.player.guard=Math.min(40,next.player.guard+v);result.amount=next.player.guard-before;
     }
 
@@ -117,6 +140,7 @@ function finishBattle(battle,won){
   battle.stars=1+(accuracy>=.8?1:0)+(battle.player.hp>=50?1:0);
 }
 
+function hasTalent(b,id){return b.player.talents?.includes(id);}
 function pickWeightedWord(stats,wordIds,bossFocus){
   const allowed=WORDS.filter(w=>wordIds.includes(w.id));
   const pool=[];
