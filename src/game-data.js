@@ -35,11 +35,11 @@ export const WORDS = [
 ];
 
 export const STAGES = [
-  { id:1, name:'苔蘚小徑', icon:'🌿', wordIds:[1,2,3,4], enemy:{id:'moss',name:'苔球獸',icon:'🟢',art:ASSETS.enemy.moss,hp:70,intent:'纏藤',breakMax:3,intents:['纏藤','蓄力','撞擊']}, reward:'star-stone' },
-  { id:2, name:'霧林入口', icon:'🌫️', wordIds:[2,3,4,5,6], enemy:{id:'rabbit',name:'霧角兔',icon:'🐇',art:ASSETS.enemy.rabbit,hp:85,intent:'殘影',breakMax:3,intents:['殘影','突進','蓄力']}, reward:'memory-leaf' },
-  { id:3, name:'靜水橋', icon:'🌉', wordIds:[4,5,6,7], enemy:{id:'bubble',name:'泡泡怪',icon:'🫧',art:ASSETS.enemy.bubble,hp:95,intent:'泡泡治癒',breakMax:4,intents:['泡泡治癒','水彈','膨脹']}, reward:'mist-blade' },
-  { id:4, name:'古樹空洞', icon:'🌳', wordIds:[5,6,7,8,9], enemy:{id:'beetle',name:'木甲蟲',icon:'🪲',art:ASSETS.enemy.beetle,hp:110,intent:'硬殼',breakMax:4,intents:['硬殼','角撞','蓄力']}, reward:'break-charm' },
-  { id:5, name:'暮色祭壇', icon:'🗿', wordIds:[1,2,3,4,5,6,7,8,9,10], bossFocus:true, enemy:{id:'shadow',name:'影語王',icon:'👁️',art:ASSETS.enemy.shadowKing,hp:150,intent:'暗語',breakMax:5,intents:['暗語','影襲','大招','吞噬']}, reward:'core', boss:true },
+  { id:1, name:'苔蘚小徑', subtitle:'森林外圍', icon:'🌿', threat:'★', hint:'先熟悉基本戰鬥', wordIds:[1,2,3,4], enemy:{id:'moss',name:'苔球獸',icon:'🟢',art:ASSETS.enemy.moss,hp:70,intent:'纏藤',breakMax:3,intents:['纏藤','蓄力','撞擊']}, reward:'star-stone' },
+  { id:2, name:'霧林入口', subtitle:'迷霧深處', icon:'🌫️', threat:'★★', hint:'留意殘影閃避', wordIds:[2,3,4,5,6], enemy:{id:'rabbit',name:'霧角兔',icon:'🐇',art:ASSETS.enemy.rabbit,hp:85,intent:'殘影',breakMax:3,intents:['殘影','突進','蓄力']}, reward:'memory-leaf' },
+  { id:3, name:'靜水橋', subtitle:'水霧河岸', icon:'🌉', threat:'★★', hint:'先壓制牠的回血', wordIds:[4,5,6,7], enemy:{id:'bubble',name:'泡泡怪',icon:'🫧',art:ASSETS.enemy.bubble,hp:95,intent:'泡泡治癒',breakMax:4,intents:['泡泡治癒','水彈','膨脹']}, reward:'mist-blade' },
+  { id:4, name:'古樹空洞', subtitle:'樹心遺跡', icon:'🌳', threat:'★★★', hint:'Break 能破解硬殼節奏', wordIds:[5,6,7,8,9], enemy:{id:'beetle',name:'木甲蟲',icon:'🪲',art:ASSETS.enemy.beetle,hp:110,intent:'硬殼',breakMax:4,intents:['硬殼','角撞','蓄力']}, reward:'break-charm' },
+  { id:5, name:'暮色祭壇', subtitle:'最終試煉', icon:'🗿', threat:'BOSS', hint:'優先出現你最常答錯的字', wordIds:[1,2,3,4,5,6,7,8,9,10], bossFocus:true, enemy:{id:'shadow',name:'影語王',icon:'👁️',art:ASSETS.enemy.shadowKing,hp:150,intent:'暗語',breakMax:5,intents:['暗語','影襲','大招','吞噬']}, reward:'core', boss:true },
 ];
 
 export const SKILLS = [
