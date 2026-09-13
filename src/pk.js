@@ -24,7 +24,7 @@ export function createPkMode({app,meta,ROLES,PETS,WORDS,UPGRADES,visual,onExit})
     socket.onerror=()=>{if(alive)renderQueue('PK 連線失敗')};
     socket.onclose=()=>{if(alive&&status!=='finished'){status='closed';renderQueue('連線已中斷')}};
   }
-  function stop(exit=true){alive=false;if(socket){try{socket.close(1000,'leave')}catch{}socket=null}if(exit)onExit();}
+  function stop(exit=true){alive=false;if(socket){const old=socket;old.onopen=old.onmessage=old.onerror=old.onclose=null;try{old.close(1000,'leave')}catch{}socket=null}if(exit)onExit();}
   function send(data){if(socket?.readyState===WebSocket.OPEN)socket.send(JSON.stringify(data))}
 
   function handle(m){
@@ -33,7 +33,7 @@ export function createPkMode({app,meta,ROLES,PETS,WORDS,UPGRADES,visual,onExit})
       status='battle';me=basePlayer({role:meta.role,pet:meta.pet||'fox'});opponent={...m.opponent,hp:m.opponent.hp,maxHp:m.opponent.maxHp};turn=1;round=0;waiting=false;review=null;question=makeQuestion(m.questionIndex);renderBattle();return;
     }
     if(m.type==='waiting-opponent'){waiting=true;renderBattle();return}
-    if(m.type==='battle-result'){waiting=false;animateRounds(m.rounds||[],m.nextQuestionIndex,m.finished,m.winner);return}
+    if(m.type==='battle-result'){waiting=false;if(me&&m.selfMaxHp)me.maxHp=m.selfMaxHp;if(opponent&&m.opponentMaxHp)opponent.maxHp=m.opponentMaxHp;animateRounds(m.rounds||[],m.nextQuestionIndex,m.finished,m.winner);return}
     if(m.type==='opponent-left'){status='finished';renderEnd(true,'對手離線');return}
     if(m.type==='error'){renderQueue(m.message||'配對發生錯誤')}
   }
