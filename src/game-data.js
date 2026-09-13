@@ -1,22 +1,24 @@
+import { ASSETS } from './assets.js';
+
 export const ROLES = [
-  { id:'warrior', name:'戰士', icon:'⚔️', bonus:'連續答對時，Break +1', color:'#9ba89d' },
-  { id:'mage', name:'法師', icon:'🪄', bonus:'拼字題成功時，技能能量 +1', color:'#b8b0be' },
-  { id:'archer', name:'弓手', icon:'🏹', bonus:'8 秒內答對時，Combo +1', color:'#aeb9bf' },
+  { id:'warrior', name:'戰士', icon:'⚔️', art:ASSETS.role.warrior, bonus:'連續答對時，Break +1', color:'#9ba89d' },
+  { id:'mage', name:'法師', icon:'🪄', art:ASSETS.role.mage, bonus:'拼字題成功時，技能能量 +1', color:'#b8b0be' },
+  { id:'archer', name:'弓手', icon:'🏹', art:ASSETS.role.archer, bonus:'8 秒內答對時，Combo +1', color:'#aeb9bf' },
 ];
 
 export const PETS = [
-  { id:'fox', name:'霧尾狐', icon:'🦊', type:'spelling', passive:'拼字成功時，有機率獲得額外星語石', evolve:8 },
-  { id:'owl', name:'暮光鴞', icon:'🦉', type:'listening', passive:'聽力題成功時，回復少量生命', evolve:8 },
-  { id:'dragon', name:'青芽龍', icon:'🐲', type:'combo', passive:'Combo 達 3 時，技能效果提升', evolve:10 },
+  { id:'fox', name:'霧尾狐', icon:'🦊', art:ASSETS.pet.fox, type:'spelling', passive:'拼字成功時，有機率獲得額外星語石', evolve:8 },
+  { id:'owl', name:'暮光鴞', icon:'🦉', art:ASSETS.pet.owl, type:'listening', passive:'聽力題成功時，回復少量生命', evolve:8 },
+  { id:'dragon', name:'青芽龍', icon:'🐲', art:ASSETS.pet.dragon, type:'combo', passive:'Combo 達 3 時，技能效果提升', evolve:10 },
 ];
 
 export const ITEMS = [
-  { id:'mist-blade', name:'霧鋒', icon:'🗡️', kind:'裝備', rarity:'普通', effect:'Combo 3+ 時，攻擊效果 +20%' },
-  { id:'echo-ring', name:'回音戒', icon:'💍', kind:'裝備', rarity:'稀有', effect:'聽力題成功時，抽到回復技能的機率提高' },
-  { id:'memory-leaf', name:'記憶葉', icon:'🍃', kind:'寶物', rarity:'普通', effect:'每場第一次答錯不會中斷 Combo' },
-  { id:'break-charm', name:'裂紋符', icon:'🪬', kind:'寶物', rarity:'稀有', effect:'Break 技能第一次成功時額外 +1' },
-  { id:'star-stone', name:'星語石', icon:'🔹', kind:'素材', rarity:'素材', effect:'寵物升級與進化用' },
-  { id:'core', name:'進化核心', icon:'💠', kind:'素材', rarity:'稀有素材', effect:'寵物進化必需品' },
+  { id:'mist-blade', name:'霧鋒', icon:'🗡️', art:ASSETS.item.mistBlade, kind:'裝備', rarity:'普通', effect:'Combo 3+ 時，攻擊效果 +20%' },
+  { id:'echo-ring', name:'回音戒', icon:'💍', art:ASSETS.item.echoRing, kind:'裝備', rarity:'稀有', effect:'聽力題成功時，抽到回復技能的機率提高' },
+  { id:'memory-leaf', name:'記憶葉', icon:'🍃', art:ASSETS.item.memoryLeaf, kind:'寶物', rarity:'普通', effect:'每場第一次答錯不會中斷 Combo' },
+  { id:'break-charm', name:'裂紋符', icon:'🪬', art:ASSETS.item.breakCharm, kind:'寶物', rarity:'稀有', effect:'Break 技能第一次成功時額外 +1' },
+  { id:'star-stone', name:'星語石', icon:'🔹', art:ASSETS.item.starStone, kind:'素材', rarity:'素材', effect:'寵物升級與進化用' },
+  { id:'core', name:'進化核心', icon:'💠', art:ASSETS.item.core, kind:'素材', rarity:'稀有素材', effect:'寵物進化必需品' },
 ];
 
 export const WORDS = [
@@ -33,15 +35,15 @@ export const WORDS = [
 ];
 
 export const STAGES = [
-  { id:1, name:'苔蘚小徑', icon:'🌿', enemy:{name:'苔球獸',icon:'🟢',hp:70,intent:'蓄力',breakMax:3}, reward:'star-stone' },
-  { id:2, name:'霧林入口', icon:'🌫️', enemy:{name:'霧角兔',icon:'🐇',hp:85,intent:'閃避',breakMax:3}, reward:'memory-leaf' },
-  { id:3, name:'靜水橋', icon:'🌉', enemy:{name:'泡泡怪',icon:'🫧',hp:95,intent:'回復',breakMax:4}, reward:'mist-blade' },
-  { id:4, name:'古樹空洞', icon:'🌳', enemy:{name:'木甲蟲',icon:'🪲',hp:110,intent:'護甲',breakMax:4}, reward:'break-charm' },
-  { id:5, name:'暮色祭壇', icon:'🗿', enemy:{name:'影語王',icon:'👁️',hp:150,intent:'大招',breakMax:5}, reward:'core', boss:true },
+  { id:1, name:'苔蘚小徑', icon:'🌿', enemy:{name:'苔球獸',icon:'🟢',art:ASSETS.enemy.moss,hp:70,intent:'蓄力',breakMax:3}, reward:'star-stone' },
+  { id:2, name:'霧林入口', icon:'🌫️', enemy:{name:'霧角兔',icon:'🐇',art:ASSETS.enemy.rabbit,hp:85,intent:'閃避',breakMax:3}, reward:'memory-leaf' },
+  { id:3, name:'靜水橋', icon:'🌉', enemy:{name:'泡泡怪',icon:'🫧',art:ASSETS.enemy.bubble,hp:95,intent:'回復',breakMax:4}, reward:'mist-blade' },
+  { id:4, name:'古樹空洞', icon:'🌳', enemy:{name:'木甲蟲',icon:'🪲',art:ASSETS.enemy.beetle,hp:110,intent:'護甲',breakMax:4}, reward:'break-charm' },
+  { id:5, name:'暮色祭壇', icon:'🗿', enemy:{name:'影語王',icon:'👁️',art:ASSETS.enemy.shadowKing,hp:150,intent:'大招',breakMax:5}, reward:'core', boss:true },
 ];
 
 export const SKILLS = [
-  { id:'strike', name:'斬擊', icon:'⚔️', effect:'damage', value:22 },
-  { id:'break', name:'破陣', icon:'💥', effect:'break', value:2 },
-  { id:'guard', name:'守護', icon:'🛡️', effect:'guard', value:14 },
+  { id:'strike', name:'斬擊', icon:'⚔️', art:ASSETS.skill.strike, effect:'damage', value:22 },
+  { id:'break', name:'破陣', icon:'💥', art:ASSETS.skill.break, effect:'break', value:2 },
+  { id:'guard', name:'守護', icon:'🛡️', art:ASSETS.skill.guard, effect:'guard', value:14 },
 ];
