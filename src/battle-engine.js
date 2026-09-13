@@ -4,7 +4,9 @@ export function createBattle(stage,context={}){
   const pet=PETS.find(p=>p.id===context.petId)||PETS[0];
   const wordIds=stage.wordIds?.length?stage.wordIds:WORDS.map(w=>w.id);
   const questionTypes=stage.questionTypes?.length?stage.questionTypes:['meaning','reverse','spelling','listening'];
-  const q=pickQuestion(context.wordStats||{},wordIds,!!stage.bossFocus,questionTypes);
+  const newWordIds=(stage.newWordIds||[]).filter(id=>wordIds.includes(id));
+  const newWordTarget=Math.min(stage.newWordTarget||0,newWordIds.length);
+  const q=newWordTarget?pickQuestion(context.wordStats||{},newWordIds,false,questionTypes):pickQuestion(context.wordStats||{},wordIds,!!stage.bossFocus,questionTypes);
   const questionLimit=context.questionLimit||getQuestionLimit(stage.id);
   return {
     mode:context.mode||'story',stageId:stage.id,stageName:stage.name,
@@ -13,6 +15,7 @@ export function createBattle(stage,context={}){
     pet:{id:pet.id,name:pet.name,level:Math.max(1,context.petLevel||1),evolved:!!context.petEvolved,trait:pet.combat},
     inventory:[...(context.inventory||[])],
     wordStats:context.wordStats||{},wordIds,questionTypes,bossFocus:!!stage.bossFocus,
+    newWordIds,newWordTarget,seenNewWordIds:newWordIds.includes(q.wordId)?[q.wordId]:[],
     selectedSkill:'strike',turn:1,finished:false,won:false,currentQuestion:q,questionStartedAt:Date.now(),lastResult:null,
     correctCount:0,wrongCount:0,answeredCount:0,questionLimit,usedMemoryLeaf:false,usedBreakCharm:false,stars:0,accuracy:0,
   };
@@ -87,12 +90,20 @@ export function resolveAnswer(battle,answer){
   if(next.mode==='review'&&goalReachedThisAnswer){finishBattle(next,true);next.lastResult=result;return next;}
   if(next.mode!=='review'&&goalReachedThisAnswer&&next.enemy.currentHp<=0){finishBattle(next,true);next.lastResult=result;return next;}
   if(next.mode!=='review'&&goalReachedThisAnswer&&next.enemy.currentHp>0&&!result.enemyText)result.enemyText='學習目標完成・擊倒敵人即可通關';
-  next.turn+=1;next.currentQuestion=pickQuestion(next.wordStats,next.wordIds,next.bossFocus,next.questionTypes);next.questionStartedAt=Date.now();next.lastResult=result;return next;
+  next.turn+=1;next.currentQuestion=pickNextBattleQuestion(next);next.questionStartedAt=Date.now();next.lastResult=result;return next;
 }
 
 function finishBattle(battle,won){if(battle.answeredCount>battle.questionLimit)battle.questionLimit=battle.answeredCount;battle.finished=true;battle.won=won;const total=Math.max(1,battle.correctCount+battle.wrongCount),accuracy=battle.correctCount/total;battle.accuracy=Math.round(accuracy*100);if(!won){battle.stars=0;return;}battle.stars=1+(accuracy>=.8?1:0)+(battle.player.hp>=50?1:0);}
 function dealDamage(battle,damage,canFinish){const nextHp=battle.enemy.currentHp-damage;battle.enemy.currentHp=canFinish?Math.max(0,nextHp):Math.max(1,nextHp);}
 function getQuestionLimit(stageId){return ({1:8,2:9,3:10,4:11,5:12})[stageId]||10;}
+function pickNextBattleQuestion(battle){
+  const seen=battle.seenNewWordIds||[],unseen=(battle.newWordIds||[]).filter(id=>!seen.includes(id)),nextNumber=(battle.answeredCount||0)+1;
+  const useNew=nextNumber<=battle.questionLimit&&unseen.length&&seen.length<(battle.newWordTarget||0)&&nextNumber%3!==0;
+  const q=useNew?pickQuestion(battle.wordStats,unseen,false,battle.questionTypes):pickQuestion(battle.wordStats,battle.wordIds,battle.bossFocus,battle.questionTypes);
+  if((battle.newWordIds||[]).includes(q.wordId)&&!seen.includes(q.wordId))seen.push(q.wordId);
+  battle.seenNewWordIds=seen;
+  return q;
+}
 function hasTalent(b,id){return b.player.talents?.includes(id);}
 function pickWeightedWord(stats,wordIds,bossFocus){const allowed=WORDS.filter(w=>wordIds.includes(w.id));const missed=allowed.filter(w=>(stats[w.id]?.wrong||0)>0);const source=bossFocus&&missed.length&&Math.random()<.75?missed:allowed;const pool=[];for(const w of source){const s=stats[w.id]||{correct:0,wrong:0};let weight=Math.max(1,1+(s.wrong||0)*2-Math.floor((s.correct||0)/3));if(bossFocus&&(s.wrong||0)>0)weight+=4+(s.wrong||0)*2;for(let i=0;i<weight;i++)pool.push(w);}return pool[Math.floor(Math.random()*pool.length)]||source[0]||allowed[0]||WORDS[0];}
 function reverseQuestion(w,wordIds){const d=shuffle(WORDS.filter(x=>x.id!==w.id&&wordIds.includes(x.id)).map(x=>x.word)).slice(0,3);return {type:'reverse',label:'英譯',wordId:w.id,word:w.word,zh:w.zh,prompt:w.zh,answer:w.word,options:shuffle([w.word,...d])};}
