@@ -15,9 +15,17 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:ui-rounded,"PingFang TC","Noto Sans TC",system-ui,sans-serif}
-button{font:inherit}
+button,input{font:inherit}
 body{min-height:100vh}
 #app{min-height:100vh}
+.login-screen{min-height:100dvh;width:100%;display:flex;align-items:flex-end;justify-content:center;padding:0 20px max(8vh,44px);background:linear-gradient(180deg,rgba(242,239,233,.04),rgba(63,73,68,.18)),url('/images/login-bg.png') center/cover no-repeat,var(--bg)}
+.login-panel{width:min(390px,100%);display:grid;gap:12px;padding:18px;border-radius:28px;background:rgba(251,250,247,.76);border:1px solid rgba(255,255,255,.58);box-shadow:0 18px 50px rgba(54,62,57,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.login-name{width:100%;height:54px;border:1px solid rgba(63,73,68,.12);outline:0;border-radius:18px;background:rgba(255,255,255,.86);color:var(--ink);font-size:17px;font-weight:800;text-align:center;padding:0 16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.login-name::placeholder{color:#9b9e99;font-weight:700}.login-name:focus{border-color:rgba(111,127,114,.45);box-shadow:0 0 0 4px rgba(111,127,114,.09)}
+.line-login-btn,.enter-game-btn{width:100%;height:54px;border:0;border-radius:18px;cursor:pointer;font-weight:900;transition:transform .16s ease,filter .16s ease}.line-login-btn:active,.enter-game-btn:active{transform:scale(.985)}
+.line-login-btn{background:#06c755;color:#fff;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 24px rgba(6,199,85,.18)}
+.line-mark{display:grid;place-items:center;min-width:40px;height:26px;padding:0 5px;border-radius:7px;background:#fff;color:#06c755;font-size:10px;font-weight:1000;letter-spacing:-.03em}
+.enter-game-btn{background:var(--sage-deep);color:#fff;font-size:18px;letter-spacing:.08em;box-shadow:0 10px 24px rgba(111,127,114,.22)}
 .app-shell{max-width:480px;min-height:100vh;margin:0 auto;padding:18px 16px 92px}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
 .brand{font-size:22px;font-weight:800;letter-spacing:.02em}
@@ -47,4 +55,4 @@ body{min-height:100vh}
 @keyframes enemy-break{0%,100%{transform:scale(1)}35%{transform:scale(.9) rotate(-4deg)}65%{transform:scale(1.06) rotate(3deg)}}
 @keyframes result-pop{0%{opacity:0;transform:scale(.4) rotate(-12deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
-@media (min-width:700px){.app-shell{padding-top:28px}.hero-card{padding:30px}.map-card{min-height:600px}}
+@media (min-width:700px){.login-screen{padding-bottom:max(7vh,54px)}.app-shell{padding-top:28px}.hero-card{padding:30px}.map-card{min-height:600px}}
