@@ -1,4 +1,5 @@
 import { ROLES, PETS, ITEMS, WORDS, STAGES, SKILLS } from './game-data.js';
+import { visual } from './assets.js';
 import { loadState, saveState } from './store.js';
 import { createBattle, chooseSkill, resolveAnswer } from './battle-engine.js';
 
@@ -23,7 +24,7 @@ function renderHome(){
   const pet=PETS.find(p=>p.id===state.player.pet) || PETS[0];
   return `${renderTop('WORD RPG')}
   <section class="hero-card">
-    <div class="avatar-wrap"><span>${role.icon}</span><div class="pet-bubble">${pet.icon}</div></div>
+    <div class="avatar-wrap">${visual(role.art,role.icon,'hero-art')}<div class="pet-bubble">${visual(pet.art,pet.icon,'pet-art')}</div></div>
     <div class="hero-title">${role.name}・${state.player.name}</div>
     <div class="hero-sub">${role.bonus}</div>
     <button class="primary-btn" data-action="go-map">▶ 開始冒險</button>
@@ -34,7 +35,7 @@ function renderHome(){
     </div>
   </section>
   <section class="quick-grid">
-    <button class="quick soft-btn" data-view="pet"><span class="emoji">${pet.icon}</span><span>寵物</span></button>
+    <button class="quick soft-btn" data-view="pet">${visual(pet.art,pet.icon,'nav-art')}<span>寵物</span></button>
     <button class="quick soft-btn" data-view="words"><span class="emoji">📖</span><span>圖鑑</span></button>
   </section>`;
 }
@@ -57,23 +58,27 @@ function renderBattle(){
   const hp=Math.max(0,battle.enemy.currentHp/battle.enemy.hp*100);
   const br=Math.max(0,battle.enemy.break/battle.enemy.breakMax*100);
   if(battle.finished){
-    return `${renderTop(stage.name)}<section class="hero-card">
-      <div class="avatar-wrap">${battle.won?'🏆':'💤'}</div>
+    return `${renderTop(stage.name)}<section class="hero-card result-card">
+      <div class="result-icon">${battle.won?'🏆':'💤'}</div>
       <div class="hero-title">${battle.won?'勝利':'再試一次'}</div>
       <div class="hero-sub">${battle.won?`獲得 ${rewardLabel(stage.reward)}`:'休息一下，再回來挑戰'}</div>
       <button class="primary-btn" data-action="finish-battle">返回地圖</button>
     </section>`;
   }
+  const result=battle.lastResult;
+  const fx=result?.correct?result.effect:'enemy';
+  const feedback=result?renderFeedback(result):'';
   return `${renderTop(stage.name,`Turn ${battle.turn}`)}
-  <section class="battle-stage">
-    <div class="enemy-box">
-      <div class="enemy-avatar">${battle.enemy.icon}</div>
+  <section class="battle-stage ${result?'has-feedback':''}">
+    <div class="enemy-box ${fx==='damage'?'hit':''} ${result?.broke?'broken':''}">
+      <div class="enemy-avatar">${visual(battle.enemy.art,battle.enemy.icon,'enemy-art')}</div>
+      ${feedback}
       <div class="enemy-name">${battle.enemy.name}</div>
       <div class="intent">👁 ${battle.enemy.intent}</div>
     </div>
     <div class="bar-label"><span>HP</span><span>${battle.enemy.currentHp}/${battle.enemy.hp}</span></div><div class="bar"><i style="width:${hp}%"></i></div>
     <div class="bar-label"><span>BREAK</span><span>${battle.enemy.break}/${battle.enemy.breakMax}</span></div><div class="bar break"><i style="width:${br}%"></i></div>
-    <div class="skill-row">${SKILLS.map(s=>`<button class="skill-card ${battle.selectedSkill===s.id?'selected':''}" data-skill="${s.id}"><span class="sicon">${s.icon}</span>${s.name}</button>`).join('')}</div>
+    <div class="skill-row">${SKILLS.map(s=>`<button class="skill-card ${battle.selectedSkill===s.id?'selected':''}" data-skill="${s.id}">${visual(s.art,s.icon,'skill-art')}<span>${s.name}</span></button>`).join('')}</div>
     <div class="question-card">
       <div class="status-line"><span class="mini-pill">🔥 ${battle.player.combo}</span><span class="status-mini">❤️ ${battle.player.hp} · 🛡️ ${battle.player.guard}</span></div>
       <div class="question-word">${battle.currentWord.word}</div>
@@ -82,19 +87,26 @@ function renderBattle(){
   </section>`;
 }
 
+function renderFeedback(result){
+  if(!result.correct) return `<div class="battle-fx enemy-fx">-${result.playerDamage || 0} HP</div>`;
+  if(result.effect==='damage') return `<div class="battle-fx damage-fx">-${result.amount}</div>`;
+  if(result.effect==='break') return `<div class="battle-fx break-fx">${result.broke?'BREAK!':`+${result.amount}`}</div>`;
+  return `<div class="battle-fx guard-fx">🛡 +${result.amount}</div>`;
+}
+
 function renderPets(){
   return `${renderTop('寵物')}
   <div class="section-title"><h2>夥伴</h2><span>點選同行</span></div>
   <div class="pet-grid">${PETS.map(p=>{
     const active=state.player.pet===p.id;
-    return `<button class="card soft-btn" data-pet="${p.id}" style="text-align:left;${active?'outline:3px solid rgba(111,127,114,.25)':''}"><div class="big">${p.icon}</div><h3>${p.name}</h3><p>${p.passive}</p><div class="progress"><i style="width:${active?65:30}%"></i></div><span class="rarity">${active?'同行中':'可選擇'}</span></button>`;
+    return `<button class="card soft-btn pet-card ${active?'active-card':''}" data-pet="${p.id}">${visual(p.art,p.icon,'card-art')}<h3>${p.name}</h3><p>${p.passive}</p><div class="progress"><i style="width:${active?65:30}%"></i></div><span class="rarity">${active?'同行中':'可選擇'}</span></button>`;
   }).join('')}</div>`;
 }
 
 function renderBag(){
   const owned=ITEMS.filter(i=>state.inventory.includes(i.id) || (i.id==='star-stone'&&state.player.stones>0));
   return `${renderTop('背包')}<div class="section-title"><h2>收藏</h2><span>${owned.length} 件</span></div>
-  <div class="item-grid">${owned.length?owned.map(i=>`<div class="card"><div class="big">${i.icon}</div><h3>${i.name}</h3><p>${i.effect}</p><span class="rarity">${i.kind} · ${i.rarity}</span></div>`).join(''):'<div class="empty">還沒有收藏</div>'}</div>`;
+  <div class="item-grid">${owned.length?owned.map(i=>`<div class="card">${visual(i.art,i.icon,'card-art')}<h3>${i.name}</h3><p>${i.effect}</p><span class="rarity">${i.kind} · ${i.rarity}</span></div>`).join(''):'<div class="empty">還沒有收藏</div>'}</div>`;
 }
 
 function renderWords(){
@@ -103,7 +115,7 @@ function renderWords(){
     const stats=state.progress.wordStats[w.id]||{correct:0,wrong:0};
     const total=stats.correct+stats.wrong;
     const rate=total?Math.round(stats.correct/total*100):0;
-    return `<div class="card"><div class="big">${rate>=80?'⭐':'🔤'}</div><h3>${w.word}</h3><p>${w.zh}</p><div class="progress"><i style="width:${rate}%"></i></div><span class="rarity">${rate}%</span></div>`;
+    return `<div class="card word-card"><div class="word-badge">${rate>=80?'⭐':'🔤'}</div><h3>${w.word}</h3><p>${w.zh}</p><div class="progress"><i style="width:${rate}%"></i></div><span class="rarity">${rate}%</span></div>`;
   }).join('')}</div>`;
 }
 
