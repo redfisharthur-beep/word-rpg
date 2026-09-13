@@ -1,9 +1,9 @@
 import { ASSETS } from './assets.js';
 
 export const ROLES = [
-  { id:'warrior', name:'戰士', icon:'⚔️', art:ASSETS.role.warrior, bonus:'連續答對時，Break +1', color:'#9ba89d' },
-  { id:'mage', name:'法師', icon:'🪄', art:ASSETS.role.mage, bonus:'拼字題成功時，技能效果提升', color:'#b8b0be' },
-  { id:'archer', name:'弓手', icon:'🏹', art:ASSETS.role.archer, bonus:'7 秒內答對時，Combo +1', color:'#aeb9bf' },
+  { id:'warrior', name:'戰士', icon:'⚔️', art:ASSETS.role.warrior, bonus:'連續答對時，Break +1', color:'#9ba89d', ultimate:{name:'裂地斬',icon:'💢',desc:'重擊並大幅削減 Break'} },
+  { id:'mage', name:'法師', icon:'🪄', art:ASSETS.role.mage, bonus:'拼字題成功時，技能效果提升', color:'#b8b0be', ultimate:{name:'星界爆發',icon:'✦',desc:'魔法傷害並獲得大量護盾'} },
+  { id:'archer', name:'弓手', icon:'🏹', art:ASSETS.role.archer, bonus:'7 秒內答對時，Combo +1', color:'#aeb9bf', ultimate:{name:'疾風連射',icon:'➶',desc:'無視閃避並提高 Combo'} },
 ];
 
 export const PETS = [
