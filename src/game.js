@@ -10,8 +10,8 @@ const WORDS=[
 
 const ROLES={
  warrior:{name:'戰士',art:ASSETS.role.warrior,icon:'⚔️',desc:'耐打、護盾、反擊',passive:'不屈：受到傷害 -10%',favored:['def','hp','counter','shield','fortress','reprisal'],base:{hp:150,atk:17,def:6}},
- mage:{name:'法師',art:ASSETS.role.mage,icon:'🪄',desc:'火焰、劇毒、爆發',passive:'元素精通：火焰／毒傷 +25%',favored:['fire','poison','heal','arcane','surge'],base:{hp:130,atk:19,def:4}},
- archer:{name:'弓手',art:ASSETS.role.archer,icon:'🏹',desc:'暴擊、連擊、先手',passive:'先制：每組第1回合暴擊／連擊 +12%',favored:['crit','combo','rage','aim','rapid'],base:{hp:138,atk:18,def:5,crit:.10}},
+ mage:{name:'法師',art:ASSETS.role.mage,icon:'🪄',desc:'火焰、劇毒、爆發',passive:'元素精通：火焰／毒傷 +25%',favored:['fire','poison','heal','arcane','surge'],base:{hp:134,atk:19,def:4}},
+ archer:{name:'弓手',art:ASSETS.role.archer,icon:'🏹',desc:'暴擊、連擊、先手',passive:'先制：每組第1回合暴擊／連擊 +12%',favored:['crit','combo','rage','aim','rapid'],base:{hp:140,atk:18,def:5,crit:.10}},
 };
 
 const PETS={
@@ -21,32 +21,32 @@ const PETS={
 };
 
 const STAGES=[
- {id:1,name:'苔蘚小徑',enemy:'苔球獸',art:ASSETS.enemy.moss,icon:'🟢',hp:230,atk:10,def:2,trait:'🌿 纏藤',traitText:'每組第 2 回合，你的傷害降低 30%',mechanic:'vine',reward:'擊破後回復 12% 生命'},
- {id:2,name:'霧林追獵',enemy:'霧角兔',art:ASSETS.enemy.rabbit,icon:'🐇',hp:360,atk:14,def:4,trait:'💨 殘影',traitText:'主攻擊有 28% 機率被閃避',mechanic:'dodge',reward:'擊破後回復 14% 生命'},
- {id:3,name:'古樹守門',enemy:'木甲蟲',art:ASSETS.enemy.beetle,icon:'🪲',hp:540,atk:18,def:7,trait:'🪨 硬殼',traitText:'前 2 回合額外 +6 防禦，第 3 回合裂開',mechanic:'shell',reward:'擊破後回復 16% 生命'},
- {id:4,name:'暮色祭壇',enemy:'影語王',art:ASSETS.enemy.shadowKing,icon:'👁️',hp:820,atk:23,def:9,trait:'🌑 暗影循環',traitText:'第 2 回合減傷 25%，第 3 回合強攻並吸血',mechanic:'shadow',boss:true,reward:'最終試煉'},
+ {id:1,name:'苔蘚小徑',enemy:'苔球獸',art:ASSETS.enemy.moss,icon:'🟢',hp:310,atk:10,def:2,trait:'🌿 纏藤',traitText:'每組第 2 回合，你的傷害降低 30%',mechanic:'vine',reward:'擊破後回復 12% 生命'},
+ {id:2,name:'霧林追獵',enemy:'霧角兔',art:ASSETS.enemy.rabbit,icon:'🐇',hp:500,atk:14,def:4,trait:'💨 殘影',traitText:'主攻擊有 28% 機率被閃避',mechanic:'dodge',reward:'擊破後回復 14% 生命'},
+ {id:3,name:'古樹守門',enemy:'木甲蟲',art:ASSETS.enemy.beetle,icon:'🪲',hp:760,atk:18,def:7,trait:'🪨 硬殼',traitText:'前 2 回合額外 +6 防禦，第 3 回合裂開',mechanic:'shell',reward:'擊破後回復 16% 生命'},
+ {id:4,name:'暮色祭壇',enemy:'影語王',art:ASSETS.enemy.shadowKing,icon:'👁️',hp:1180,atk:22,def:9,trait:'🌑 暗影循環',traitText:'第 2 回合減傷 25%，第 3 回合強攻並吸血',mechanic:'shadow',boss:true,reward:'最終試煉'},
 ];
 
 const U=(id,icon,name,desc,apply,roleOnly=null)=>({id,icon,name,desc,apply,roleOnly});
 const UPGRADES=[
- U('atk','⚔️','力量成長',l=>`攻擊提升 ${9+Math.floor(l*3)}%`,(r,l,s)=>r.atk=Math.ceil(r.atk*(1+(9+l*3)/100*s))),
+ U('atk','⚔️','力量成長',l=>`攻擊提升 ${7+Math.floor(l*2)}%`,(r,l,s)=>r.atk=Math.ceil(r.atk*(1+(7+l*2)/100*s))),
  U('def','🛡️','鐵壁',l=>`防禦提升 ${2+Math.floor(l/2)}`,(r,l,s)=>r.def+=Math.max(1,Math.round((2+Math.floor(l/2))*s))),
- U('hp','❤️','生命祝福',l=>`最大生命 +${14+Math.floor(l*5)}，並回復`,(r,l,s)=>{const v=Math.max(1,Math.round((14+l*5)*s));r.maxHp+=v;r.hp=Math.min(r.maxHp,r.hp+v)}),
- U('crit','💥','致命一擊',l=>`暴擊率 +${6+Math.floor(l*2)}%`,(r,l,s)=>r.crit=Math.min(.75,r.crit+(6+l*2)/100*s)),
- U('combo','➶','連擊',l=>`追加攻擊率 +${8+Math.floor(l*4)}%`,(r,l,s)=>r.combo=Math.min(.78,r.combo+(8+l*4)/100*s)),
- U('lifesteal','🩸','吸血',l=>`吸血 +${3+Math.floor(l)}%`,(r,l,s)=>r.lifesteal=Math.min(.38,r.lifesteal+(3+l)/100*s)),
- U('counter','↩️','反擊',l=>`反擊傷害 +${12+Math.floor(l*6)}% 攻擊`,(r,l,s)=>r.counter+=((12+l*6)/100)*s),
- U('shield','◇','護體',l=>`每回合護盾 +${4+Math.floor(l*2)}`,(r,l,s)=>r.shield+=Math.max(1,Math.round((4+l*2)*s))),
- U('fire','🔥','灼燒',l=>`每次攻擊附加 ${3+Math.floor(l*2)} 火傷`,(r,l,s)=>r.fire+=Math.max(1,Math.round((3+l*2)*s))),
- U('poison','☠️','劇毒',l=>`每次攻擊疊加 ${2+Math.floor(l)} 中毒`,(r,l,s)=>r.poison+=Math.max(1,Math.round((2+l)*s))),
- U('heal','🌿','再生',l=>`每戰鬥回合回復 ${2+Math.floor(l*2)} HP`,(r,l,s)=>r.regen+=Math.max(1,Math.round((2+l*2)*s))),
- U('rage','✦','狂怒',l=>`連對每層增加 ${3+Math.floor(l)}% 攻擊`,(r,l,s)=>r.rage+=((3+l)/100)*s),
- U('fortress','🧱','堡壘架勢',l=>`每回合額外減傷 ${2+Math.floor(l*1.5)}`,(r,l,s)=>r.roleGuard+=Math.max(1,Math.round((2+l*1.5)*s)),'warrior'),
- U('reprisal','⚔️','復仇戰意',l=>`受擊後下一擊 +${10+Math.floor(l*5)}%`,(r,l,s)=>r.reprisal+=((10+l*5)/100)*s,'warrior'),
- U('arcane','🔮','元素共鳴',l=>`火焰／毒傷再 +${10+Math.floor(l*4)}%`,(r,l,s)=>r.elementAmp+=((10+l*4)/100)*s,'mage'),
- U('surge','✨','奧術爆發',l=>`每組第3回合傷害 +${12+Math.floor(l*5)}%`,(r,l,s)=>r.arcaneBurst+=((12+l*5)/100)*s,'mage'),
- U('aim','🎯','鷹眼',l=>`第1回合暴擊率 +${8+Math.floor(l*3)}%`,(r,l,s)=>r.firstCrit+=((8+l*3)/100)*s,'archer'),
- U('rapid','🏹','疾射',l=>`第1回合連擊率 +${9+Math.floor(l*4)}%`,(r,l,s)=>r.firstCombo+=((9+l*4)/100)*s,'archer'),
+ U('hp','❤️','生命祝福',l=>`最大生命 +${12+Math.floor(l*4)}，並回復`,(r,l,s)=>{const v=Math.max(1,Math.round((12+l*4)*s));r.maxHp+=v;r.hp=Math.min(r.maxHp,r.hp+v)}),
+ U('crit','💥','致命一擊',l=>`暴擊率 +${5+Math.floor(l*1.5)}%`,(r,l,s)=>r.crit=Math.min(.72,r.crit+(5+l*1.5)/100*s)),
+ U('combo','➶','連擊',l=>`追加攻擊率 +${7+Math.floor(l*3)}%`,(r,l,s)=>r.combo=Math.min(.74,r.combo+(7+l*3)/100*s)),
+ U('lifesteal','🩸','吸血',l=>`吸血 +${3+Math.floor(l*.8)}%`,(r,l,s)=>r.lifesteal=Math.min(.34,r.lifesteal+(3+l*.8)/100*s)),
+ U('counter','↩️','反擊',l=>`反擊傷害 +${10+Math.floor(l*5)}% 攻擊`,(r,l,s)=>r.counter+=((10+l*5)/100)*s),
+ U('shield','◇','護體',l=>`每回合護盾 +${4+Math.floor(l*1.5)}`,(r,l,s)=>r.shield+=Math.max(1,Math.round((4+l*1.5)*s))),
+ U('fire','🔥','灼燒',l=>`每次攻擊附加 ${3+Math.floor(l*1.5)} 火傷`,(r,l,s)=>r.fire+=Math.max(1,Math.round((3+l*1.5)*s))),
+ U('poison','☠️','劇毒',l=>`每次攻擊疊加 ${2+Math.floor(l*.8)} 中毒`,(r,l,s)=>r.poison+=Math.max(1,Math.round((2+l*.8)*s))),
+ U('heal','🌿','再生',l=>`每戰鬥回合回復 ${2+Math.floor(l*1.5)} HP`,(r,l,s)=>r.regen+=Math.max(1,Math.round((2+l*1.5)*s))),
+ U('rage','✦','狂怒',l=>`連對每層增加 ${2+Math.floor(l*.75)}% 攻擊`,(r,l,s)=>r.rage+=((2+l*.75)/100)*s),
+ U('fortress','🧱','堡壘架勢',l=>`每回合額外減傷 ${2+Math.floor(l*1.25)}`,(r,l,s)=>r.roleGuard+=Math.max(1,Math.round((2+l*1.25)*s)),'warrior'),
+ U('reprisal','⚔️','復仇戰意',l=>`受擊後下一擊 +${9+Math.floor(l*4)}%`,(r,l,s)=>r.reprisal+=((9+l*4)/100)*s,'warrior'),
+ U('arcane','🔮','元素共鳴',l=>`火焰／毒傷再 +${8+Math.floor(l*3)}%`,(r,l,s)=>r.elementAmp+=((8+l*3)/100)*s,'mage'),
+ U('surge','✨','奧術爆發',l=>`每組第3回合傷害 +${10+Math.floor(l*4)}%`,(r,l,s)=>r.arcaneBurst+=((10+l*4)/100)*s,'mage'),
+ U('aim','🎯','鷹眼',l=>`第1回合暴擊率 +${7+Math.floor(l*2.5)}%`,(r,l,s)=>r.firstCrit+=((7+l*2.5)/100)*s,'archer'),
+ U('rapid','🏹','疾射',l=>`第1回合連擊率 +${8+Math.floor(l*3)}%`,(r,l,s)=>r.firstCombo+=((8+l*3)/100)*s,'archer'),
 ];
 
 const EVOLUTIONS={
@@ -55,18 +55,18 @@ const EVOLUTIONS={
  counter:[{level:3,name:'血性反擊'},{level:5,name:'穿甲反擊'}],shield:[{level:3,name:'荊棘護體'},{level:5,name:'鋼鐵荊棘'}],
 };
 const WHEEL=[
- {icon:'⚔️',label:'攻擊 +18%',fn:r=>r.atk=Math.ceil(r.atk*1.18)},{icon:'❤️',label:'回復 30% 生命',fn:r=>r.hp=Math.min(r.maxHp,r.hp+Math.ceil(r.maxHp*.30))},
- {icon:'🛡️',label:'防禦 +4',fn:r=>r.def+=4},{icon:'💥',label:'暴擊 +12%',fn:r=>r.crit=Math.min(.78,r.crit+.12)},
- {icon:'⬆️',label:'隨機技能升 1 級',fn:r=>levelRandomOwned(r)},{icon:'👑',label:'全能力強化',fn:r=>{r.atk+=5;r.def+=2;r.maxHp+=12;r.hp=Math.min(r.maxHp,r.hp+12)}},
+ {icon:'⚔️',label:'攻擊 +14%',fn:r=>r.atk=Math.ceil(r.atk*1.14)},{icon:'❤️',label:'回復 28% 生命',fn:r=>r.hp=Math.min(r.maxHp,r.hp+Math.ceil(r.maxHp*.28))},
+ {icon:'🛡️',label:'防禦 +3',fn:r=>r.def+=3},{icon:'💥',label:'暴擊 +10%',fn:r=>r.crit=Math.min(.76,r.crit+.10)},
+ {icon:'⬆️',label:'隨機技能升 1 級',fn:r=>levelRandomOwned(r)},{icon:'👑',label:'全能力強化',fn:r=>{r.atk+=4;r.def+=2;r.maxHp+=10;r.hp=Math.min(r.maxHp,r.hp+10)}},
 ];
 const RARE_REWARDS=[
- {id:'giant-core',icon:'❤️',name:'巨人核心',desc:'最大生命 +30，立即回復 30 HP',apply:r=>{r.maxHp+=30;r.hp=Math.min(r.maxHp,r.hp+30)}},
- {id:'war-rune',icon:'⚔️',name:'戰意刻印',desc:'攻擊永久 +16%',apply:r=>r.atk=Math.ceil(r.atk*1.16)},
- {id:'guardian-sigil',icon:'🛡️',name:'守護徽記',desc:'防禦 +4、每回合護盾 +3',apply:r=>{r.def+=4;r.shield+=3}},
- {id:'hunter-eye',icon:'🎯',name:'獵人之眼',desc:'暴擊率 +10%、連擊率 +10%',apply:r=>{r.crit=Math.min(.88,r.crit+.10);r.combo=Math.min(.9,r.combo+.10)}},
- {id:'element-crystal',icon:'🔮',name:'元素結晶',desc:'火焰 +4、劇毒 +2、元素傷害再 +15%',apply:r=>{r.fire+=4;r.poison+=2;r.elementAmp+=.15}},
- {id:'blood-moon',icon:'🩸',name:'血月徽記',desc:'吸血 +8%、反擊傷害 +18%',apply:r=>{r.lifesteal=Math.min(.45,r.lifesteal+.08);r.counter+=.18}},
- {id:'phoenix-feather',icon:'🔥',name:'鳳凰羽',desc:'最大生命 +18，每回合再生 +3',apply:r=>{r.maxHp+=18;r.hp=Math.min(r.maxHp,r.hp+18);r.regen+=3}},
+ {id:'giant-core',icon:'❤️',name:'巨人核心',desc:'最大生命 +26，立即回復 26 HP',apply:r=>{r.maxHp+=26;r.hp=Math.min(r.maxHp,r.hp+26)}},
+ {id:'war-rune',icon:'⚔️',name:'戰意刻印',desc:'攻擊永久 +12%',apply:r=>r.atk=Math.ceil(r.atk*1.12)},
+ {id:'guardian-sigil',icon:'🛡️',name:'守護徽記',desc:'防禦 +3、每回合護盾 +3',apply:r=>{r.def+=3;r.shield+=3}},
+ {id:'hunter-eye',icon:'🎯',name:'獵人之眼',desc:'暴擊率 +8%、連擊率 +8%',apply:r=>{r.crit=Math.min(.84,r.crit+.08);r.combo=Math.min(.86,r.combo+.08)}},
+ {id:'element-crystal',icon:'🔮',name:'元素結晶',desc:'火焰 +3、劇毒 +2、元素傷害再 +10%',apply:r=>{r.fire+=3;r.poison+=2;r.elementAmp+=.10}},
+ {id:'blood-moon',icon:'🩸',name:'血月徽記',desc:'吸血 +7%、反擊傷害 +15%',apply:r=>{r.lifesteal=Math.min(.40,r.lifesteal+.07);r.counter+=.15}},
+ {id:'phoenix-feather',icon:'🔥',name:'鳳凰羽',desc:'最大生命 +16，每回合再生 +2',apply:r=>{r.maxHp+=16;r.hp=Math.min(r.maxHp,r.hp+16);r.regen+=2}},
 ];
 
 const PAUSE={review:1150,focus:700,attack:560,impact:780,counter:720,between:820,defeat:1200};
@@ -87,7 +87,7 @@ function fmtLevel(v){return Number.isInteger(v)?String(v):v.toFixed(1);}
 function clearFx(){combatFx={hero:'',enemy:'',proc:''};}
 function evolutionState(id,level=skillLevel(id)){const list=EVOLUTIONS[id]||[];let active=null,next=null;for(const e of list){if(level>=e.level)active=e;else if(!next)next=e;}return {active,next};}
 function evolutionNote(id,level){const {active,next}=evolutionState(id,level);if(next)return `下一進化 Lv.${next.level}：${next.name}`;if(active)return `已進化：${active.name}`;return '';}
-function levelRandomOwned(r){const ids=Object.keys(r.skills||{});if(!ids.length){r.atk=Math.ceil(r.atk*1.12);return}const id=pick(ids),u=UPGRADES.find(x=>x.id===id),next=(r.skills[id]||0)+1;r.skills[id]=next;u?.apply(r,next,1);}
+function levelRandomOwned(r){const ids=Object.keys(r.skills||{});if(!ids.length){r.atk=Math.ceil(r.atk*1.10);return}const id=pick(ids),u=UPGRADES.find(x=>x.id===id),next=(r.skills[id]||0)+1;r.skills[id]=next;u?.apply(r,next,1);}
 
 function startRun(){const base=ROLES[meta.role].base;run={role:meta.role,pet:meta.pet||'fox',stageIndex:0,cycle:1,totalAnswers:0,correct:0,streak:0,maxStreak:0,hp:base.hp,maxHp:base.hp,atk:base.atk,def:base.def,crit:base.crit||.05,combo:0,lifesteal:0,counter:0,shield:0,fire:0,poison:0,regen:0,rage:0,roleGuard:0,reprisal:0,elementAmp:0,arcaneBurst:0,firstCrit:0,firstCombo:0,wasHit:false,question:makeQuestion(),enemy:freshEnemy(STAGES[0]),skills:{},rareRewards:[],battleRound:0,won:false};meta.runs++;saveMeta();screen='stage';locked=false;anim='';answerReview=null;clearFx();render();}
 function render(){app.innerHTML=screen==='home'?renderHome():screen==='stage'?renderStageIntro():screen==='play'?renderPlay():screen==='upgrade'?renderUpgrade():screen==='wheel'?renderWheel():screen==='clear'?renderStageClear():screen==='rare'?renderRareReward():screen==='end'?renderEnd():renderHome();bind();}
@@ -111,10 +111,10 @@ function spinWheel(){if(wheelReward)return;wheelReward=pick(WHEEL);wheelReward.f
 function startBattleSet(){screen='play';locked=true;answerReview=null;run.battleRound=1;run.wasHit=false;anim='';clearFx();if(run.pet==='owl'){const before=run.hp;run.hp=Math.min(run.maxHp,run.hp+3);if(run.hp>before)combatFx.hero=`+${run.hp-before}`;}render();setTimeout(playBattleRound,PAUSE.focus);}
 function enemyRoundProfile(){const m=run.enemy.mechanic,n=run.battleRound;let heroDamageMult=1,enemyDefBonus=0,evadeChance=0,enemyAtkMult=1,enemyHeal=0,label='';if(m==='vine'&&n===2){heroDamageMult=.7;label='🌿 纏藤';}if(m==='dodge')evadeChance=.28;if(m==='shell'&&n<=2){enemyDefBonus=6;label='🪨 硬殼';}if(m==='shadow'&&n===2){heroDamageMult=.75;label='🌑 暗影護幕';}if(m==='shadow'&&n===3){enemyAtkMult=1.45;enemyHeal=10;label='👁️ 吞噬';}return {heroDamageMult,enemyDefBonus,evadeChance,enemyAtkMult,enemyHeal,label};}
 function playBattleRound(){if(screen!=='play'||run.battleRound<1)return;clearFx();const r=role(),p=enemyRoundProfile(),critLv=skillLevel('crit'),comboLv=skillLevel('combo'),fireLv=skillLevel('fire'),poisonLv=skillLevel('poison');if(run.regen){const before=run.hp;run.hp=Math.min(run.maxHp,run.hp+run.regen);if(run.hp>before)combatFx.hero=`+${run.hp-before}`;}
- let raw=Math.round(run.atk*(1+run.rage*Math.max(0,run.streak-1)));if(run.wasHit&&run.reprisal){raw=Math.round(raw*(1+run.reprisal));combatFx.proc='⚔️ 復仇戰意';run.wasHit=false;}if(r===ROLES.mage&&run.battleRound===3&&run.arcaneBurst){raw=Math.round(raw*(1+run.arcaneBurst));combatFx.proc=[combatFx.proc,'✨ 奧術爆發'].filter(Boolean).join(' · ');}const critChance=clamp(run.crit+(r===ROLES.archer&&run.battleRound===1?.12+run.firstCrit:0),0,.9);let crit=false;if(Math.random()<critChance){raw=Math.round(raw*(critLv>=3?2.4:2));crit=true}
- const effectiveDef=run.enemy.def+p.enemyDefBonus;let damage=Math.max(1,Math.round((raw-effectiveDef)*p.heroDamageMult));const elemMult=r===ROLES.mage?1.25+run.elementAmp:1+run.elementAmp,fireHit=Math.round(run.fire*elemMult);damage+=fireHit;let combo=0,secondCombo=0,finisher=0,petHit=0;const comboChance=clamp(run.combo+(r===ROLES.archer&&run.battleRound===1?.12+run.firstCombo:0),0,.92);if(comboChance>0&&Math.random()<comboChance){combo=Math.max(1,Math.round((run.atk*(comboLv>=3?.85:.6)-effectiveDef)*p.heroDamageMult));if(comboLv>=5)secondCombo=Math.max(1,Math.round((run.atk*.45-Math.floor(effectiveDef*.5))*p.heroDamageMult));}if(crit&&critLv>=5)finisher=Math.max(1,Math.round(run.atk*.45*p.heroDamageMult));if(run.pet==='fox'&&Math.random()<.25)petHit=Math.max(1,Math.round(run.atk*.4));if(run.pet==='dragon')petHit+=5;const dodged=p.evadeChance>0&&Math.random()<p.evadeChance;if(dodged){damage=combo=secondCombo=finisher=0;}
- combatFx.proc=[combatFx.proc,p.label,dodged?'💨 殘影閃避':'',crit&&!dodged?'💥 暴擊':'',combo?comboLv>=5?'➶ 二段連擊':'➶ 連擊':'',finisher?'✦ 終結追擊':'',petHit?run.pet==='fox'?'🦊 靈狐追擊':'🐉 龍息':''].filter(Boolean).join(' · ');anim='hero-attack';render();setTimeout(()=>{const total=damage+combo+secondCombo+finisher+petHit;run.enemy.currentHp-=total;combatFx.enemy=dodged&&petHit===0?'MISS':`-${total}`;if(!dodged&&fireHit&&fireLv>=3){run.enemy.burn+=Math.max(1,Math.ceil(fireHit*.5));if(fireLv>=5&&run.battleRound===3){const burst=Math.max(2,fireHit*2);run.enemy.currentHp-=burst;combatFx.enemy=`-${total+burst}`;combatFx.proc=[combatFx.proc,'🔥 烈焰爆發'].filter(Boolean).join(' · ');}}if(!dodged&&run.poison){const basePoison=run.poison*elemMult,pm=poisonLv>=5?2:poisonLv>=3?1.4:1,add=Math.max(1,Math.round(basePoison*pm));run.enemy.poison+=add;combatFx.proc=[combatFx.proc,`☠️ +${add}`].filter(Boolean).join(' · ');}if(!dodged&&run.lifesteal&&total>0){const heal=Math.max(1,Math.round(total*run.lifesteal));run.hp=Math.min(run.maxHp,run.hp+heal);combatFx.hero=`+${heal}`;}anim='enemy-hit';render();setTimeout(()=>afterHeroAttack(p),PAUSE.impact);},PAUSE.attack);}
-function afterHeroAttack(p){let dot=0,tags=[];if(run.enemy.burn>0){dot+=run.enemy.burn;tags.push(`🔥 ${run.enemy.burn}`)}if(run.enemy.poison>0){dot+=run.enemy.poison;tags.push(`☠️ ${run.enemy.poison}`)}if(dot){run.enemy.currentHp-=dot;combatFx.enemy=`-${dot}`;combatFx.proc=tags.join(' · ')}if(run.enemy.currentHp<=0){anim='enemy-down';render();setTimeout(()=>finishBattleSet(true),PAUSE.defeat);return}clearFx();if(p.label)combatFx.proc=p.label;anim='enemy-turn';render();setTimeout(()=>{const r=role(),enemyAtk=Math.round(run.enemy.atk*p.enemyAtkMult),pre=Math.max(1,enemyAtk-run.def),roleReduction=r===ROLES.warrior?.9:1,petReduction=run.pet==='owl'?.88:1,incoming=Math.max(1,Math.round((pre-run.shield-run.roleGuard)*roleReduction*petReduction)),blocked=Math.max(0,pre-incoming);run.hp=Math.max(0,run.hp-incoming);run.wasHit=incoming>0;combatFx.hero=`-${incoming}`;if(run.pet==='owl')combatFx.proc=[combatFx.proc,'🦉 守望'].filter(Boolean).join(' · ');if(p.enemyHeal>0&&incoming>0){const heal=Math.min(p.enemyHeal,run.enemy.hp-run.enemy.currentHp);if(heal>0){run.enemy.currentHp+=heal;combatFx.enemy=`+${heal}`;combatFx.proc=[combatFx.proc,'🩸 吸血'].filter(Boolean).join(' · ');}}const counterLv=skillLevel('counter'),shieldLv=skillLevel('shield');let counter=0,thorns=0;if(run.counter>0){counter=counterLv>=5?Math.max(1,Math.round(run.atk*run.counter)):Math.max(1,Math.round(run.atk*run.counter)-run.enemy.def);if(r===ROLES.warrior)counter=Math.round(counter*1.2);run.enemy.currentHp-=counter;combatFx.enemy=`-${counter}`;combatFx.proc=[combatFx.proc,counterLv>=5?'↩️ 穿甲反擊':'↩️ 反擊'].filter(Boolean).join(' · ');if(counterLv>=3){const heal=Math.max(1,Math.round(counter*.25));run.hp=Math.min(run.maxHp,run.hp+heal);combatFx.hero=`-${incoming} / +${heal}`;combatFx.proc+=' · 🩸 回復';}}if(shieldLv>=3&&blocked>0){thorns=Math.max(1,Math.round(blocked*(shieldLv>=5?.6:.3)));run.enemy.currentHp-=thorns;combatFx.enemy=`-${counter+thorns}`;combatFx.proc=[combatFx.proc,shieldLv>=5?'◇ 鋼鐵荊棘':'◇ 荊棘護體'].filter(Boolean).join(' · ');}anim='hero-hit';render();setTimeout(()=>{if(run.hp<=0){finish(false);return}if(run.enemy.currentHp<=0){anim='enemy-down';render();setTimeout(()=>finishBattleSet(true),PAUSE.defeat);return}if(run.battleRound>=3){finishBattleSet(false);return}run.battleRound++;anim='';clearFx();render();setTimeout(playBattleRound,PAUSE.between);},PAUSE.counter);},PAUSE.counter);}
+ let raw=Math.round(run.atk*(1+run.rage*Math.max(0,run.streak-1)));if(run.wasHit&&run.reprisal){raw=Math.round(raw*(1+run.reprisal));combatFx.proc='⚔️ 復仇戰意';run.wasHit=false;}if(r===ROLES.mage&&run.battleRound===3&&run.arcaneBurst){raw=Math.round(raw*(1+run.arcaneBurst));combatFx.proc=[combatFx.proc,'✨ 奧術爆發'].filter(Boolean).join(' · ');}const critChance=clamp(run.crit+(r===ROLES.archer&&run.battleRound===1?.12+run.firstCrit:0),0,.88);let crit=false;if(Math.random()<critChance){raw=Math.round(raw*(critLv>=3?2.35:2));crit=true}
+ const effectiveDef=run.enemy.def+p.enemyDefBonus;let damage=Math.max(1,Math.round((raw-effectiveDef)*p.heroDamageMult));const elemMult=r===ROLES.mage?1.22+run.elementAmp:1+run.elementAmp,fireHit=Math.round(run.fire*elemMult);damage+=fireHit;let combo=0,secondCombo=0,finisher=0,petHit=0;const comboChance=clamp(run.combo+(r===ROLES.archer&&run.battleRound===1?.12+run.firstCombo:0),0,.88);if(comboChance>0&&Math.random()<comboChance){combo=Math.max(1,Math.round((run.atk*(comboLv>=3?.80:.58)-effectiveDef)*p.heroDamageMult));if(comboLv>=5)secondCombo=Math.max(1,Math.round((run.atk*.40-Math.floor(effectiveDef*.5))*p.heroDamageMult));}if(crit&&critLv>=5)finisher=Math.max(1,Math.round(run.atk*.40*p.heroDamageMult));if(run.pet==='fox'&&Math.random()<.25)petHit=Math.max(1,Math.round(run.atk*.4));if(run.pet==='dragon')petHit+=5;const dodged=p.evadeChance>0&&Math.random()<p.evadeChance;if(dodged){damage=combo=secondCombo=finisher=0;}
+ combatFx.proc=[combatFx.proc,p.label,dodged?'💨 殘影閃避':'',crit&&!dodged?'💥 暴擊':'',combo?comboLv>=5?'➶ 二段連擊':'➶ 連擊':'',finisher?'✦ 終結追擊':'',petHit?run.pet==='fox'?'🦊 靈狐追擊':'🐉 龍息':''].filter(Boolean).join(' · ');anim='hero-attack';render();setTimeout(()=>{const total=damage+combo+secondCombo+finisher+petHit;run.enemy.currentHp-=total;combatFx.enemy=dodged&&petHit===0?'MISS':`-${total}`;if(!dodged&&fireHit&&fireLv>=3){run.enemy.burn+=Math.max(1,Math.ceil(fireHit*.45));if(fireLv>=5&&run.battleRound===3){const burst=Math.max(2,Math.round(fireHit*1.7));run.enemy.currentHp-=burst;combatFx.enemy=`-${total+burst}`;combatFx.proc=[combatFx.proc,'🔥 烈焰爆發'].filter(Boolean).join(' · ');}}if(!dodged&&run.poison){const basePoison=run.poison*elemMult,pm=poisonLv>=5?1.8:poisonLv>=3?1.3:1,add=Math.max(1,Math.round(basePoison*pm));run.enemy.poison+=add;combatFx.proc=[combatFx.proc,`☠️ +${add}`].filter(Boolean).join(' · ');}if(!dodged&&run.lifesteal&&total>0){const heal=Math.max(1,Math.round(total*run.lifesteal));run.hp=Math.min(run.maxHp,run.hp+heal);combatFx.hero=`+${heal}`;}anim='enemy-hit';render();setTimeout(()=>afterHeroAttack(p),PAUSE.impact);},PAUSE.attack);}
+function afterHeroAttack(p){let dot=0,tags=[];if(run.enemy.burn>0){dot+=run.enemy.burn;tags.push(`🔥 ${run.enemy.burn}`)}if(run.enemy.poison>0){dot+=run.enemy.poison;tags.push(`☠️ ${run.enemy.poison}`)}if(dot){run.enemy.currentHp-=dot;combatFx.enemy=`-${dot}`;combatFx.proc=tags.join(' · ')}if(run.enemy.currentHp<=0){anim='enemy-down';render();setTimeout(()=>finishBattleSet(true),PAUSE.defeat);return}clearFx();if(p.label)combatFx.proc=p.label;anim='enemy-turn';render();setTimeout(()=>{const r=role(),enemyAtk=Math.round(run.enemy.atk*p.enemyAtkMult),pre=Math.max(1,enemyAtk-run.def),roleReduction=r===ROLES.warrior?.9:1,petReduction=run.pet==='owl'?.88:1,incoming=Math.max(1,Math.round((pre-run.shield-run.roleGuard)*roleReduction*petReduction)),blocked=Math.max(0,pre-incoming);run.hp=Math.max(0,run.hp-incoming);run.wasHit=incoming>0;combatFx.hero=`-${incoming}`;if(run.pet==='owl')combatFx.proc=[combatFx.proc,'🦉 守望'].filter(Boolean).join(' · ');if(p.enemyHeal>0&&incoming>0){const heal=Math.min(p.enemyHeal,run.enemy.hp-run.enemy.currentHp);if(heal>0){run.enemy.currentHp+=heal;combatFx.enemy=`+${heal}`;combatFx.proc=[combatFx.proc,'🩸 吸血'].filter(Boolean).join(' · ');}}const counterLv=skillLevel('counter'),shieldLv=skillLevel('shield');let counter=0,thorns=0;if(run.counter>0){counter=counterLv>=5?Math.max(1,Math.round(run.atk*run.counter)):Math.max(1,Math.round(run.atk*run.counter)-run.enemy.def);if(r===ROLES.warrior)counter=Math.round(counter*1.18);run.enemy.currentHp-=counter;combatFx.enemy=`-${counter}`;combatFx.proc=[combatFx.proc,counterLv>=5?'↩️ 穿甲反擊':'↩️ 反擊'].filter(Boolean).join(' · ');if(counterLv>=3){const heal=Math.max(1,Math.round(counter*.22));run.hp=Math.min(run.maxHp,run.hp+heal);combatFx.hero=`-${incoming} / +${heal}`;combatFx.proc+=' · 🩸 回復';}}if(shieldLv>=3&&blocked>0){thorns=Math.max(1,Math.round(blocked*(shieldLv>=5?.52:.28)));run.enemy.currentHp-=thorns;combatFx.enemy=`-${counter+thorns}`;combatFx.proc=[combatFx.proc,shieldLv>=5?'◇ 鋼鐵荊棘':'◇ 荊棘護體'].filter(Boolean).join(' · ');}anim='hero-hit';render();setTimeout(()=>{if(run.hp<=0){finish(false);return}if(run.enemy.currentHp<=0){anim='enemy-down';render();setTimeout(()=>finishBattleSet(true),PAUSE.defeat);return}if(run.battleRound>=3){finishBattleSet(false);return}run.battleRound++;anim='';clearFx();render();setTimeout(playBattleRound,PAUSE.between);},PAUSE.counter);},PAUSE.counter);}
 
 function finishBattleSet(dead){anim='';clearFx();if(dead){run.battleRound=0;screen='clear';locked=false;render();return}run.battleRound=0;run.cycle++;run.question=makeQuestion();locked=false;answerReview=null;screen='play';render();}
 function strongestBuild(){const owned=Object.entries(run.skills).sort((a,b)=>b[1]-a[1]);if(!owned.length)return `${pet().icon} ${pet().name}`;const [id,l]=owned[0],u=UPGRADES.find(x=>x.id===id),e=evolutionState(id,l).active;return `${u?.icon||'✦'} ${u?.name||id} Lv.${fmtLevel(l)}${e?`・${e.name}`:''}`;}
