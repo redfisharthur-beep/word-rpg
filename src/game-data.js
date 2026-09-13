@@ -6,6 +6,27 @@ export const ROLES = [
   { id:'archer', name:'弓手', icon:'🏹', art:ASSETS.role.archer, bonus:'7 秒內答對時，Combo +1', color:'#aeb9bf', ultimate:{name:'疾風連射',icon:'➶',desc:'無視閃避並提高 Combo'} },
 ];
 
+export const TALENTS = {
+  warrior:[
+    {id:'warrior-breaker',tier:2,name:'破甲專精',icon:'💥',desc:'破陣成功時額外 +1 Break'},
+    {id:'warrior-bulwark',tier:2,name:'鐵壁',icon:'🛡️',desc:'守護額外 +6 護盾'},
+    {id:'warrior-execution',tier:3,name:'處決姿態',icon:'⚔️',desc:'敵人失衡時，斬擊傷害 +25%'},
+    {id:'warrior-rage',tier:3,name:'戰意爆發',icon:'💢',desc:'裂地斬傷害 +15'},
+  ],
+  mage:[
+    {id:'mage-spellflow',tier:2,name:'咒文循環',icon:'✎',desc:'拼字答對時額外 +12 能量'},
+    {id:'mage-ward',tier:2,name:'秘法護幕',icon:'◇',desc:'守護額外 +8 護盾'},
+    {id:'mage-arcane',tier:3,name:'奧術共鳴',icon:'✦',desc:'拼字題的斬擊傷害再 +20%'},
+    {id:'mage-starshield',tier:3,name:'星盾',icon:'🔷',desc:'星界爆發額外 +12 護盾'},
+  ],
+  archer:[
+    {id:'archer-swift',tier:2,name:'迅足',icon:'➶',desc:'9 秒內答對也能觸發迅捷連擊'},
+    {id:'archer-focus',tier:2,name:'專注射擊',icon:'🎯',desc:'Combo 2+ 時斬擊傷害 +15%'},
+    {id:'archer-volley',tier:3,name:'風暴箭雨',icon:'🏹',desc:'疾風連射傷害 +18'},
+    {id:'archer-momentum',tier:3,name:'乘風',icon:'🌬️',desc:'迅捷連擊額外再 +1 Combo'},
+  ],
+};
+
 export const PETS = [
   { id:'fox', name:'霧尾狐', icon:'🦊', art:ASSETS.pet.fox, type:'guard', passive:'答對時有機率生成護盾', evolve:8, combat:{kind:'guard',base:4,evolved:7} },
   { id:'owl', name:'暮光鴞', icon:'🦉', art:ASSETS.pet.owl, type:'mercy', passive:'降低怪物反擊傷害', evolve:8, combat:{kind:'reduce',base:3,evolved:6} },
