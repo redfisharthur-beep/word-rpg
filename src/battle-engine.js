@@ -20,7 +20,7 @@ export function pickWord(){
 
 export function chooseSkill(battle,skillId){
   if(!SKILLS.some(s=>s.id===skillId)) return battle;
-  return {...battle,selectedSkill:skillId};
+  return {...battle,selectedSkill:skillId,lastResult:null};
 }
 
 export function resolveAnswer(battle,answer){
@@ -28,49 +28,60 @@ export function resolveAnswer(battle,answer){
   const correct=answer===battle.currentWord.zh;
   const skill=SKILLS.find(s=>s.id===battle.selectedSkill) || SKILLS[0];
   const next=structuredClone(battle);
-  next.lastResult={correct,answer,word:battle.currentWord.word,zh:battle.currentWord.zh};
+  const result={correct,answer,word:battle.currentWord.word,zh:battle.currentWord.zh,effect:skill.effect,amount:0,enemyDamage:0,playerDamage:0,broke:false};
 
   if(correct){
     next.player.combo+=1;
     if(skill.effect==='damage'){
       const bonus=next.enemy.broken?1.8:1;
       const comboBonus=next.player.combo>=3?1.2:1;
-      next.enemy.currentHp=Math.max(0,Math.round(next.enemy.currentHp-skill.value*bonus*comboBonus));
+      const damage=Math.round(skill.value*bonus*comboBonus);
+      next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
+      result.amount=damage;
+      result.enemyDamage=damage;
     }
     if(skill.effect==='break' && !next.enemy.broken){
+      const before=next.enemy.break;
       next.enemy.break=Math.min(next.enemy.breakMax,next.enemy.break+skill.value);
+      result.amount=next.enemy.break-before;
       if(next.enemy.break>=next.enemy.breakMax){
         next.enemy.broken=true;
+        result.broke=true;
       }
     }
     if(skill.effect==='guard'){
+      const before=next.player.guard;
       next.player.guard=Math.min(40,next.player.guard+skill.value);
+      result.amount=next.player.guard-before;
     }
   }else{
     next.player.combo=0;
-    enemyTurn(next);
+    result.playerDamage=enemyTurn(next);
   }
 
   if(next.enemy.currentHp<=0){
     next.finished=true;
     next.won=true;
+    next.lastResult=result;
     return next;
   }
 
   if(next.enemy.broken){
     next.enemy.intent='失衡';
   }else if(correct){
-    enemyTurn(next);
+    result.playerDamage=enemyTurn(next);
   }
 
   if(next.player.hp<=0){
     next.finished=true;
     next.won=false;
+    next.lastResult=result;
     return next;
   }
 
   next.turn+=1;
   next.currentWord=pickWord();
+  next.lastResult=result;
   return next;
 }
 
@@ -79,7 +90,7 @@ function enemyTurn(battle){
     battle.enemy.broken=false;
     battle.enemy.break=0;
     battle.enemy.intent='蓄力';
-    return;
+    return 0;
   }
   const base=battle.enemy.intent==='大招'?24:battle.enemy.intent==='蓄力'?18:12;
   const damage=Math.max(0,base-battle.player.guard);
@@ -90,4 +101,5 @@ function enemyTurn(battle){
   if(battle.enemy.intent==='回復'){
     battle.enemy.currentHp=Math.min(battle.enemy.hp,battle.enemy.currentHp+8);
   }
+  return damage;
 }
