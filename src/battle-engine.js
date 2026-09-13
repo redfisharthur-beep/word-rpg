@@ -7,7 +7,7 @@ export function createBattle(stage,context={}){
   return {
     stageId:stage.id,
     enemy:{...stage.enemy,currentHp:stage.enemy.hp,break:0,broken:false,dodge:false,armor:0},
-    player:{hp:100,maxHp:100,guard:0,combo:0,roleId:context.roleId||'warrior'},
+    player:{hp:100,maxHp:100,guard:0,combo:0,roleId:context.roleId||'warrior',energy:0,maxEnergy:100},
     pet:{id:pet.id,name:pet.name,level:Math.max(1,context.petLevel||1),evolved:!!context.petEvolved,trait:pet.combat},
     inventory:[...(context.inventory||[])],
     wordStats:context.wordStats||{},wordIds,bossFocus:!!stage.bossFocus,
@@ -26,15 +26,47 @@ export function pickQuestion(wordStats={},wordIds=WORDS.map(w=>w.id),bossFocus=f
 
 export function chooseSkill(battle,skillId){return SKILLS.some(s=>s.id===skillId)?{...battle,selectedSkill:skillId,lastResult:null}:battle;}
 
+export function useUltimate(battle){
+  if(!battle||battle.finished||battle.player.energy<100)return battle;
+  const next=structuredClone(battle);
+  const role=next.player.roleId;
+  const result={correct:true,answer:'',word:'',zh:'',questionType:'ultimate',effect:'ultimate',amount:0,enemyDamage:0,playerDamage:0,broke:false,petText:'',enemyText:'',roleText:'',itemText:'',ultimateText:''};
+  next.player.energy=0;
+
+  if(role==='warrior'){
+    const damage=58;
+    next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
+    next.enemy.break=Math.min(next.enemy.breakMax,next.enemy.break+2);
+    if(next.enemy.break>=next.enemy.breakMax){next.enemy.broken=true;result.broke=true;}
+    result.amount=damage;result.enemyDamage=damage;result.ultimateText='裂地斬・重擊 + Break 2';
+  }else if(role==='mage'){
+    const damage=42;
+    next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
+    next.player.guard=Math.min(40,next.player.guard+24);
+    result.amount=damage;result.enemyDamage=damage;result.ultimateText='星界爆發・傷害 + 護盾 24';
+  }else{
+    const damage=54;
+    next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
+    next.enemy.dodge=false;
+    next.player.combo+=3;
+    result.amount=damage;result.enemyDamage=damage;result.ultimateText='疾風連射・無視閃避 + Combo 3';
+  }
+
+  if(next.enemy.currentHp<=0){finishBattle(next,true);next.lastResult=result;return next;}
+  next.lastResult=result;
+  return next;
+}
+
 export function resolveAnswer(battle,answer){
   if(battle.finished)return battle;
   const q=battle.currentQuestion,correct=norm(answer)===norm(q.answer),skill=SKILLS.find(s=>s.id===battle.selectedSkill)||SKILLS[0],next=structuredClone(battle),elapsed=(Date.now()-battle.questionStartedAt)/1000;
-  const result={correct,answer,word:q.word,zh:q.zh,questionType:q.type,effect:skill.effect,amount:0,enemyDamage:0,playerDamage:0,broke:false,petText:'',enemyText:'',roleText:'',itemText:''};
+  const result={correct,answer,word:q.word,zh:q.zh,questionType:q.type,effect:skill.effect,amount:0,enemyDamage:0,playerDamage:0,broke:false,petText:'',enemyText:'',roleText:'',itemText:'',ultimateText:''};
 
   if(correct){
-    next.correctCount+=1;next.player.combo+=1;let mult=1;
-    if(next.player.roleId==='mage'&&q.type==='spelling'){mult=1.35;result.roleText='法師・拼字共鳴';}
-    if(next.player.roleId==='archer'&&elapsed<=7){next.player.combo+=1;mult*=1.12;result.roleText='弓手・迅捷連擊';}
+    next.correctCount+=1;next.player.combo+=1;next.player.energy=Math.min(100,next.player.energy+22);let mult=1;
+    if(next.player.roleId==='mage'&&q.type==='spelling'){mult=1.35;next.player.energy=Math.min(100,next.player.energy+8);result.roleText='法師・拼字共鳴';}
+    if(next.player.roleId==='archer'&&elapsed<=7){next.player.combo+=1;next.player.energy=Math.min(100,next.player.energy+5);mult*=1.12;result.roleText='弓手・迅捷連擊';}
+    if(next.player.roleId==='warrior'&&next.player.combo>=3)next.player.energy=Math.min(100,next.player.energy+4);
     if(next.inventory.includes('mist-blade')&&next.player.combo>=3&&skill.effect==='damage'){mult*=1.2;result.itemText='霧鋒・連擊強化';}
 
     if(skill.effect==='damage'){
@@ -65,7 +97,7 @@ export function resolveAnswer(battle,answer){
     }
     petCorrect(next,result);
   }else{
-    next.wrongCount+=1;
+    next.wrongCount+=1;next.player.energy=Math.min(100,next.player.energy+8);
     if(next.inventory.includes('memory-leaf')&&!next.usedMemoryLeaf){next.usedMemoryLeaf=true;result.itemText='記憶葉・Combo 保留';}
     else next.player.combo=0;
     result.playerDamage=enemyTurn(next,result);
