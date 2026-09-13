@@ -3,25 +3,28 @@ import { SKILLS, WORDS, PETS } from './game-data.js';
 export function createBattle(stage,context={}){
   const pet=PETS.find(p=>p.id===context.petId)||PETS[0];
   const wordIds=stage.wordIds?.length?stage.wordIds:WORDS.map(w=>w.id);
-  const q=pickQuestion(context.wordStats||{},wordIds,!!stage.bossFocus);
+  const questionTypes=stage.questionTypes?.length?stage.questionTypes:['meaning','reverse','spelling','listening'];
+  const q=pickQuestion(context.wordStats||{},wordIds,!!stage.bossFocus,questionTypes);
   return {
     stageId:stage.id,
     enemy:{...stage.enemy,currentHp:stage.enemy.hp,break:0,broken:false,dodge:false,armor:0},
     player:{hp:100,maxHp:100,guard:0,combo:0,roleId:context.roleId||'warrior',energy:0,maxEnergy:100,talents:[...(context.talents||[])]},
     pet:{id:pet.id,name:pet.name,level:Math.max(1,context.petLevel||1),evolved:!!context.petEvolved,trait:pet.combat},
     inventory:[...(context.inventory||[])],
-    wordStats:context.wordStats||{},wordIds,bossFocus:!!stage.bossFocus,
+    wordStats:context.wordStats||{},wordIds,questionTypes,bossFocus:!!stage.bossFocus,
     selectedSkill:'strike',turn:1,finished:false,won:false,currentQuestion:q,questionStartedAt:Date.now(),lastResult:null,
     correctCount:0,wrongCount:0,usedMemoryLeaf:false,usedBreakCharm:false,stars:0,
   };
 }
 
-export function pickQuestion(wordStats={},wordIds=WORDS.map(w=>w.id),bossFocus=false){
-  const w=pickWeightedWord(wordStats,wordIds,bossFocus),r=Math.random();
-  if(r<.34)return {type:'meaning',label:'意思',wordId:w.id,word:w.word,zh:w.zh,prompt:w.word,answer:w.zh,options:[...w.options]};
-  if(r<.58)return reverseQuestion(w);
-  if(r<.80)return {type:'spelling',label:'拼字',wordId:w.id,word:w.word,zh:w.zh,prompt:maskWord(w.word),answer:w.word,options:[]};
-  return listeningQuestion(w);
+export function pickQuestion(wordStats={},wordIds=WORDS.map(w=>w.id),bossFocus=false,questionTypes=['meaning','reverse','spelling','listening']){
+  const w=pickWeightedWord(wordStats,wordIds,bossFocus);
+  const types=questionTypes.length?questionTypes:['meaning'];
+  const type=types[Math.floor(Math.random()*types.length)];
+  if(type==='reverse')return reverseQuestion(w,wordIds);
+  if(type==='spelling')return {type:'spelling',label:'拼字',wordId:w.id,word:w.word,zh:w.zh,prompt:maskWord(w.word),answer:w.word,options:[]};
+  if(type==='listening')return listeningQuestion(w,wordIds);
+  return {type:'meaning',label:'意思',wordId:w.id,word:w.word,zh:w.zh,prompt:w.word,answer:w.zh,options:[...w.options]};
 }
 
 export function chooseSkill(battle,skillId){return SKILLS.some(s=>s.id===skillId)?{...battle,selectedSkill:skillId,lastResult:null}:battle;}
@@ -130,7 +133,7 @@ export function resolveAnswer(battle,answer){
   if(next.enemy.broken)next.enemy.intent='失衡';else if(correct)result.playerDamage=enemyTurn(next,result);
   if(next.player.hp<=0){finishBattle(next,false);next.lastResult=result;return next;}
 
-  next.turn+=1;next.currentQuestion=pickQuestion(next.wordStats,next.wordIds,next.bossFocus);next.questionStartedAt=Date.now();next.lastResult=result;return next;
+  next.turn+=1;next.currentQuestion=pickQuestion(next.wordStats,next.wordIds,next.bossFocus,next.questionTypes);next.questionStartedAt=Date.now();next.lastResult=result;return next;
 }
 
 function finishBattle(battle,won){
@@ -143,17 +146,19 @@ function finishBattle(battle,won){
 function hasTalent(b,id){return b.player.talents?.includes(id);}
 function pickWeightedWord(stats,wordIds,bossFocus){
   const allowed=WORDS.filter(w=>wordIds.includes(w.id));
+  const missed=allowed.filter(w=>(stats[w.id]?.wrong||0)>0);
+  const source=bossFocus&&missed.length&&Math.random()<.75?missed:allowed;
   const pool=[];
-  for(const w of allowed){
+  for(const w of source){
     const s=stats[w.id]||{correct:0,wrong:0};
     let weight=Math.max(1,1+(s.wrong||0)*2-Math.floor((s.correct||0)/3));
-    if(bossFocus&&(s.wrong||0)>0)weight+=3+(s.wrong||0);
+    if(bossFocus&&(s.wrong||0)>0)weight+=4+(s.wrong||0)*2;
     for(let i=0;i<weight;i++)pool.push(w);
   }
-  return pool[Math.floor(Math.random()*pool.length)]||allowed[0]||WORDS[0];
+  return pool[Math.floor(Math.random()*pool.length)]||source[0]||allowed[0]||WORDS[0];
 }
-function reverseQuestion(w){const d=shuffle(WORDS.filter(x=>x.id!==w.id).map(x=>x.word)).slice(0,3);return {type:'reverse',label:'英譯',wordId:w.id,word:w.word,zh:w.zh,prompt:w.zh,answer:w.word,options:shuffle([w.word,...d])};}
-function listeningQuestion(w){const d=shuffle(WORDS.filter(x=>x.id!==w.id).map(x=>x.word)).slice(0,3);return {type:'listening',label:'聽力',wordId:w.id,word:w.word,zh:w.zh,prompt:'🔊',answer:w.word,options:shuffle([w.word,...d])};}
+function reverseQuestion(w,wordIds){const d=shuffle(WORDS.filter(x=>x.id!==w.id&&wordIds.includes(x.id)).map(x=>x.word)).slice(0,3);return {type:'reverse',label:'英譯',wordId:w.id,word:w.word,zh:w.zh,prompt:w.zh,answer:w.word,options:shuffle([w.word,...d])};}
+function listeningQuestion(w,wordIds){const d=shuffle(WORDS.filter(x=>x.id!==w.id&&wordIds.includes(x.id)).map(x=>x.word)).slice(0,3);return {type:'listening',label:'聽力',wordId:w.id,word:w.word,zh:w.zh,prompt:'🔊',answer:w.word,options:shuffle([w.word,...d])};}
 function maskWord(word){if(word.length<=3)return `${word[0]} _ ${word[word.length-1]}`;const chars=[...word],ids=shuffle([...Array(word.length).keys()].slice(1,-1)).slice(0,Math.max(1,Math.floor(word.length/2)));ids.forEach(i=>chars[i]='_');return chars.join(' ');}
 function norm(v){return String(v??'').trim().toLowerCase();}
 function shuffle(a){const c=[...a];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c;}
