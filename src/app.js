@@ -7,12 +7,13 @@ const app=document.querySelector('#app');
 let state=loadState();
 let view=!state.session?.entered?'login':state.session.roleChosen?'home':'role';
 let battle=null;
+let selectedStageId=1;
 let toastTimer=null;
 
 function render(){
-  const content={login:renderLogin,role:renderRoleSelect,home:renderHome,map:renderMap,battle:renderBattle,pet:renderPets,bag:renderBag,words:renderWords}[view]?.() || renderHome();
+  const content={login:renderLogin,role:renderRoleSelect,home:renderHome,map:renderMap,stage:renderStagePreview,battle:renderBattle,pet:renderPets,bag:renderBag,words:renderWords}[view]?.() || renderHome();
   if(view==='login') app.innerHTML=content;
-  else app.innerHTML=`<main class="app-shell">${content}${!['battle','role'].includes(view)?renderNav():''}</main>`;
+  else app.innerHTML=`<main class="app-shell ${view==='stage'&&STAGES.find(s=>s.id===selectedStageId)?.boss?'boss-shell':''}">${content}${!['battle','role','stage'].includes(view)?renderNav():''}</main>`;
   bindEvents();
 }
 
@@ -57,13 +58,41 @@ function renderHome(){
 
 function renderMap(){
   return `${renderTop('霧森之路',`${state.progress.unlockedStage}/5`)}
-  <div class="section-title"><h2>冒險</h2><span>選一個節點</span></div>
-  <section class="map-card"><div class="path">${STAGES.map(stage=>{
+  <div class="section-title"><h2>冒險</h2><span>點選關卡</span></div>
+  <section class="map-card"><div class="map-glow"></div><div class="path">${STAGES.map((stage,index)=>{
     const unlocked=stage.id<=state.progress.unlockedStage;
     const cleared=state.progress.cleared.includes(stage.id);
     const stars=state.progress.stageStars?.[stage.id]||0;
-    return `<button class="node ${!unlocked?'locked':''} ${stage.boss?'boss':''}" ${unlocked?'data-stage="'+stage.id+'"':''}>${cleared?'✓':stage.icon}<small>${stage.name}${stars?` · ${'★'.repeat(stars)}`:''}</small></button>`;
+    return `<button class="node ${!unlocked?'locked':''} ${stage.boss?'boss':''} ${cleared?'cleared':''}" ${unlocked?'data-preview-stage="'+stage.id+'"':''}>
+      <span class="node-step">${stage.boss?'BOSS':String(index+1).padStart(2,'0')}</span>
+      <span class="node-icon">${cleared?'✓':stage.icon}</span>
+      <small><b>${stage.name}</b><em>${stage.subtitle}</em>${stars?`<i>${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</i>`:''}</small>
+    </button>`;
   }).join('')}</div></section>`;
+}
+
+function renderStagePreview(){
+  const stage=STAGES.find(s=>s.id===selectedStageId)||STAGES[0];
+  const stars=state.progress.stageStars?.[stage.id]||0;
+  const reward=ITEMS.find(i=>i.id===stage.reward);
+  const wordCount=stage.wordIds?.length||0;
+  return `${renderTop(stage.boss?'暮色試煉':stage.name,stage.threat)}
+  <section class="stage-preview ${stage.boss?'boss-preview':''}">
+    ${stage.boss?'<div class="boss-warning">FINAL BATTLE</div>':''}
+    <button class="back-chip" data-action="back-map">← 地圖</button>
+    <div class="preview-art ${stage.boss?'boss-art':''}">${visual(stage.enemy.art,stage.enemy.icon,'preview-enemy-art')}</div>
+    <div class="preview-kicker">${stage.subtitle}</div>
+    <div class="preview-name">${stage.enemy.name}</div>
+    <div class="preview-stars">${stars?'★'.repeat(stars)+'☆'.repeat(3-stars):'☆☆☆'}</div>
+    <div class="preview-grid">
+      <div><strong>${stage.enemy.hp}</strong><span>HP</span></div>
+      <div><strong>${stage.enemy.breakMax}</strong><span>BREAK</span></div>
+      <div><strong>${wordCount}</strong><span>WORDS</span></div>
+    </div>
+    <div class="preview-hint">${stage.boss?'👁 ':''}${stage.hint}</div>
+    <div class="preview-meta"><span>${reward?`${reward.icon} ${reward.name}`:'🎁 獎勵'}</span><span>${stage.boss?'錯題優先':'混合題型'}</span></div>
+    <button class="primary-btn battle-start-btn ${stage.boss?'boss-start':''}" data-start-stage="${stage.id}">${stage.boss?'⚔ 挑戰影語王':'⚔ 開始戰鬥'}</button>
+  </section>`;
 }
 
 function renderBattle(){
@@ -79,9 +108,9 @@ function renderBattle(){
   const result=battle.lastResult;
   const fx=result?.correct?result.effect:'enemy';
   return `${renderTop(stage.name,`Turn ${battle.turn}`)}
-  <section class="battle-stage ${result?'has-feedback':''}">
+  <section class="battle-stage ${stage.boss?'boss-battle':''} ${result?'has-feedback':''}">
     <div class="enemy-box ${fx==='damage'?'hit':''} ${result?.broke?'broken':''}">
-      <div class="enemy-avatar">${visual(battle.enemy.art,battle.enemy.icon,'enemy-art')}</div>${result?renderFeedback(result):''}
+      ${stage.boss?'<div class="boss-aura"></div>':''}<div class="enemy-avatar">${visual(battle.enemy.art,battle.enemy.icon,'enemy-art')}</div>${result?renderFeedback(result):''}
       <div class="enemy-name">${battle.enemy.name}</div><div class="intent">👁 ${battle.enemy.intent}</div>
       ${result?.enemyText?`<div class="battle-note enemy-note">${result.enemyText}</div>`:''}${result?.petText?`<div class="battle-note pet-note">🐾 ${result.petText}</div>`:''}${result?.roleText?`<div class="battle-note role-note">✦ ${result.roleText}</div>`:''}${result?.itemText?`<div class="battle-note role-note">🎒 ${result.itemText}</div>`:''}
     </div>
@@ -143,7 +172,9 @@ function bindEvents(){
   document.querySelector('[data-action="line-login"]')?.addEventListener('click',()=>toast('LINE 登入尚未串接'));
   document.querySelectorAll('[data-role]').forEach(el=>el.addEventListener('click',()=>chooseRole(el.dataset.role)));
   document.querySelector('[data-action="go-map"]')?.addEventListener('click',()=>{view='map';render();});
-  document.querySelectorAll('[data-stage]').forEach(el=>el.addEventListener('click',()=>startBattle(Number(el.dataset.stage))));
+  document.querySelectorAll('[data-preview-stage]').forEach(el=>el.addEventListener('click',()=>openStagePreview(Number(el.dataset.previewStage))));
+  document.querySelector('[data-action="back-map"]')?.addEventListener('click',()=>{view='map';render();});
+  document.querySelectorAll('[data-start-stage]').forEach(el=>el.addEventListener('click',()=>startBattle(Number(el.dataset.startStage))));
   document.querySelectorAll('[data-skill]').forEach(el=>el.addEventListener('click',()=>{battle=chooseSkill(battle,el.dataset.skill);render();}));
   document.querySelectorAll('[data-answer]').forEach(el=>el.addEventListener('click',()=>answer(el.dataset.answer)));
   document.querySelector('[data-action="submit-spelling"]')?.addEventListener('click',submitSpelling);
@@ -169,6 +200,7 @@ function chooseRole(roleId){if(!ROLES.some(r=>r.id===roleId)) return;state.playe
 function selectPet(petId){if(!PETS.some(p=>p.id===petId)) return;state.player.pet=petId;saveState(state);toast('已更換夥伴');render();}
 function upgradePet(petId){const p=state.pets?.[petId];if(!p||p.level>=10)return;const cost=Math.max(1,p.level);if(state.player.stones<cost){toast(`需要 ${cost} 顆星語石`);return;}state.player.stones-=cost;p.level+=1;saveState(state);toast(`升到 Lv.${p.level}`);render();}
 function evolvePet(petId){const pet=PETS.find(p=>p.id===petId);const ps=state.pets?.[petId];const i=state.inventory.indexOf('core');if(!pet||!ps||ps.evolved||ps.level<pet.evolve||i<0)return;ps.evolved=true;state.inventory.splice(i,1);saveState(state);toast('進化成功 ✦');render();}
+function openStagePreview(stageId){const stage=STAGES.find(s=>s.id===stageId);if(!stage||stage.id>state.progress.unlockedStage)return;selectedStageId=stageId;view='stage';render();}
 
 function startBattle(stageId){
   const stage=STAGES.find(s=>s.id===stageId);if(!stage)return;
@@ -207,7 +239,7 @@ function completeStage(stageId,stars=1){
 
 function shortBonus(text){return text.replace('時，',' · ').replace('有機率','').replace('額外','');}
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
-function escapeHtml(value){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function escapeHtml(value){return String(value).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
 function toast(text){document.querySelector('.toast')?.remove();const el=document.createElement('div');el.className='toast';el.textContent=text;document.body.appendChild(el);clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.remove(),900);}
 
 render();
