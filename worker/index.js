@@ -75,8 +75,8 @@ export class Matchmaker extends DurableObject {
     if(result.finished){att.state='finished';oppAtt.state='finished'}
     ws.serializeAttachment(att);opponent.serializeAttachment(oppAtt);
     const nextQ=Math.floor(Math.random()*WORD_COUNT);
-    ws.send(JSON.stringify({type:'battle-result',rounds:result.aRounds,nextQuestionIndex:nextQ,finished:result.finished,winner:result.winner==='a'?'self':result.winner==='b'?'opponent':'draw'}));
-    opponent.send(JSON.stringify({type:'battle-result',rounds:result.bRounds,nextQuestionIndex:nextQ,finished:result.finished,winner:result.winner==='b'?'self':result.winner==='a'?'opponent':'draw'}));
+    ws.send(JSON.stringify({type:'battle-result',rounds:result.aRounds,selfMaxHp:result.aMax,opponentMaxHp:result.bMax,nextQuestionIndex:nextQ,finished:result.finished,winner:result.winner==='a'?'self':result.winner==='b'?'opponent':'draw'}));
+    opponent.send(JSON.stringify({type:'battle-result',rounds:result.bRounds,selfMaxHp:result.bMax,opponentMaxHp:result.aMax,nextQuestionIndex:nextQ,finished:result.finished,winner:result.winner==='b'?'self':result.winner==='a'?'opponent':'draw'}));
   }
 
   cleanSnapshot(s,profile){
@@ -111,13 +111,20 @@ export class Matchmaker extends DurableObject {
   attack(A,D,round){
     let raw=A.atk*(1+A.rage*Math.max(0,A.streak-1));
     if(A.role==='mage'&&round===3)raw*=1+A.arcaneBurst;
+    const critLv=num(A.skills?.crit,0),comboLv=num(A.skills?.combo,0),fireLv=num(A.skills?.fire,0),poisonLv=num(A.skills?.poison,0);
     const critChance=clamp(A.crit+(A.role==='archer'&&round===1?.12+A.firstCrit:0),0,.9);
     const comboChance=clamp(A.combo+(A.role==='archer'&&round===1?.12+A.firstCombo:0),0,.9);
     const crit=Math.random()<critChance,combo=Math.random()<comboChance;
-    if(crit)raw*=2;
+    if(crit)raw*=critLv>=3?2.35:2;
     let damage=Math.max(1,Math.round(raw-D.def-D.shield-D.roleGuard));
-    const elem=A.role==='mage'?1.22+A.elementAmp:1+A.elementAmp;damage+=Math.max(0,Math.round(A.fire*elem));
-    if(combo)damage+=Math.max(1,Math.round(A.atk*.58-D.def*.5));
+    const elem=A.role==='mage'?1.22+A.elementAmp:1+A.elementAmp;
+    const fire=Math.max(0,Math.round(A.fire*elem));
+    damage+=fire;
+    if(fireLv>=3&&round>1)damage+=Math.max(1,Math.round(fire*.35));
+    if(fireLv>=5&&round===3)damage+=Math.max(2,Math.round(fire*1.4));
+    if(A.poison>0){const pm=poisonLv>=5?1.8:poisonLv>=3?1.3:1;damage+=Math.max(1,Math.round(A.poison*elem*pm));}
+    if(combo){damage+=Math.max(1,Math.round(A.atk*(comboLv>=3?.8:.58)-D.def*.5));if(comboLv>=5)damage+=Math.max(1,Math.round(A.atk*.4-D.def*.25));}
+    if(crit&&critLv>=5)damage+=Math.max(1,Math.round(A.atk*.4));
     if(A.pet==='fox'&&Math.random()<.30)damage+=Math.max(1,Math.round(A.atk*.45));
     if(A.pet==='dragon')damage+=3;
     return {damage,crit,combo};
