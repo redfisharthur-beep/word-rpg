@@ -1,7 +1,7 @@
 import { ROLES, PETS, ITEMS, WORDS, STAGES, SKILLS } from './game-data.js';
 import { visual } from './assets.js';
 import { loadState, saveState } from './store.js';
-import { createBattle, chooseSkill, resolveAnswer } from './battle-engine.js';
+import { createBattle, chooseSkill, resolveAnswer, useUltimate } from './battle-engine.js';
 
 const app=document.querySelector('#app');
 let state=loadState();
@@ -98,25 +98,32 @@ function renderStagePreview(){
 function renderBattle(){
   if(!battle){view='map';return renderMap();}
   const stage=STAGES.find(s=>s.id===battle.stageId);
+  const role=ROLES.find(r=>r.id===battle.player.roleId)||ROLES[0];
   const hp=Math.max(0,battle.enemy.currentHp/battle.enemy.hp*100);
   const br=Math.max(0,battle.enemy.break/battle.enemy.breakMax*100);
+  const energy=Math.max(0,Math.min(100,battle.player.energy||0));
   if(battle.finished){
     const reward=battle.rewardEarned?ITEMS.find(i=>i.id===battle.rewardEarned):null;
     const stars=battle.won?'★'.repeat(battle.stars)+'☆'.repeat(3-battle.stars):'';
     return `${renderTop(stage.name)}<section class="hero-card result-card"><div class="result-icon">${battle.won?'🏆':'💤'}</div><div class="hero-title">${battle.won?'勝利':'再試一次'}</div>${battle.won?`<div class="hero-sub" style="font-size:24px">${stars}</div>`:''}${battle.won&&reward?`<div class="loot-reveal">${visual(reward.art,reward.icon,'loot-art')}<strong>${reward.name}</strong><span>${reward.kind}</span></div>`:''}${battle.won&&!reward?`<div class="hero-sub">已完成關卡</div>`:`<div class="hero-sub">${battle.won?'獎勵已收入背包':'休息一下，再回來挑戰'}</div>`}<button class="primary-btn" data-action="finish-battle">返回地圖</button></section>`;
   }
   const result=battle.lastResult;
-  const fx=result?.correct?result.effect:'enemy';
+  const fx=result?.effect==='ultimate'?'damage':result?.correct?result.effect:'enemy';
   return `${renderTop(stage.name,`Turn ${battle.turn}`)}
   <section class="battle-stage ${stage.boss?'boss-battle':''} ${result?'has-feedback':''}">
     <div class="enemy-box ${fx==='damage'?'hit':''} ${result?.broke?'broken':''}">
       ${stage.boss?'<div class="boss-aura"></div>':''}<div class="enemy-avatar">${visual(battle.enemy.art,battle.enemy.icon,'enemy-art')}</div>${result?renderFeedback(result):''}
       <div class="enemy-name">${battle.enemy.name}</div><div class="intent">👁 ${battle.enemy.intent}</div>
-      ${result?.enemyText?`<div class="battle-note enemy-note">${result.enemyText}</div>`:''}${result?.petText?`<div class="battle-note pet-note">🐾 ${result.petText}</div>`:''}${result?.roleText?`<div class="battle-note role-note">✦ ${result.roleText}</div>`:''}${result?.itemText?`<div class="battle-note role-note">🎒 ${result.itemText}</div>`:''}
+      ${result?.enemyText?`<div class="battle-note enemy-note">${result.enemyText}</div>`:''}${result?.petText?`<div class="battle-note pet-note">🐾 ${result.petText}</div>`:''}${result?.roleText?`<div class="battle-note role-note">✦ ${result.roleText}</div>`:''}${result?.itemText?`<div class="battle-note role-note">🎒 ${result.itemText}</div>`:''}${result?.ultimateText?`<div class="battle-note ultimate-note">${role.ultimate.icon} ${result.ultimateText}</div>`:''}
     </div>
     <div class="bar-label"><span>HP</span><span>${battle.enemy.currentHp}/${battle.enemy.hp}</span></div><div class="bar"><i style="width:${hp}%"></i></div>
     <div class="bar-label"><span>BREAK</span><span>${battle.enemy.break}/${battle.enemy.breakMax}</span></div><div class="bar break"><i style="width:${br}%"></i></div>
     <div class="battle-companion"><span>🐾 ${battle.pet.name}</span><small>Lv.${battle.pet.level}${battle.pet.evolved?' ✦':''}</small></div>
+    <div class="ultimate-panel ${energy>=100?'ready':''}">
+      <div class="ultimate-head"><span>${role.ultimate.icon} ${role.ultimate.name}</span><small>${Math.round(energy)} / 100</small></div>
+      <div class="energy-bar"><i style="width:${energy}%"></i></div>
+      <button class="ultimate-btn" data-action="ultimate" ${energy<100?'disabled':''}>${energy>=100?'釋放大招':role.ultimate.desc}</button>
+    </div>
     <div class="skill-row">${SKILLS.map(s=>`<button class="skill-card ${battle.selectedSkill===s.id?'selected':''}" data-skill="${s.id}">${visual(s.art,s.icon,'skill-art')}<span>${s.name}</span></button>`).join('')}</div>
     ${renderQuestion(battle.currentQuestion)}
   </section>`;
@@ -130,6 +137,7 @@ function renderQuestion(q){
 }
 
 function renderFeedback(result){
+  if(result.effect==='ultimate') return `<div class="battle-fx ultimate-fx">-${result.amount}</div>`;
   if(!result.correct) return `<div class="battle-fx enemy-fx">-${result.playerDamage||0} HP</div>`;
   if(result.effect==='damage') return `<div class="battle-fx damage-fx">-${result.amount}</div>`;
   if(result.effect==='break') return `<div class="battle-fx break-fx">${result.broke?'BREAK!':`+${result.amount}`}</div>`;
@@ -176,6 +184,7 @@ function bindEvents(){
   document.querySelector('[data-action="back-map"]')?.addEventListener('click',()=>{view='map';render();});
   document.querySelectorAll('[data-start-stage]').forEach(el=>el.addEventListener('click',()=>startBattle(Number(el.dataset.startStage))));
   document.querySelectorAll('[data-skill]').forEach(el=>el.addEventListener('click',()=>{battle=chooseSkill(battle,el.dataset.skill);render();}));
+  document.querySelector('[data-action="ultimate"]')?.addEventListener('click',activateUltimate);
   document.querySelectorAll('[data-answer]').forEach(el=>el.addEventListener('click',()=>answer(el.dataset.answer)));
   document.querySelector('[data-action="submit-spelling"]')?.addEventListener('click',submitSpelling);
   document.querySelector('#spell-answer')?.addEventListener('keydown',e=>{if(e.key==='Enter') submitSpelling();});
@@ -207,6 +216,13 @@ function startBattle(stageId){
   const petState=state.pets?.[state.player.pet]||{level:1,evolved:false};
   battle=createBattle(stage,{petId:state.player.pet,petLevel:petState.level,petEvolved:petState.evolved,roleId:state.player.role,wordStats:state.progress.wordStats,inventory:state.inventory});
   view='battle';render();
+}
+
+function activateUltimate(){
+  if(!battle||battle.player.energy<100)return;
+  battle=useUltimate(battle);
+  if(battle.finished&&battle.won&&!battle.rewardProcessed){battle.rewardEarned=completeStage(battle.stageId,battle.stars);battle.rewardProcessed=true;saveState(state);}
+  render();
 }
 
 function submitSpelling(){const input=document.querySelector('#spell-answer');const value=(input?.value||'').trim();if(!value){input?.focus();return;}answer(value);}
