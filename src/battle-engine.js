@@ -90,7 +90,7 @@ export function resolveAnswer(battle,answer){
   next.turn+=1;next.currentQuestion=pickQuestion(next.wordStats,next.wordIds,next.bossFocus,next.questionTypes);next.questionStartedAt=Date.now();next.lastResult=result;return next;
 }
 
-function finishBattle(battle,won){battle.finished=true;battle.won=won;const total=Math.max(1,battle.correctCount+battle.wrongCount),accuracy=battle.correctCount/total;battle.accuracy=Math.round(accuracy*100);if(!won){battle.stars=0;return;}battle.stars=1+(accuracy>=.8?1:0)+(battle.player.hp>=50?1:0);}
+function finishBattle(battle,won){if(battle.answeredCount>battle.questionLimit)battle.questionLimit=battle.answeredCount;battle.finished=true;battle.won=won;const total=Math.max(1,battle.correctCount+battle.wrongCount),accuracy=battle.correctCount/total;battle.accuracy=Math.round(accuracy*100);if(!won){battle.stars=0;return;}battle.stars=1+(accuracy>=.8?1:0)+(battle.player.hp>=50?1:0);}
 function dealDamage(battle,damage,canFinish){const nextHp=battle.enemy.currentHp-damage;battle.enemy.currentHp=canFinish?Math.max(0,nextHp):Math.max(1,nextHp);}
 function getQuestionLimit(stageId){return ({1:8,2:9,3:10,4:11,5:12})[stageId]||10;}
 function hasTalent(b,id){return b.player.talents?.includes(id);}
