@@ -32,22 +32,23 @@ export function chooseSkill(battle,skillId){return SKILLS.some(s=>s.id===skillId
 
 export function useUltimate(battle){
   if(!battle||battle.finished||battle.player.energy<100)return battle;
-  const next=structuredClone(battle),role=next.player.roleId;
+  const next=structuredClone(battle),role=next.player.roleId,canFinish=next.mode!=='review'&&next.answeredCount>=next.questionLimit;
   const result={correct:true,answer:'',word:'',zh:'',questionType:'ultimate',effect:'ultimate',amount:0,enemyDamage:0,playerDamage:0,broke:false,petText:'',enemyText:'',roleText:'',itemText:'',ultimateText:''};
   next.player.energy=0;
   if(role==='warrior'){
-    const damage=58+(hasTalent(next,'warrior-rage')?15:0);dealDamage(next,damage,false);next.enemy.break=Math.min(next.enemy.breakMax,next.enemy.break+2);if(next.enemy.break>=next.enemy.breakMax){next.enemy.broken=true;result.broke=true;}result.amount=damage;result.enemyDamage=damage;result.ultimateText=`裂地斬・${damage} 傷害 + Break 2`;
+    const damage=58+(hasTalent(next,'warrior-rage')?15:0);dealDamage(next,damage,canFinish);next.enemy.break=Math.min(next.enemy.breakMax,next.enemy.break+2);if(next.enemy.break>=next.enemy.breakMax){next.enemy.broken=true;result.broke=true;}result.amount=damage;result.enemyDamage=damage;result.ultimateText=`裂地斬・${damage} 傷害 + Break 2`;
   }else if(role==='mage'){
-    const damage=42,guard=24+(hasTalent(next,'mage-starshield')?12:0);dealDamage(next,damage,false);next.player.guard=Math.min(40,next.player.guard+guard);result.amount=damage;result.enemyDamage=damage;result.ultimateText=`星界爆發・傷害 + 護盾 ${guard}`;
+    const damage=42,guard=24+(hasTalent(next,'mage-starshield')?12:0);dealDamage(next,damage,canFinish);next.player.guard=Math.min(40,next.player.guard+guard);result.amount=damage;result.enemyDamage=damage;result.ultimateText=`星界爆發・傷害 + 護盾 ${guard}`;
   }else{
-    const damage=54+(hasTalent(next,'archer-volley')?18:0);dealDamage(next,damage,false);next.enemy.dodge=false;next.player.combo+=3;result.amount=damage;result.enemyDamage=damage;result.ultimateText=`疾風連射・${damage} 傷害 + Combo 3`;
+    const damage=54+(hasTalent(next,'archer-volley')?18:0);dealDamage(next,damage,canFinish);next.enemy.dodge=false;next.player.combo+=3;result.amount=damage;result.enemyDamage=damage;result.ultimateText=`疾風連射・${damage} 傷害 + Combo 3`;
   }
+  if(canFinish&&next.enemy.currentHp<=0)finishBattle(next,true);
   next.lastResult=result;return next;
 }
 
 export function resolveAnswer(battle,answer){
   if(battle.finished)return battle;
-  const q=battle.currentQuestion,correct=norm(answer)===norm(q.answer),skill=SKILLS.find(s=>s.id===battle.selectedSkill)||SKILLS[0],next=structuredClone(battle),elapsed=(Date.now()-battle.questionStartedAt)/1000,isFinalQuestion=next.answeredCount+1>=next.questionLimit;
+  const q=battle.currentQuestion,correct=norm(answer)===norm(q.answer),skill=SKILLS.find(s=>s.id===battle.selectedSkill)||SKILLS[0],next=structuredClone(battle),elapsed=(Date.now()-battle.questionStartedAt)/1000,goalReachedThisAnswer=next.answeredCount+1>=next.questionLimit,wasBrokenAtStart=!!battle.enemy.broken;
   const result={correct,answer,word:q.word,zh:q.zh,questionType:q.type,effect:skill.effect,amount:0,enemyDamage:0,playerDamage:0,broke:false,petText:'',enemyText:'',roleText:'',itemText:'',ultimateText:''};
   next.answeredCount+=1;
   if(correct){
@@ -60,9 +61,9 @@ export function resolveAnswer(battle,answer){
     if(next.player.roleId==='warrior'&&next.player.combo>=3)next.player.energy=Math.min(100,next.player.energy+4);
     if(next.inventory.includes('mist-blade')&&next.player.combo>=3&&skill.effect==='damage'){mult*=1.2;result.itemText='霧鋒・連擊強化';}
     if(next.player.roleId==='mage'&&q.type==='spelling'&&hasTalent(next,'mage-arcane')&&skill.effect==='damage')mult*=1.2;
-    if(next.player.roleId==='warrior'&&next.enemy.broken&&hasTalent(next,'warrior-execution')&&skill.effect==='damage')mult*=1.25;
+    if(next.player.roleId==='warrior'&&wasBrokenAtStart&&hasTalent(next,'warrior-execution')&&skill.effect==='damage')mult*=1.25;
     if(skill.effect==='damage'){
-      let dmg=Math.round(skill.value*(next.enemy.broken?1.8:1)*(next.player.combo>=3?1.2:1)*petCombo(next)*mult);if(next.enemy.armor>0){dmg=Math.max(1,dmg-next.enemy.armor);result.enemyText=`硬殼減傷 ${next.enemy.armor}`;next.enemy.armor=0;}if(next.enemy.dodge){dmg=Math.max(1,Math.round(dmg*.45));result.enemyText='殘影閃避';next.enemy.dodge=false;}dealDamage(next,dmg,isFinalQuestion);result.amount=dmg;result.enemyDamage=dmg;
+      let dmg=Math.round(skill.value*(wasBrokenAtStart?1.8:1)*(next.player.combo>=3?1.2:1)*petCombo(next)*mult);if(next.enemy.armor>0){dmg=Math.max(1,dmg-next.enemy.armor);result.enemyText=`硬殼減傷 ${next.enemy.armor}`;next.enemy.armor=0;}if(next.enemy.dodge){dmg=Math.max(1,Math.round(dmg*.45));result.enemyText='殘影閃避';next.enemy.dodge=false;}dealDamage(next,dmg,goalReachedThisAnswer);result.amount=dmg;result.enemyDamage=dmg;
     }
     if(skill.effect==='break'&&!next.enemy.broken){
       const before=next.enemy.break;let v=skill.value;if(next.player.combo>=3&&next.pet.trait?.kind==='combo')v+=next.pet.evolved?1:0;if(next.player.roleId==='warrior'&&next.player.combo>=2){v+=1;result.roleText='戰士・破勢';}if(hasTalent(next,'warrior-breaker')&&next.player.roleId==='warrior'){v+=1;result.roleText='戰士・破甲專精';}if(next.player.roleId==='mage'&&q.type==='spelling')v+=1;if(next.inventory.includes('break-charm')&&!next.usedBreakCharm){v+=1;next.usedBreakCharm=true;result.itemText='裂紋符・Break +1';}next.enemy.break=Math.min(next.enemy.breakMax,next.enemy.break+v);result.amount=next.enemy.break-before;if(next.enemy.break>=next.enemy.breakMax){next.enemy.broken=true;result.broke=true;}
@@ -76,12 +77,16 @@ export function resolveAnswer(battle,answer){
   }
   if(next.player.hp<=0&&next.mode!=='review'){finishBattle(next,false);next.lastResult=result;return next;}
   if(next.mode==='review'&&next.player.hp<=0)next.player.hp=1;
-  if(correct&&next.enemy.currentHp>0){if(next.enemy.broken)next.enemy.intent='失衡';else result.playerDamage=enemyTurn(next,result);}
+  if(correct&&next.enemy.currentHp>0){
+    if(wasBrokenAtStart){next.enemy.broken=false;next.enemy.break=0;if(!result.enemyText)result.enemyText='失衡加成結束';result.playerDamage=enemyTurn(next,result);}
+    else if(next.enemy.broken){next.enemy.intent='失衡';if(!result.enemyText)result.enemyText='敵人失衡，無法行動';}
+    else result.playerDamage=enemyTurn(next,result);
+  }
   if(next.player.hp<=0&&next.mode!=='review'){finishBattle(next,false);next.lastResult=result;return next;}
   if(next.mode==='review'&&next.player.hp<=0)next.player.hp=1;
-  if(isFinalQuestion){
-    const won=next.mode==='review'?true:next.enemy.currentHp<=0;finishBattle(next,won);if(!won)result.enemyText=result.enemyText||'題數結束，敵人仍有餘力';next.lastResult=result;return next;
-  }
+  if(next.mode==='review'&&goalReachedThisAnswer){finishBattle(next,true);next.lastResult=result;return next;}
+  if(next.mode!=='review'&&goalReachedThisAnswer&&next.enemy.currentHp<=0){finishBattle(next,true);next.lastResult=result;return next;}
+  if(next.mode!=='review'&&goalReachedThisAnswer&&next.enemy.currentHp>0&&!result.enemyText)result.enemyText='學習目標完成・擊倒敵人即可通關';
   next.turn+=1;next.currentQuestion=pickQuestion(next.wordStats,next.wordIds,next.bossFocus,next.questionTypes);next.questionStartedAt=Date.now();next.lastResult=result;return next;
 }
 
@@ -97,6 +102,6 @@ function norm(v){return String(v??'').trim().toLowerCase();}
 function shuffle(a){const c=[...a];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c;}
 function petCombo(b){if(b.pet.trait?.kind!=='combo'||b.player.combo<3)return 1;const t=b.pet.trait,base=b.pet.evolved?t.evolved:t.base;return 1+base+Math.min(.08,(b.pet.level-1)*.01);}
 function petCorrect(b,r){if(b.pet.trait?.kind!=='guard')return;const chance=Math.min(.65,.28+b.pet.level*.03+(b.pet.evolved?.15:0));if(Math.random()>chance)return;const v=(b.pet.evolved?b.pet.trait.evolved:b.pet.trait.base)+Math.floor(b.pet.level/3);b.player.guard=Math.min(40,b.player.guard+v);r.petText=`${b.pet.name} +${v} 護盾`;}
-function enemyTurn(b,r){if(b.enemy.broken){b.enemy.broken=false;b.enemy.break=0;b.enemy.intent=b.enemy.intents?.[0]||'蓄力';r.enemyText='敵人失衡，無法行動';return 0;}const intent=b.enemy.intent;let base=12;if(b.enemy.id==='moss'){if(intent==='纏藤'){b.player.guard=Math.max(0,b.player.guard-8);base=8;r.enemyText='纏藤削弱護盾';}else base=intent==='蓄力'?18:12;}if(b.enemy.id==='rabbit'){if(intent==='殘影'){b.enemy.dodge=true;base=6;r.enemyText='下一次攻擊威力降低';}else base=intent==='突進'?16:18;}if(b.enemy.id==='bubble'){if(intent==='泡泡治癒'){b.enemy.currentHp=Math.min(b.enemy.hp,b.enemy.currentHp+12);base=5;r.enemyText='回復 12 HP';}else base=intent==='膨脹'?19:12;}if(b.enemy.id==='beetle'){if(intent==='硬殼'){b.enemy.armor=10;base=6;r.enemyText='下一次受到傷害 -10';}else base=intent==='角撞'?17:20;}if(b.enemy.id==='shadow'){if(intent==='暗語'){b.player.combo=0;base=10;r.enemyText='Combo 被清空';}else if(intent==='吞噬'){b.enemy.currentHp=Math.min(b.enemy.hp,b.enemy.currentHp+10);base=14;r.enemyText='吸收生命 +10';}else base=intent==='大招'?26:17;}const reduce=petReduction(b),damage=Math.max(0,base-b.player.guard-reduce);if(reduce>0&&damage<base)r.petText=`${b.pet.name} 減傷 ${reduce}`;b.player.hp=Math.max(0,b.player.hp-damage);b.player.guard=0;b.enemy.intent=pickIntent(b.enemy);return damage;}
+function enemyTurn(b,r){if(b.enemy.broken){b.enemy.broken=false;b.enemy.break=0;b.enemy.intent=b.enemy.intents?.[0]||'蓄力';r.enemyText='敵人失衡，無法行動';return 0;}const intent=b.enemy.intent;let base=10;if(b.enemy.id==='moss'){if(intent==='纏藤'){b.player.guard=Math.max(0,b.player.guard-6);base=6;r.enemyText='纏藤削弱護盾';}else base=intent==='蓄力'?12:9;}if(b.enemy.id==='rabbit'){if(intent==='殘影'){b.enemy.dodge=true;base=5;r.enemyText='下一次攻擊威力降低';}else base=intent==='突進'?12:14;}if(b.enemy.id==='bubble'){if(intent==='泡泡治癒'){b.enemy.currentHp=Math.min(b.enemy.hp,b.enemy.currentHp+10);base=5;r.enemyText='回復 10 HP';}else base=intent==='膨脹'?15:10;}if(b.enemy.id==='beetle'){if(intent==='硬殼'){b.enemy.armor=10;base=5;r.enemyText='下一次受到傷害 -10';}else base=intent==='角撞'?15:17;}if(b.enemy.id==='shadow'){if(intent==='暗語'){b.player.combo=0;base=8;r.enemyText='Combo 被清空';}else if(intent==='吞噬'){b.enemy.currentHp=Math.min(b.enemy.hp,b.enemy.currentHp+10);base=12;r.enemyText='吸收生命 +10';}else base=intent==='大招'?22:14;}const reduce=petReduction(b),damage=Math.max(0,base-b.player.guard-reduce);if(reduce>0&&damage<base)r.petText=`${b.pet.name} 減傷 ${reduce}`;b.player.hp=Math.max(0,b.player.hp-damage);b.player.guard=0;b.enemy.intent=pickIntent(b.enemy);return damage;}
 function petReduction(b){if(b.pet.trait?.kind!=='reduce')return 0;const t=b.pet.trait;return (b.pet.evolved?t.evolved:t.base)+Math.floor((b.pet.level-1)/2);}
 function pickIntent(e){const a=e.intents?.length?e.intents:['蓄力','閃避','回復','護甲'];return a[Math.floor(Math.random()*a.length)];}
