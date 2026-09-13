@@ -59,7 +59,7 @@ function maskWord(word){if(word.length<=3)return `${word[0]} _ ${word[word.lengt
 function norm(v){return String(v??'').trim().toLowerCase();}
 function shuffle(a){const c=[...a];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c;}
 function petCombo(b){if(b.pet.trait?.kind!=='combo'||b.player.combo<3)return 1;const t=b.pet.trait,base=b.pet.evolved?t.evolved:t.base;return 1+base+Math.min(.08,(b.pet.level-1)*.01);}
-function petCorrect(b,r){if(b.pet.trait?.kind!=='guard')return;const chance=Math.min(.65,.28+b.pet.level*.03+(b.pet.evolved?.15:0));if(Math.random()>chance)return;const v=(b.pet.evolved?b.pet.trait.evolved:b.pet.trait.base)+Math.floor(b.pet.level/3);b.player.guard=Math.min(40,b.player.guard+v);r.petText=`${b.pet.name} +${v} 護盾`;}
+function petCorrect(b,r){if(b.pet.trait?.kind!=='guard')return;const chance=Math.min(.65,.28+b.pet.level*.03+(b.pet.evolved ? .15 : 0));if(Math.random()>chance)return;const v=(b.pet.evolved?b.pet.trait.evolved:b.pet.trait.base)+Math.floor(b.pet.level/3);b.player.guard=Math.min(40,b.player.guard+v);r.petText=`${b.pet.name} +${v} 護盾`;}
 
 function enemyTurn(b,r){
   if(b.enemy.broken){b.enemy.broken=false;b.enemy.break=0;b.enemy.intent=b.enemy.intents?.[0]||'蓄力';r.enemyText='敵人失衡，無法行動';return 0;}
