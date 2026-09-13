@@ -8,7 +8,7 @@ const initialState={
     owl:{level:1,evolved:false},
     dragon:{level:1,evolved:false},
   },
-  progress:{unlockedStage:1,cleared:[],masteredWords:[],wordStats:{}},
+  progress:{unlockedStage:1,cleared:[],masteredWords:[],wordStats:{},stageStars:{}},
   inventory:['star-stone'],
 };
 
@@ -27,7 +27,7 @@ export function loadState(){
         owl:{...initialState.pets.owl,...saved.pets?.owl},
         dragon:{...initialState.pets.dragon,...saved.pets?.dragon},
       },
-      progress:{...initialState.progress,...saved.progress},
+      progress:{...initialState.progress,...saved.progress,stageStars:{...initialState.progress.stageStars,...saved.progress?.stageStars}},
     };
   }catch{
     return structuredClone(initialState);
