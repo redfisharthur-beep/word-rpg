@@ -112,7 +112,8 @@ function getPetComboBonus(battle){
 
 function applyPetCorrect(battle,result){
   if(battle.pet.trait?.kind!=='guard') return;
-  const chance=Math.min(.65,.28+battle.pet.level*.03+(battle.pet.evolved?.15:0));
+  const evolvedBonus=battle.pet.evolved?0.15:0;
+  const chance=Math.min(.65,.28+battle.pet.level*.03+evolvedBonus);
   if(Math.random()>chance) return;
   const value=(battle.pet.evolved?battle.pet.trait.evolved:battle.pet.trait.base)+Math.floor(battle.pet.level/3);
   battle.player.guard=Math.min(40,battle.player.guard+value);
