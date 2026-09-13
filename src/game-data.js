@@ -1,22 +1,22 @@
 import { ASSETS } from './assets.js';
 
 export const ROLES = [
-  { id:'warrior', name:'戰士', icon:'⚔️', art:ASSETS.role.warrior, bonus:'連續答對 2 題後，額外削弱 Break', color:'#9ba89d' },
-  { id:'mage', name:'法師', icon:'🪄', art:ASSETS.role.mage, bonus:'拼字成功時，技能效果提升', color:'#b8b0be' },
-  { id:'archer', name:'弓手', icon:'🏹', art:ASSETS.role.archer, bonus:'7 秒內答對，額外累積 Combo', color:'#aeb9bf' },
+  { id:'warrior', name:'戰士', icon:'⚔️', art:ASSETS.role.warrior, bonus:'連續答對時，Break +1', color:'#9ba89d' },
+  { id:'mage', name:'法師', icon:'🪄', art:ASSETS.role.mage, bonus:'拼字題成功時，技能效果提升', color:'#b8b0be' },
+  { id:'archer', name:'弓手', icon:'🏹', art:ASSETS.role.archer, bonus:'7 秒內答對時，Combo +1', color:'#aeb9bf' },
 ];
 
 export const PETS = [
   { id:'fox', name:'霧尾狐', icon:'🦊', art:ASSETS.pet.fox, type:'guard', passive:'答對時有機率生成護盾', evolve:8, combat:{kind:'guard',base:4,evolved:7} },
-  { id:'owl', name:'暮光鴞', icon:'🦉', art:ASSETS.pet.owl, type:'mercy', passive:'答錯時降低怪物反擊傷害', evolve:8, combat:{kind:'reduce',base:3,evolved:6} },
+  { id:'owl', name:'暮光鴞', icon:'🦉', art:ASSETS.pet.owl, type:'mercy', passive:'降低怪物反擊傷害', evolve:8, combat:{kind:'reduce',base:3,evolved:6} },
   { id:'dragon', name:'青芽龍', icon:'🐲', art:ASSETS.pet.dragon, type:'combo', passive:'Combo 達 3 時強化技能效果', evolve:10, combat:{kind:'combo',base:.12,evolved:.22} },
 ];
 
 export const ITEMS = [
-  { id:'mist-blade', name:'霧鋒', icon:'🗡️', art:ASSETS.item.mistBlade, kind:'裝備', rarity:'普通', effect:'Combo 3+ 時，攻擊效果 +20%' },
-  { id:'echo-ring', name:'回音戒', icon:'💍', art:ASSETS.item.echoRing, kind:'裝備', rarity:'稀有', effect:'聽力題成功時，抽到回復技能的機率提高' },
+  { id:'mist-blade', name:'霧鋒', icon:'🗡️', art:ASSETS.item.mistBlade, kind:'裝備', rarity:'普通', effect:'Combo 3+ 時，攻擊 +20%' },
+  { id:'echo-ring', name:'回音戒', icon:'💍', art:ASSETS.item.echoRing, kind:'裝備', rarity:'稀有', effect:'聽力題答對時，額外獲得 6 護盾' },
   { id:'memory-leaf', name:'記憶葉', icon:'🍃', art:ASSETS.item.memoryLeaf, kind:'寶物', rarity:'普通', effect:'每場第一次答錯不會中斷 Combo' },
-  { id:'break-charm', name:'裂紋符', icon:'🪬', art:ASSETS.item.breakCharm, kind:'寶物', rarity:'稀有', effect:'Break 技能第一次成功時額外 +1' },
+  { id:'break-charm', name:'裂紋符', icon:'🪬', art:ASSETS.item.breakCharm, kind:'寶物', rarity:'稀有', effect:'每場第一次使用破陣時，Break +1' },
   { id:'star-stone', name:'星語石', icon:'🔹', art:ASSETS.item.starStone, kind:'素材', rarity:'素材', effect:'寵物升級與進化用' },
   { id:'core', name:'進化核心', icon:'💠', art:ASSETS.item.core, kind:'素材', rarity:'稀有素材', effect:'寵物進化必需品' },
 ];
@@ -35,11 +35,11 @@ export const WORDS = [
 ];
 
 export const STAGES = [
-  { id:1, name:'苔蘚小徑', icon:'🌿', enemy:{id:'moss',name:'苔球獸',icon:'🟢',art:ASSETS.enemy.moss,hp:70,intent:'纏藤',breakMax:3,intents:['纏藤','蓄力','撞擊']}, reward:'star-stone' },
-  { id:2, name:'霧林入口', icon:'🌫️', enemy:{id:'rabbit',name:'霧角兔',icon:'🐇',art:ASSETS.enemy.rabbit,hp:85,intent:'殘影',breakMax:3,intents:['殘影','突進','蓄力']}, reward:'memory-leaf' },
-  { id:3, name:'靜水橋', icon:'🌉', enemy:{id:'bubble',name:'泡泡怪',icon:'🫧',art:ASSETS.enemy.bubble,hp:95,intent:'泡泡治癒',breakMax:4,intents:['泡泡治癒','水彈','膨脹']}, reward:'mist-blade' },
-  { id:4, name:'古樹空洞', icon:'🌳', enemy:{id:'beetle',name:'木甲蟲',icon:'🪲',art:ASSETS.enemy.beetle,hp:110,intent:'硬殼',breakMax:4,intents:['硬殼','角撞','蓄力']}, reward:'break-charm' },
-  { id:5, name:'暮色祭壇', icon:'🗿', enemy:{id:'shadow',name:'影語王',icon:'👁️',art:ASSETS.enemy.shadowKing,hp:150,intent:'暗語',breakMax:5,intents:['暗語','影襲','大招','吞噬']}, reward:'core', boss:true },
+  { id:1, name:'苔蘚小徑', icon:'🌿', wordIds:[1,2,3,4], enemy:{id:'moss',name:'苔球獸',icon:'🟢',art:ASSETS.enemy.moss,hp:70,intent:'纏藤',breakMax:3,intents:['纏藤','蓄力','撞擊']}, reward:'star-stone' },
+  { id:2, name:'霧林入口', icon:'🌫️', wordIds:[2,3,4,5,6], enemy:{id:'rabbit',name:'霧角兔',icon:'🐇',art:ASSETS.enemy.rabbit,hp:85,intent:'殘影',breakMax:3,intents:['殘影','突進','蓄力']}, reward:'memory-leaf' },
+  { id:3, name:'靜水橋', icon:'🌉', wordIds:[4,5,6,7], enemy:{id:'bubble',name:'泡泡怪',icon:'🫧',art:ASSETS.enemy.bubble,hp:95,intent:'泡泡治癒',breakMax:4,intents:['泡泡治癒','水彈','膨脹']}, reward:'mist-blade' },
+  { id:4, name:'古樹空洞', icon:'🌳', wordIds:[5,6,7,8,9], enemy:{id:'beetle',name:'木甲蟲',icon:'🪲',art:ASSETS.enemy.beetle,hp:110,intent:'硬殼',breakMax:4,intents:['硬殼','角撞','蓄力']}, reward:'break-charm' },
+  { id:5, name:'暮色祭壇', icon:'🗿', wordIds:[1,2,3,4,5,6,7,8,9,10], bossFocus:true, enemy:{id:'shadow',name:'影語王',icon:'👁️',art:ASSETS.enemy.shadowKing,hp:150,intent:'暗語',breakMax:5,intents:['暗語','影襲','大招','吞噬']}, reward:'core', boss:true },
 ];
 
 export const SKILLS = [
