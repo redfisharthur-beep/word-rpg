@@ -43,13 +43,14 @@ function renderHome(){
   const pet=PETS.find(p=>p.id===state.player.pet) || PETS[0];
   const petState=state.pets?.[pet.id] || {level:1,evolved:false};
   const playerName=state.player.name||'勇者';
+  const starTotal=Object.values(state.progress.stageStars||{}).reduce((a,b)=>a+b,0);
   return `${renderTop('WORD RPG')}
   <section class="hero-card">
     <div class="avatar-wrap">${visual(role.art,role.icon,'hero-art')}<div class="pet-bubble">${visual(pet.art,pet.icon,'pet-art')}</div></div>
     <div class="hero-title">${role.name}・${playerName}</div>
     <div class="hero-sub">${pet.name} Lv.${petState.level}${petState.evolved?' · ✦':''}</div>
     <button class="primary-btn" data-action="go-map">▶ 開始冒險</button>
-    <div class="stats"><div class="stat"><strong>${state.progress.cleared.length}</strong><span>關卡</span></div><div class="stat"><strong>${state.progress.masteredWords.length}</strong><span>熟練字</span></div><div class="stat"><strong>${state.player.stones}</strong><span>星語石</span></div></div>
+    <div class="stats"><div class="stat"><strong>${starTotal}</strong><span>⭐ 星等</span></div><div class="stat"><strong>${state.progress.masteredWords.length}</strong><span>熟練字</span></div><div class="stat"><strong>${state.player.stones}</strong><span>星語石</span></div></div>
   </section>
   <section class="quick-grid"><button class="quick soft-btn" data-view="pet">${visual(pet.art,pet.icon,'nav-art')}<span>寵物</span></button><button class="quick soft-btn" data-view="words"><span class="emoji">📖</span><span>圖鑑</span></button></section>`;
 }
@@ -60,7 +61,8 @@ function renderMap(){
   <section class="map-card"><div class="path">${STAGES.map(stage=>{
     const unlocked=stage.id<=state.progress.unlockedStage;
     const cleared=state.progress.cleared.includes(stage.id);
-    return `<button class="node ${!unlocked?'locked':''} ${stage.boss?'boss':''}" ${unlocked?'data-stage="'+stage.id+'"':''}>${cleared?'✅':stage.icon}<small>${stage.name}</small></button>`;
+    const stars=state.progress.stageStars?.[stage.id]||0;
+    return `<button class="node ${!unlocked?'locked':''} ${stage.boss?'boss':''}" ${unlocked?'data-stage="'+stage.id+'"':''}>${cleared?'✓':stage.icon}<small>${stage.name}${stars?` · ${'★'.repeat(stars)}`:''}</small></button>`;
   }).join('')}</div></section>`;
 }
 
@@ -71,7 +73,8 @@ function renderBattle(){
   const br=Math.max(0,battle.enemy.break/battle.enemy.breakMax*100);
   if(battle.finished){
     const reward=battle.rewardEarned?ITEMS.find(i=>i.id===battle.rewardEarned):null;
-    return `${renderTop(stage.name)}<section class="hero-card result-card"><div class="result-icon">${battle.won?'🏆':'💤'}</div><div class="hero-title">${battle.won?'勝利':'再試一次'}</div>${battle.won&&reward?`<div class="loot-reveal">${visual(reward.art,reward.icon,'loot-art')}<strong>${reward.name}</strong><span>${reward.kind}</span></div>`:''}${battle.won&&!reward?`<div class="hero-sub">已完成關卡</div>`:`<div class="hero-sub">${battle.won?'獎勵已收入背包':'休息一下，再回來挑戰'}</div>`}<button class="primary-btn" data-action="finish-battle">返回地圖</button></section>`;
+    const stars=battle.won?'★'.repeat(battle.stars)+'☆'.repeat(3-battle.stars):'';
+    return `${renderTop(stage.name)}<section class="hero-card result-card"><div class="result-icon">${battle.won?'🏆':'💤'}</div><div class="hero-title">${battle.won?'勝利':'再試一次'}</div>${battle.won?`<div class="hero-sub" style="font-size:24px">${stars}</div>`:''}${battle.won&&reward?`<div class="loot-reveal">${visual(reward.art,reward.icon,'loot-art')}<strong>${reward.name}</strong><span>${reward.kind}</span></div>`:''}${battle.won&&!reward?`<div class="hero-sub">已完成關卡</div>`:`<div class="hero-sub">${battle.won?'獎勵已收入背包':'休息一下，再回來挑戰'}</div>`}<button class="primary-btn" data-action="finish-battle">返回地圖</button></section>`;
   }
   const result=battle.lastResult;
   const fx=result?.correct?result.effect:'enemy';
@@ -80,7 +83,7 @@ function renderBattle(){
     <div class="enemy-box ${fx==='damage'?'hit':''} ${result?.broke?'broken':''}">
       <div class="enemy-avatar">${visual(battle.enemy.art,battle.enemy.icon,'enemy-art')}</div>${result?renderFeedback(result):''}
       <div class="enemy-name">${battle.enemy.name}</div><div class="intent">👁 ${battle.enemy.intent}</div>
-      ${result?.enemyText?`<div class="battle-note enemy-note">${result.enemyText}</div>`:''}${result?.petText?`<div class="battle-note pet-note">🐾 ${result.petText}</div>`:''}${result?.roleText?`<div class="battle-note role-note">✦ ${result.roleText}</div>`:''}
+      ${result?.enemyText?`<div class="battle-note enemy-note">${result.enemyText}</div>`:''}${result?.petText?`<div class="battle-note pet-note">🐾 ${result.petText}</div>`:''}${result?.roleText?`<div class="battle-note role-note">✦ ${result.roleText}</div>`:''}${result?.itemText?`<div class="battle-note role-note">🎒 ${result.itemText}</div>`:''}
     </div>
     <div class="bar-label"><span>HP</span><span>${battle.enemy.currentHp}/${battle.enemy.hp}</span></div><div class="bar"><i style="width:${hp}%"></i></div>
     <div class="bar-label"><span>BREAK</span><span>${battle.enemy.break}/${battle.enemy.breakMax}</span></div><div class="bar break"><i style="width:${br}%"></i></div>
@@ -92,12 +95,8 @@ function renderBattle(){
 
 function renderQuestion(q){
   const status=`<div class="status-line"><span class="mini-pill">🔥 ${battle.player.combo}</span><span class="status-mini">❤️ ${battle.player.hp} · 🛡️ ${battle.player.guard}</span></div>`;
-  if(q.type==='spelling'){
-    return `<div class="question-card">${status}<div class="question-kind">✎ ${q.label}</div><div class="question-word">${q.prompt}</div><div class="question-hint">${q.zh}</div><div class="spell-row"><input id="spell-answer" class="spell-input" autocomplete="off" autocapitalize="none" placeholder="type..."><button class="spell-submit" data-action="submit-spelling">GO</button></div></div>`;
-  }
-  if(q.type==='listening'){
-    return `<div class="question-card">${status}<div class="question-kind">🔊 ${q.label}</div><button class="listen-btn" data-action="speak-word">🔊</button><div class="answers">${q.options.map(o=>`<button class="soft-btn" data-answer="${o}">${o}</button>`).join('')}</div></div>`;
-  }
+  if(q.type==='spelling') return `<div class="question-card">${status}<div class="question-kind">✎ ${q.label}</div><div class="question-word">${q.prompt}</div><div class="question-hint">${q.zh}</div><div class="spell-row"><input id="spell-answer" class="spell-input" autocomplete="off" autocapitalize="none" placeholder="type..."><button class="spell-submit" data-action="submit-spelling">GO</button></div></div>`;
+  if(q.type==='listening') return `<div class="question-card">${status}<div class="question-kind">🔊 ${q.label}</div><button class="listen-btn" data-action="speak-word">🔊</button><div class="answers">${q.options.map(o=>`<button class="soft-btn" data-answer="${o}">${o}</button>`).join('')}</div></div>`;
   return `<div class="question-card">${status}<div class="question-kind">${q.type==='reverse'?'⇄':'◆'} ${q.label}</div><div class="question-word">${q.prompt}</div><div class="answers">${shuffle([...q.options]).map(o=>`<button class="soft-btn" data-answer="${o}">${o}</button>`).join('')}</div></div>`;
 }
 
@@ -174,16 +173,12 @@ function evolvePet(petId){const pet=PETS.find(p=>p.id===petId);const ps=state.pe
 function startBattle(stageId){
   const stage=STAGES.find(s=>s.id===stageId);if(!stage)return;
   const petState=state.pets?.[state.player.pet]||{level:1,evolved:false};
-  battle=createBattle(stage,{petId:state.player.pet,petLevel:petState.level,petEvolved:petState.evolved,roleId:state.player.role,wordStats:state.progress.wordStats});
+  battle=createBattle(stage,{petId:state.player.pet,petLevel:petState.level,petEvolved:petState.evolved,roleId:state.player.role,wordStats:state.progress.wordStats,inventory:state.inventory});
   view='battle';render();
 }
 
 function submitSpelling(){const input=document.querySelector('#spell-answer');const value=(input?.value||'').trim();if(!value){input?.focus();return;}answer(value);}
-
-function speakCurrentWord(){
-  const word=battle?.currentQuestion?.word;if(!word||!('speechSynthesis'in window))return;
-  window.speechSynthesis.cancel();const utter=new SpeechSynthesisUtterance(word);utter.lang='en-US';utter.rate=.82;window.speechSynthesis.speak(utter);
-}
+function speakCurrentWord(){const word=battle?.currentQuestion?.word;if(!word||!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const utter=new SpeechSynthesisUtterance(word);utter.lang='en-US';utter.rate=.82;window.speechSynthesis.speak(utter);}
 
 function answer(answerText){
   const q=battle.currentQuestion;
@@ -194,12 +189,14 @@ function answer(answerText){
   if(total>=3&&stats.correct/total>=.8&&!state.progress.masteredWords.includes(q.wordId)) state.progress.masteredWords.push(q.wordId);
   battle.wordStats=state.progress.wordStats;
   battle=resolveAnswer(battle,answerText);
-  if(battle.finished&&battle.won&&!battle.rewardProcessed){battle.rewardEarned=completeStage(battle.stageId);battle.rewardProcessed=true;}
+  if(battle.finished&&battle.won&&!battle.rewardProcessed){battle.rewardEarned=completeStage(battle.stageId,battle.stars);battle.rewardProcessed=true;}
   saveState(state);toast(correct?'✓ 正確':`✕ ${q.word} = ${q.zh}`);render();
 }
 
-function completeStage(stageId){
+function completeStage(stageId,stars=1){
   const stage=STAGES.find(s=>s.id===stageId);if(!stage)return null;
+  const previous=state.progress.stageStars?.[stageId]||0;
+  state.progress.stageStars={...(state.progress.stageStars||{}),[stageId]:Math.max(previous,stars)};
   const firstClear=!state.progress.cleared.includes(stageId);state.player.exp+=20;
   if(state.player.exp>=100){state.player.level+=1;state.player.exp-=100;}
   if(!firstClear)return null;
