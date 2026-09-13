@@ -5,14 +5,28 @@ import { createBattle, chooseSkill, resolveAnswer } from './battle-engine.js';
 
 const app=document.querySelector('#app');
 let state=loadState();
-let view='home';
+let view=state.session?.entered?'home':'login';
 let battle=null;
 let toastTimer=null;
 
 function render(){
-  const content={home:renderHome,map:renderMap,battle:renderBattle,pet:renderPets,bag:renderBag,words:renderWords}[view]?.() || renderHome();
-  app.innerHTML=`<main class="app-shell">${content}${view!=='battle'?renderNav():''}</main>`;
+  const content={login:renderLogin,home:renderHome,map:renderMap,battle:renderBattle,pet:renderPets,bag:renderBag,words:renderWords}[view]?.() || renderHome();
+  if(view==='login'){
+    app.innerHTML=content;
+  }else{
+    app.innerHTML=`<main class="app-shell">${content}${view!=='battle'?renderNav():''}</main>`;
+  }
   bindEvents();
+}
+
+function renderLogin(){
+  return `<main class="login-screen">
+    <div class="login-panel">
+      <input class="login-name" id="player-name" type="text" maxlength="12" autocomplete="nickname" placeholder="輸入名字" value="${escapeHtml(state.player.name||'')}" aria-label="輸入名字">
+      <button class="line-login-btn" data-action="line-login" type="button"><span class="line-mark">LINE</span><span>LINE 登入</span></button>
+      <button class="enter-game-btn" data-action="enter-game" type="button">進入</button>
+    </div>
+  </main>`;
 }
 
 function renderTop(title,meta=''){
@@ -22,10 +36,11 @@ function renderTop(title,meta=''){
 function renderHome(){
   const role=ROLES.find(r=>r.id===state.player.role) || ROLES[0];
   const pet=PETS.find(p=>p.id===state.player.pet) || PETS[0];
+  const playerName=state.player.name||'勇者';
   return `${renderTop('WORD RPG')}
   <section class="hero-card">
     <div class="avatar-wrap">${visual(role.art,role.icon,'hero-art')}<div class="pet-bubble">${visual(pet.art,pet.icon,'pet-art')}</div></div>
-    <div class="hero-title">${role.name}・${state.player.name}</div>
+    <div class="hero-title">${role.name}・${playerName}</div>
     <div class="hero-sub">${role.bonus}</div>
     <button class="primary-btn" data-action="go-map">▶ 開始冒險</button>
     <div class="stats">
@@ -126,12 +141,26 @@ function renderNav(){
 
 function bindEvents(){
   document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>{view=el.dataset.view;render();}));
+  document.querySelector('[data-action="enter-game"]')?.addEventListener('click',enterGame);
+  document.querySelector('#player-name')?.addEventListener('keydown',event=>{if(event.key==='Enter') enterGame();});
+  document.querySelector('[data-action="line-login"]')?.addEventListener('click',()=>toast('LINE 登入尚未串接'));
   document.querySelector('[data-action="go-map"]')?.addEventListener('click',()=>{view='map';render();});
   document.querySelectorAll('[data-stage]').forEach(el=>el.addEventListener('click',()=>startBattle(Number(el.dataset.stage))));
   document.querySelectorAll('[data-skill]').forEach(el=>el.addEventListener('click',()=>{battle=chooseSkill(battle,el.dataset.skill);render();}));
   document.querySelectorAll('[data-answer]').forEach(el=>el.addEventListener('click',()=>answer(el.dataset.answer)));
   document.querySelectorAll('[data-pet]').forEach(el=>el.addEventListener('click',()=>{state.player.pet=el.dataset.pet;saveState(state);toast('已更換夥伴');render();}));
   document.querySelector('[data-action="finish-battle"]')?.addEventListener('click',()=>{battle=null;view='map';render();});
+}
+
+function enterGame(){
+  const input=document.querySelector('#player-name');
+  const name=(input?.value||'').trim();
+  if(!name){toast('請輸入名字');input?.focus();return;}
+  state.player.name=name.slice(0,12);
+  state.session={entered:true,loginMethod:'guest'};
+  saveState(state);
+  view='home';
+  render();
 }
 
 function startBattle(stageId){
@@ -178,6 +207,10 @@ function rewardLabel(id){
 function shuffle(arr){
   for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
   return arr;
+}
+
+function escapeHtml(value){
+  return String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 }
 
 function toast(text){
