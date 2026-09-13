@@ -5,6 +5,7 @@ export function createBattle(stage,context={}){
   const wordIds=stage.wordIds?.length?stage.wordIds:WORDS.map(w=>w.id);
   const questionTypes=stage.questionTypes?.length?stage.questionTypes:['meaning','reverse','spelling','listening'];
   const q=pickQuestion(context.wordStats||{},wordIds,!!stage.bossFocus,questionTypes);
+  const questionLimit=getQuestionLimit(stage.id);
   return {
     stageId:stage.id,
     enemy:{...stage.enemy,currentHp:stage.enemy.hp,break:0,broken:false,dodge:false,armor:0},
@@ -13,7 +14,7 @@ export function createBattle(stage,context={}){
     inventory:[...(context.inventory||[])],
     wordStats:context.wordStats||{},wordIds,questionTypes,bossFocus:!!stage.bossFocus,
     selectedSkill:'strike',turn:1,finished:false,won:false,currentQuestion:q,questionStartedAt:Date.now(),lastResult:null,
-    correctCount:0,wrongCount:0,usedMemoryLeaf:false,usedBreakCharm:false,stars:0,
+    correctCount:0,wrongCount:0,answeredCount:0,questionLimit,usedMemoryLeaf:false,usedBreakCharm:false,stars:0,accuracy:0,
   };
 }
 
@@ -38,25 +39,24 @@ export function useUltimate(battle){
 
   if(role==='warrior'){
     const damage=58+(hasTalent(next,'warrior-rage')?15:0);
-    next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
+    dealDamage(next,damage,false);
     next.enemy.break=Math.min(next.enemy.breakMax,next.enemy.break+2);
     if(next.enemy.break>=next.enemy.breakMax){next.enemy.broken=true;result.broke=true;}
     result.amount=damage;result.enemyDamage=damage;result.ultimateText=`裂地斬・${damage} 傷害 + Break 2`;
   }else if(role==='mage'){
     const damage=42;
     const guard=24+(hasTalent(next,'mage-starshield')?12:0);
-    next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
+    dealDamage(next,damage,false);
     next.player.guard=Math.min(40,next.player.guard+guard);
     result.amount=damage;result.enemyDamage=damage;result.ultimateText=`星界爆發・傷害 + 護盾 ${guard}`;
   }else{
     const damage=54+(hasTalent(next,'archer-volley')?18:0);
-    next.enemy.currentHp=Math.max(0,next.enemy.currentHp-damage);
+    dealDamage(next,damage,false);
     next.enemy.dodge=false;
     next.player.combo+=3;
     result.amount=damage;result.enemyDamage=damage;result.ultimateText=`疾風連射・${damage} 傷害 + Combo 3`;
   }
 
-  if(next.enemy.currentHp<=0){finishBattle(next,true);next.lastResult=result;return next;}
   next.lastResult=result;
   return next;
 }
@@ -64,7 +64,10 @@ export function useUltimate(battle){
 export function resolveAnswer(battle,answer){
   if(battle.finished)return battle;
   const q=battle.currentQuestion,correct=norm(answer)===norm(q.answer),skill=SKILLS.find(s=>s.id===battle.selectedSkill)||SKILLS[0],next=structuredClone(battle),elapsed=(Date.now()-battle.questionStartedAt)/1000;
+  const isFinalQuestion=next.answeredCount+1>=next.questionLimit;
   const result={correct,answer,word:q.word,zh:q.zh,questionType:q.type,effect:skill.effect,amount:0,enemyDamage:0,playerDamage:0,broke:false,petText:'',enemyText:'',roleText:'',itemText:'',ultimateText:''};
+
+  next.answeredCount+=1;
 
   if(correct){
     next.correctCount+=1;next.player.combo+=1;next.player.energy=Math.min(100,next.player.energy+22);let mult=1;
@@ -95,7 +98,7 @@ export function resolveAnswer(battle,answer){
       let dmg=Math.round(skill.value*(next.enemy.broken?1.8:1)*(next.player.combo>=3?1.2:1)*petCombo(next)*mult);
       if(next.enemy.armor>0){dmg=Math.max(1,dmg-next.enemy.armor);result.enemyText=`硬殼減傷 ${next.enemy.armor}`;next.enemy.armor=0;}
       if(next.enemy.dodge){dmg=Math.max(1,Math.round(dmg*.45));result.enemyText='殘影閃避';next.enemy.dodge=false;}
-      next.enemy.currentHp=Math.max(0,next.enemy.currentHp-dmg);result.amount=dmg;result.enemyDamage=dmg;
+      dealDamage(next,dmg,isFinalQuestion);result.amount=dmg;result.enemyDamage=dmg;
     }
 
     if(skill.effect==='break'&&!next.enemy.broken){
@@ -129,20 +132,38 @@ export function resolveAnswer(battle,answer){
     result.playerDamage=enemyTurn(next,result);
   }
 
-  if(next.enemy.currentHp<=0){finishBattle(next,true);next.lastResult=result;return next;}
-  if(next.enemy.broken)next.enemy.intent='失衡';else if(correct)result.playerDamage=enemyTurn(next,result);
   if(next.player.hp<=0){finishBattle(next,false);next.lastResult=result;return next;}
+
+  if(correct&&next.enemy.currentHp>0){
+    if(next.enemy.broken)next.enemy.intent='失衡';
+    else result.playerDamage=enemyTurn(next,result);
+  }
+  if(next.player.hp<=0){finishBattle(next,false);next.lastResult=result;return next;}
+
+  if(isFinalQuestion){
+    const won=next.enemy.currentHp<=0;
+    finishBattle(next,won);
+    if(!won)result.enemyText=result.enemyText||'題數結束，敵人仍有餘力';
+    next.lastResult=result;
+    return next;
+  }
 
   next.turn+=1;next.currentQuestion=pickQuestion(next.wordStats,next.wordIds,next.bossFocus,next.questionTypes);next.questionStartedAt=Date.now();next.lastResult=result;return next;
 }
 
 function finishBattle(battle,won){
   battle.finished=true;battle.won=won;
-  if(!won){battle.stars=0;return;}
   const total=Math.max(1,battle.correctCount+battle.wrongCount),accuracy=battle.correctCount/total;
+  battle.accuracy=Math.round(accuracy*100);
+  if(!won){battle.stars=0;return;}
   battle.stars=1+(accuracy>=.8?1:0)+(battle.player.hp>=50?1:0);
 }
 
+function dealDamage(battle,damage,canFinish){
+  const nextHp=battle.enemy.currentHp-damage;
+  battle.enemy.currentHp=canFinish?Math.max(0,nextHp):Math.max(1,nextHp);
+}
+function getQuestionLimit(stageId){return ({1:8,2:9,3:10,4:11,5:12})[stageId]||10;}
 function hasTalent(b,id){return b.player.talents?.includes(id);}
 function pickWeightedWord(stats,wordIds,bossFocus){
   const allowed=WORDS.filter(w=>wordIds.includes(w.id));
