@@ -2,12 +2,22 @@ import { SKILLS, WORDS, PETS } from './game-data.js';
 
 export function createBattle(stage,context={}){
   const pet=PETS.find(p=>p.id===context.petId)||PETS[0];
-  const q=pickQuestion(context.wordStats||{});
-  return {stageId:stage.id,enemy:{...stage.enemy,currentHp:stage.enemy.hp,break:0,broken:false,dodge:false,armor:0},player:{hp:100,maxHp:100,guard:0,combo:0,roleId:context.roleId||'warrior'},pet:{id:pet.id,name:pet.name,level:Math.max(1,context.petLevel||1),evolved:!!context.petEvolved,trait:pet.combat},selectedSkill:'strike',turn:1,finished:false,won:false,wordStats:context.wordStats||{},currentQuestion:q,questionStartedAt:Date.now(),lastResult:null};
+  const wordIds=stage.wordIds?.length?stage.wordIds:WORDS.map(w=>w.id);
+  const q=pickQuestion(context.wordStats||{},wordIds,!!stage.bossFocus);
+  return {
+    stageId:stage.id,
+    enemy:{...stage.enemy,currentHp:stage.enemy.hp,break:0,broken:false,dodge:false,armor:0},
+    player:{hp:100,maxHp:100,guard:0,combo:0,roleId:context.roleId||'warrior'},
+    pet:{id:pet.id,name:pet.name,level:Math.max(1,context.petLevel||1),evolved:!!context.petEvolved,trait:pet.combat},
+    inventory:[...(context.inventory||[])],
+    wordStats:context.wordStats||{},wordIds,bossFocus:!!stage.bossFocus,
+    selectedSkill:'strike',turn:1,finished:false,won:false,currentQuestion:q,questionStartedAt:Date.now(),lastResult:null,
+    correctCount:0,wrongCount:0,usedMemoryLeaf:false,usedBreakCharm:false,stars:0,
+  };
 }
 
-export function pickQuestion(wordStats={}){
-  const w=pickWeightedWord(wordStats),r=Math.random();
+export function pickQuestion(wordStats={},wordIds=WORDS.map(w=>w.id),bossFocus=false){
+  const w=pickWeightedWord(wordStats,wordIds,bossFocus),r=Math.random();
   if(r<.34)return {type:'meaning',label:'意思',wordId:w.id,word:w.word,zh:w.zh,prompt:w.word,answer:w.zh,options:[...w.options]};
   if(r<.58)return reverseQuestion(w);
   if(r<.80)return {type:'spelling',label:'拼字',wordId:w.id,word:w.word,zh:w.zh,prompt:maskWord(w.word),answer:w.word,options:[]};
@@ -19,39 +29,72 @@ export function chooseSkill(battle,skillId){return SKILLS.some(s=>s.id===skillId
 export function resolveAnswer(battle,answer){
   if(battle.finished)return battle;
   const q=battle.currentQuestion,correct=norm(answer)===norm(q.answer),skill=SKILLS.find(s=>s.id===battle.selectedSkill)||SKILLS[0],next=structuredClone(battle),elapsed=(Date.now()-battle.questionStartedAt)/1000;
-  const result={correct,answer,word:q.word,zh:q.zh,questionType:q.type,effect:skill.effect,amount:0,enemyDamage:0,playerDamage:0,broke:false,petText:'',enemyText:'',roleText:''};
+  const result={correct,answer,word:q.word,zh:q.zh,questionType:q.type,effect:skill.effect,amount:0,enemyDamage:0,playerDamage:0,broke:false,petText:'',enemyText:'',roleText:'',itemText:''};
+
   if(correct){
-    next.player.combo+=1;let mult=1;
+    next.correctCount+=1;next.player.combo+=1;let mult=1;
     if(next.player.roleId==='mage'&&q.type==='spelling'){mult=1.35;result.roleText='法師・拼字共鳴';}
     if(next.player.roleId==='archer'&&elapsed<=7){next.player.combo+=1;mult*=1.12;result.roleText='弓手・迅捷連擊';}
+    if(next.inventory.includes('mist-blade')&&next.player.combo>=3&&skill.effect==='damage'){mult*=1.2;result.itemText='霧鋒・連擊強化';}
+
     if(skill.effect==='damage'){
       let dmg=Math.round(skill.value*(next.enemy.broken?1.8:1)*(next.player.combo>=3?1.2:1)*petCombo(next)*mult);
       if(next.enemy.armor>0){dmg=Math.max(1,dmg-next.enemy.armor);result.enemyText=`硬殼減傷 ${next.enemy.armor}`;next.enemy.armor=0;}
       if(next.enemy.dodge){dmg=Math.max(1,Math.round(dmg*.45));result.enemyText='殘影閃避';next.enemy.dodge=false;}
       next.enemy.currentHp=Math.max(0,next.enemy.currentHp-dmg);result.amount=dmg;result.enemyDamage=dmg;
     }
+
     if(skill.effect==='break'&&!next.enemy.broken){
       const before=next.enemy.break;let v=skill.value;
       if(next.player.combo>=3&&next.pet.trait?.kind==='combo')v+=next.pet.evolved?1:0;
       if(next.player.roleId==='warrior'&&next.player.combo>=2){v+=1;result.roleText='戰士・破勢';}
       if(next.player.roleId==='mage'&&q.type==='spelling')v+=1;
+      if(next.inventory.includes('break-charm')&&!next.usedBreakCharm){v+=1;next.usedBreakCharm=true;result.itemText='裂紋符・Break +1';}
       next.enemy.break=Math.min(next.enemy.breakMax,next.enemy.break+v);result.amount=next.enemy.break-before;
       if(next.enemy.break>=next.enemy.breakMax){next.enemy.broken=true;result.broke=true;}
     }
+
     if(skill.effect==='guard'){
       const before=next.player.guard;let v=skill.value;if(next.player.roleId==='mage'&&q.type==='spelling')v=Math.round(v*1.35);
       next.player.guard=Math.min(40,next.player.guard+v);result.amount=next.player.guard-before;
     }
+
+    if(next.inventory.includes('echo-ring')&&q.type==='listening'){
+      const before=next.player.guard;next.player.guard=Math.min(40,next.player.guard+6);const gained=next.player.guard-before;
+      if(gained>0)result.itemText=`回音戒・護盾 +${gained}`;
+    }
     petCorrect(next,result);
-  }else{next.player.combo=0;result.playerDamage=enemyTurn(next,result);}
-  if(next.enemy.currentHp<=0){next.finished=true;next.won=true;next.lastResult=result;return next;}
+  }else{
+    next.wrongCount+=1;
+    if(next.inventory.includes('memory-leaf')&&!next.usedMemoryLeaf){next.usedMemoryLeaf=true;result.itemText='記憶葉・Combo 保留';}
+    else next.player.combo=0;
+    result.playerDamage=enemyTurn(next,result);
+  }
+
+  if(next.enemy.currentHp<=0){finishBattle(next,true);next.lastResult=result;return next;}
   if(next.enemy.broken)next.enemy.intent='失衡';else if(correct)result.playerDamage=enemyTurn(next,result);
-  if(next.player.hp<=0){next.finished=true;next.won=false;next.lastResult=result;return next;}
-  next.turn+=1;next.currentQuestion=pickQuestion(next.wordStats);next.questionStartedAt=Date.now();next.lastResult=result;return next;
+  if(next.player.hp<=0){finishBattle(next,false);next.lastResult=result;return next;}
+
+  next.turn+=1;next.currentQuestion=pickQuestion(next.wordStats,next.wordIds,next.bossFocus);next.questionStartedAt=Date.now();next.lastResult=result;return next;
 }
 
-function pickWeightedWord(stats){
-  const pool=[];for(const w of WORDS){const s=stats[w.id]||{correct:0,wrong:0};const weight=Math.max(1,1+(s.wrong||0)*2-Math.floor((s.correct||0)/3));for(let i=0;i<weight;i++)pool.push(w);}return pool[Math.floor(Math.random()*pool.length)]||WORDS[0];
+function finishBattle(battle,won){
+  battle.finished=true;battle.won=won;
+  if(!won){battle.stars=0;return;}
+  const total=Math.max(1,battle.correctCount+battle.wrongCount),accuracy=battle.correctCount/total;
+  battle.stars=1+(accuracy>=.8?1:0)+(battle.player.hp>=50?1:0);
+}
+
+function pickWeightedWord(stats,wordIds,bossFocus){
+  const allowed=WORDS.filter(w=>wordIds.includes(w.id));
+  const pool=[];
+  for(const w of allowed){
+    const s=stats[w.id]||{correct:0,wrong:0};
+    let weight=Math.max(1,1+(s.wrong||0)*2-Math.floor((s.correct||0)/3));
+    if(bossFocus&&(s.wrong||0)>0)weight+=3+(s.wrong||0);
+    for(let i=0;i<weight;i++)pool.push(w);
+  }
+  return pool[Math.floor(Math.random()*pool.length)]||allowed[0]||WORDS[0];
 }
 function reverseQuestion(w){const d=shuffle(WORDS.filter(x=>x.id!==w.id).map(x=>x.word)).slice(0,3);return {type:'reverse',label:'英譯',wordId:w.id,word:w.word,zh:w.zh,prompt:w.zh,answer:w.word,options:shuffle([w.word,...d])};}
 function listeningQuestion(w){const d=shuffle(WORDS.filter(x=>x.id!==w.id).map(x=>x.word)).slice(0,3);return {type:'listening',label:'聽力',wordId:w.id,word:w.word,zh:w.zh,prompt:'🔊',answer:w.word,options:shuffle([w.word,...d])};}
