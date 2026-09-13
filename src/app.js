@@ -1,19 +1,19 @@
-import { ROLES, PETS, ITEMS, WORDS, STAGES, SKILLS } from './game-data.js';
+import { ROLES, TALENTS, PETS, ITEMS, WORDS, STAGES, SKILLS } from './game-data.js';
 import { visual } from './assets.js';
 import { loadState, saveState } from './store.js';
 import { createBattle, chooseSkill, resolveAnswer, useUltimate } from './battle-engine.js';
 
 const app=document.querySelector('#app');
 let state=loadState();
-let view=!state.session?.entered?'login':state.session.roleChosen?'home':'role';
+let view=!state.session?.entered?'login':state.session.roleChosen?(pendingTalentTier()?'talent':'home'):'role';
 let battle=null;
 let selectedStageId=1;
 let toastTimer=null;
 
 function render(){
-  const content={login:renderLogin,role:renderRoleSelect,home:renderHome,map:renderMap,stage:renderStagePreview,battle:renderBattle,pet:renderPets,bag:renderBag,words:renderWords}[view]?.() || renderHome();
+  const content={login:renderLogin,role:renderRoleSelect,talent:renderTalentChoice,home:renderHome,map:renderMap,stage:renderStagePreview,battle:renderBattle,pet:renderPets,bag:renderBag,words:renderWords}[view]?.() || renderHome();
   if(view==='login') app.innerHTML=content;
-  else app.innerHTML=`<main class="app-shell ${view==='stage'&&STAGES.find(s=>s.id===selectedStageId)?.boss?'boss-shell':''}">${content}${!['battle','role','stage'].includes(view)?renderNav():''}</main>`;
+  else app.innerHTML=`<main class="app-shell ${view==='stage'&&STAGES.find(s=>s.id===selectedStageId)?.boss?'boss-shell':''}">${content}${!['battle','role','stage','talent'].includes(view)?renderNav():''}</main>`;
   bindEvents();
 }
 
@@ -35,6 +35,22 @@ function renderRoleSelect(){
   </section>`;
 }
 
+function renderTalentChoice(){
+  const role=ROLES.find(r=>r.id===state.player.role)||ROLES[0];
+  const tier=pendingTalentTier();
+  if(!tier){view='home';return renderHome();}
+  const choices=(TALENTS[role.id]||[]).filter(t=>t.tier===tier);
+  return `<section class="talent-screen">
+    <div class="talent-level">LEVEL ${tier}</div>
+    <div class="talent-role">${visual(role.art,role.icon,'talent-role-art')}</div>
+    <div class="hero-title">選擇天賦</div>
+    <div class="hero-sub">${role.name} · 二選一，選定後永久生效</div>
+    <div class="talent-grid">${choices.map(t=>`<button class="talent-card" data-talent="${t.id}">
+      <span class="talent-icon">${t.icon}</span><strong>${t.name}</strong><small>${t.desc}</small>
+    </button>`).join('')}</div>
+  </section>`;
+}
+
 function renderTop(title,meta=''){
   return `<div class="topbar"><div class="brand">${title}</div><div class="level-pill">Lv.${state.player.level}${meta?` · ${meta}`:''}</div></div>`;
 }
@@ -45,11 +61,13 @@ function renderHome(){
   const petState=state.pets?.[pet.id] || {level:1,evolved:false};
   const playerName=state.player.name||'勇者';
   const starTotal=Object.values(state.progress.stageStars||{}).reduce((a,b)=>a+b,0);
+  const talents=(state.player.talents||[]).map(id=>findTalent(id)).filter(Boolean);
   return `${renderTop('WORD RPG')}
   <section class="hero-card">
     <div class="avatar-wrap">${visual(role.art,role.icon,'hero-art')}<div class="pet-bubble">${visual(pet.art,pet.icon,'pet-art')}</div></div>
     <div class="hero-title">${role.name}・${playerName}</div>
     <div class="hero-sub">${pet.name} Lv.${petState.level}${petState.evolved?' · ✦':''}</div>
+    ${talents.length?`<div class="talent-chips">${talents.map(t=>`<span>${t.icon} ${t.name}</span>`).join('')}</div>`:''}
     <button class="primary-btn" data-action="go-map">▶ 開始冒險</button>
     <div class="stats"><div class="stat"><strong>${starTotal}</strong><span>⭐ 星等</span></div><div class="stat"><strong>${state.progress.masteredWords.length}</strong><span>熟練字</span></div><div class="stat"><strong>${state.player.stones}</strong><span>星語石</span></div></div>
   </section>
@@ -84,11 +102,7 @@ function renderStagePreview(){
     <div class="preview-kicker">${stage.subtitle}</div>
     <div class="preview-name">${stage.enemy.name}</div>
     <div class="preview-stars">${stars?'★'.repeat(stars)+'☆'.repeat(3-stars):'☆☆☆'}</div>
-    <div class="preview-grid">
-      <div><strong>${stage.enemy.hp}</strong><span>HP</span></div>
-      <div><strong>${stage.enemy.breakMax}</strong><span>BREAK</span></div>
-      <div><strong>${wordCount}</strong><span>WORDS</span></div>
-    </div>
+    <div class="preview-grid"><div><strong>${stage.enemy.hp}</strong><span>HP</span></div><div><strong>${stage.enemy.breakMax}</strong><span>BREAK</span></div><div><strong>${wordCount}</strong><span>WORDS</span></div></div>
     <div class="preview-hint">${stage.boss?'👁 ':''}${stage.hint}</div>
     <div class="preview-meta"><span>${reward?`${reward.icon} ${reward.name}`:'🎁 獎勵'}</span><span>${stage.boss?'錯題優先':'混合題型'}</span></div>
     <button class="primary-btn battle-start-btn ${stage.boss?'boss-start':''}" data-start-stage="${stage.id}">${stage.boss?'⚔ 挑戰影語王':'⚔ 開始戰鬥'}</button>
@@ -105,7 +119,8 @@ function renderBattle(){
   if(battle.finished){
     const reward=battle.rewardEarned?ITEMS.find(i=>i.id===battle.rewardEarned):null;
     const stars=battle.won?'★'.repeat(battle.stars)+'☆'.repeat(3-battle.stars):'';
-    return `${renderTop(stage.name)}<section class="hero-card result-card"><div class="result-icon">${battle.won?'🏆':'💤'}</div><div class="hero-title">${battle.won?'勝利':'再試一次'}</div>${battle.won?`<div class="hero-sub" style="font-size:24px">${stars}</div>`:''}${battle.won&&reward?`<div class="loot-reveal">${visual(reward.art,reward.icon,'loot-art')}<strong>${reward.name}</strong><span>${reward.kind}</span></div>`:''}${battle.won&&!reward?`<div class="hero-sub">已完成關卡</div>`:`<div class="hero-sub">${battle.won?'獎勵已收入背包':'休息一下，再回來挑戰'}</div>`}<button class="primary-btn" data-action="finish-battle">返回地圖</button></section>`;
+    const talentReady=battle.won&&pendingTalentTier();
+    return `${renderTop(stage.name)}<section class="hero-card result-card"><div class="result-icon">${battle.won?'🏆':'💤'}</div><div class="hero-title">${battle.won?'勝利':'再試一次'}</div>${battle.won?`<div class="hero-sub result-stars">${stars}</div>`:''}${talentReady?`<div class="level-up-badge">LEVEL UP · 天賦解鎖</div>`:''}${battle.won&&reward?`<div class="loot-reveal">${visual(reward.art,reward.icon,'loot-art')}<strong>${reward.name}</strong><span>${reward.kind}</span></div>`:''}${battle.won&&!reward?`<div class="hero-sub">已完成關卡</div>`:`<div class="hero-sub">${battle.won?'獎勵已收入背包':'休息一下，再回來挑戰'}</div>`}<button class="primary-btn" data-action="finish-battle">${talentReady?'選擇天賦':'返回地圖'}</button></section>`;
   }
   const result=battle.lastResult;
   const fx=result?.effect==='ultimate'?'damage':result?.correct?result.effect:'enemy';
@@ -119,11 +134,7 @@ function renderBattle(){
     <div class="bar-label"><span>HP</span><span>${battle.enemy.currentHp}/${battle.enemy.hp}</span></div><div class="bar"><i style="width:${hp}%"></i></div>
     <div class="bar-label"><span>BREAK</span><span>${battle.enemy.break}/${battle.enemy.breakMax}</span></div><div class="bar break"><i style="width:${br}%"></i></div>
     <div class="battle-companion"><span>🐾 ${battle.pet.name}</span><small>Lv.${battle.pet.level}${battle.pet.evolved?' ✦':''}</small></div>
-    <div class="ultimate-panel ${energy>=100?'ready':''}">
-      <div class="ultimate-head"><span>${role.ultimate.icon} ${role.ultimate.name}</span><small>${Math.round(energy)} / 100</small></div>
-      <div class="energy-bar"><i style="width:${energy}%"></i></div>
-      <button class="ultimate-btn" data-action="ultimate" ${energy<100?'disabled':''}>${energy>=100?'釋放大招':role.ultimate.desc}</button>
-    </div>
+    <div class="ultimate-panel ${energy>=100?'ready':''}"><div class="ultimate-head"><span>${role.ultimate.icon} ${role.ultimate.name}</span><small>${Math.round(energy)} / 100</small></div><div class="energy-bar"><i style="width:${energy}%"></i></div><button class="ultimate-btn" data-action="ultimate" ${energy<100?'disabled':''}>${energy>=100?'釋放大招':role.ultimate.desc}</button></div>
     <div class="skill-row">${SKILLS.map(s=>`<button class="skill-card ${battle.selectedSkill===s.id?'selected':''}" data-skill="${s.id}">${visual(s.art,s.icon,'skill-art')}<span>${s.name}</span></button>`).join('')}</div>
     ${renderQuestion(battle.currentQuestion)}
   </section>`;
@@ -179,6 +190,7 @@ function bindEvents(){
   document.querySelector('#player-name')?.addEventListener('keydown',e=>{if(e.key==='Enter') enterGame();});
   document.querySelector('[data-action="line-login"]')?.addEventListener('click',()=>toast('LINE 登入尚未串接'));
   document.querySelectorAll('[data-role]').forEach(el=>el.addEventListener('click',()=>chooseRole(el.dataset.role)));
+  document.querySelectorAll('[data-talent]').forEach(el=>el.addEventListener('click',()=>chooseTalent(el.dataset.talent)));
   document.querySelector('[data-action="go-map"]')?.addEventListener('click',()=>{view='map';render();});
   document.querySelectorAll('[data-preview-stage]').forEach(el=>el.addEventListener('click',()=>openStagePreview(Number(el.dataset.previewStage))));
   document.querySelector('[data-action="back-map"]')?.addEventListener('click',()=>{view='map';render();});
@@ -192,7 +204,7 @@ function bindEvents(){
   document.querySelectorAll('[data-pet]').forEach(el=>el.addEventListener('click',()=>selectPet(el.dataset.pet)));
   document.querySelectorAll('[data-upgrade-pet]').forEach(el=>el.addEventListener('click',()=>upgradePet(el.dataset.upgradePet)));
   document.querySelectorAll('[data-evolve-pet]').forEach(el=>el.addEventListener('click',()=>evolvePet(el.dataset.evolvePet)));
-  document.querySelector('[data-action="finish-battle"]')?.addEventListener('click',()=>{battle=null;view='map';render();});
+  document.querySelector('[data-action="finish-battle"]')?.addEventListener('click',finishBattleView);
   if(view==='battle'&&battle?.currentQuestion?.type==='listening') setTimeout(speakCurrentWord,100);
 }
 
@@ -202,11 +214,12 @@ function enterGame(){
   if(!name){toast('請輸入名字');input?.focus();return;}
   state.player.name=name.slice(0,12);
   state.session={...state.session,entered:true,loginMethod:'guest'};
-  saveState(state);view=state.session.roleChosen?'home':'role';render();
+  saveState(state);view=state.session.roleChosen?(pendingTalentTier()?'talent':'home'):'role';render();
 }
 
-function chooseRole(roleId){if(!ROLES.some(r=>r.id===roleId)) return;state.player.role=roleId;state.session.roleChosen=true;saveState(state);view='home';render();}
-function selectPet(petId){if(!PETS.some(p=>p.id===petId)) return;state.player.pet=petId;saveState(state);toast('已更換夥伴');render();}
+function chooseRole(roleId){if(!ROLES.some(r=>r.id===roleId))return;state.player.role=roleId;state.player.talents=[];state.session.roleChosen=true;saveState(state);view='home';render();}
+function chooseTalent(talentId){const tier=pendingTalentTier();const valid=(TALENTS[state.player.role]||[]).find(t=>t.id===talentId&&t.tier===tier);if(!valid)return;state.player.talents=[...(state.player.talents||[]),talentId];saveState(state);toast(`${valid.name} 已解鎖`);view=pendingTalentTier()?'talent':'map';render();}
+function selectPet(petId){if(!PETS.some(p=>p.id===petId))return;state.player.pet=petId;saveState(state);toast('已更換夥伴');render();}
 function upgradePet(petId){const p=state.pets?.[petId];if(!p||p.level>=10)return;const cost=Math.max(1,p.level);if(state.player.stones<cost){toast(`需要 ${cost} 顆星語石`);return;}state.player.stones-=cost;p.level+=1;saveState(state);toast(`升到 Lv.${p.level}`);render();}
 function evolvePet(petId){const pet=PETS.find(p=>p.id===petId);const ps=state.pets?.[petId];const i=state.inventory.indexOf('core');if(!pet||!ps||ps.evolved||ps.level<pet.evolve||i<0)return;ps.evolved=true;state.inventory.splice(i,1);saveState(state);toast('進化成功 ✦');render();}
 function openStagePreview(stageId){const stage=STAGES.find(s=>s.id===stageId);if(!stage||stage.id>state.progress.unlockedStage)return;selectedStageId=stageId;view='stage';render();}
@@ -214,7 +227,7 @@ function openStagePreview(stageId){const stage=STAGES.find(s=>s.id===stageId);if
 function startBattle(stageId){
   const stage=STAGES.find(s=>s.id===stageId);if(!stage)return;
   const petState=state.pets?.[state.player.pet]||{level:1,evolved:false};
-  battle=createBattle(stage,{petId:state.player.pet,petLevel:petState.level,petEvolved:petState.evolved,roleId:state.player.role,wordStats:state.progress.wordStats,inventory:state.inventory});
+  battle=createBattle(stage,{petId:state.player.pet,petLevel:petState.level,petEvolved:petState.evolved,roleId:state.player.role,talents:state.player.talents,wordStats:state.progress.wordStats,inventory:state.inventory});
   view='battle';render();
 }
 
@@ -225,6 +238,7 @@ function activateUltimate(){
   render();
 }
 
+function finishBattleView(){battle=null;view=pendingTalentTier()?'talent':'map';render();}
 function submitSpelling(){const input=document.querySelector('#spell-answer');const value=(input?.value||'').trim();if(!value){input?.focus();return;}answer(value);}
 function speakCurrentWord(){const word=battle?.currentQuestion?.word;if(!word||!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const utter=new SpeechSynthesisUtterance(word);utter.lang='en-US';utter.rate=.82;window.speechSynthesis.speak(utter);}
 
@@ -234,7 +248,7 @@ function answer(answerText){
   const stats=state.progress.wordStats[q.wordId]||{correct:0,wrong:0};
   correct?stats.correct++:stats.wrong++;state.progress.wordStats[q.wordId]=stats;
   const total=stats.correct+stats.wrong;
-  if(total>=3&&stats.correct/total>=.8&&!state.progress.masteredWords.includes(q.wordId)) state.progress.masteredWords.push(q.wordId);
+  if(total>=3&&stats.correct/total>=.8&&!state.progress.masteredWords.includes(q.wordId))state.progress.masteredWords.push(q.wordId);
   battle.wordStats=state.progress.wordStats;
   battle=resolveAnswer(battle,answerText);
   if(battle.finished&&battle.won&&!battle.rewardProcessed){battle.rewardEarned=completeStage(battle.stageId,battle.stars);battle.rewardProcessed=true;}
@@ -246,13 +260,24 @@ function completeStage(stageId,stars=1){
   const previous=state.progress.stageStars?.[stageId]||0;
   state.progress.stageStars={...(state.progress.stageStars||{}),[stageId]:Math.max(previous,stars)};
   const firstClear=!state.progress.cleared.includes(stageId);state.player.exp+=20;
-  if(state.player.exp>=100){state.player.level+=1;state.player.exp-=100;}
+  while(state.player.exp>=100){state.player.level+=1;state.player.exp-=100;}
   if(!firstClear)return null;
   state.progress.cleared.push(stageId);state.progress.unlockedStage=Math.min(STAGES.length,Math.max(state.progress.unlockedStage,stageId+1));
-  if(stage.reward==='star-stone') state.player.stones+=2;else if(!state.inventory.includes(stage.reward)) state.inventory.push(stage.reward);
+  if(stage.reward==='star-stone')state.player.stones+=2;else if(!state.inventory.includes(stage.reward))state.inventory.push(stage.reward);
   return stage.reward;
 }
 
+function pendingTalentTier(){
+  const owned=state.player.talents||[];
+  const roleTalents=TALENTS[state.player.role]||[];
+  for(const tier of [2,3]){
+    if(state.player.level<tier)continue;
+    const tierIds=roleTalents.filter(t=>t.tier===tier).map(t=>t.id);
+    if(tierIds.length&&!tierIds.some(id=>owned.includes(id)))return tier;
+  }
+  return 0;
+}
+function findTalent(id){for(const list of Object.values(TALENTS)){const found=list.find(t=>t.id===id);if(found)return found;}return null;}
 function shortBonus(text){return text.replace('時，',' · ').replace('有機率','').replace('額外','');}
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 function escapeHtml(value){return String(value).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
