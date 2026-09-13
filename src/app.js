@@ -101,9 +101,12 @@ function renderBattle(){
       ${feedback}
       <div class="enemy-name">${battle.enemy.name}</div>
       <div class="intent">👁 ${battle.enemy.intent}</div>
+      ${result?.enemyText?`<div class="battle-note enemy-note">${result.enemyText}</div>`:''}
+      ${result?.petText?`<div class="battle-note pet-note">🐾 ${result.petText}</div>`:''}
     </div>
     <div class="bar-label"><span>HP</span><span>${battle.enemy.currentHp}/${battle.enemy.hp}</span></div><div class="bar"><i style="width:${hp}%"></i></div>
     <div class="bar-label"><span>BREAK</span><span>${battle.enemy.break}/${battle.enemy.breakMax}</span></div><div class="bar break"><i style="width:${br}%"></i></div>
+    <div class="battle-companion"><span>🐾 ${battle.pet.name}</span><small>Lv.${battle.pet.level}${battle.pet.evolved?' ✦':''}</small></div>
     <div class="skill-row">${SKILLS.map(s=>`<button class="skill-card ${battle.selectedSkill===s.id?'selected':''}" data-skill="${s.id}">${visual(s.art,s.icon,'skill-art')}<span>${s.name}</span></button>`).join('')}</div>
     <div class="question-card">
       <div class="status-line"><span class="mini-pill">🔥 ${battle.player.combo}</span><span class="status-mini">❤️ ${battle.player.hp} · 🛡️ ${battle.player.guard}</span></div>
@@ -232,7 +235,8 @@ function evolvePet(petId){
 function startBattle(stageId){
   const stage=STAGES.find(s=>s.id===stageId);
   if(!stage) return;
-  battle=createBattle(stage);
+  const petState=state.pets?.[state.player.pet] || {level:1,evolved:false};
+  battle=createBattle(stage,{petId:state.player.pet,petLevel:petState.level,petEvolved:petState.evolved});
   view='battle';
   render();
 }
