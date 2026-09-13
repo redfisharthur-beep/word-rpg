@@ -9,6 +9,7 @@ const initialState={
     dragon:{level:1,evolved:false},
   },
   progress:{unlockedStage:1,cleared:[],masteredWords:[],weakWords:[],wordStats:{},stageStars:{}},
+  daily:{date:'',lastStudyDate:'',streak:0,questions:0,correct:0,battles:0,claimed:{questions:false,correct:false,battle:false}},
   inventory:['star-stone'],
 };
 
@@ -32,6 +33,11 @@ export function loadState(){
         ...saved.progress,
         weakWords:Array.isArray(saved.progress?.weakWords)?saved.progress.weakWords:[],
         stageStars:{...initialState.progress.stageStars,...saved.progress?.stageStars},
+      },
+      daily:{
+        ...initialState.daily,
+        ...saved.daily,
+        claimed:{...initialState.daily.claimed,...saved.daily?.claimed},
       },
     };
   }catch{
