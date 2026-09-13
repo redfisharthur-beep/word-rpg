@@ -1,9 +1,9 @@
 import { ASSETS } from './assets.js';
 
 export const ROLES = [
-  { id:'warrior', name:'戰士', icon:'⚔️', art:ASSETS.role.warrior, bonus:'連續答對時，Break +1', color:'#9ba89d', ultimate:{name:'裂地斬',icon:'💢',desc:'重擊並大幅削減 Break'} },
-  { id:'mage', name:'法師', icon:'🪄', art:ASSETS.role.mage, bonus:'拼字題成功時，技能效果提升', color:'#b8b0be', ultimate:{name:'星界爆發',icon:'✦',desc:'魔法傷害並獲得大量護盾'} },
-  { id:'archer', name:'弓手', icon:'🏹', art:ASSETS.role.archer, bonus:'7 秒內答對時，Combo +1', color:'#aeb9bf', ultimate:{name:'疾風連射',icon:'➶',desc:'無視閃避並提高 Combo'} },
+  { id:'warrior', name:'戰士', icon:'⚔️', art:ASSETS.role.warrior, bonus:'連續答對時，Break +1；破陣獲得護盾', color:'#9ba89d', ultimate:{name:'裂地斬',icon:'💢',desc:'重擊、削減 Break 並獲得護盾'} },
+  { id:'mage', name:'法師', icon:'🪄', art:ASSETS.role.mage, bonus:'拼字題成功時，技能效果提升', color:'#b8b0be', ultimate:{name:'星界爆發',icon:'✦',desc:'魔法傷害並獲得護盾'} },
+  { id:'archer', name:'弓手', icon:'🏹', art:ASSETS.role.archer, bonus:'7 秒內答對時，Combo +1 並獲得護盾', color:'#aeb9bf', ultimate:{name:'疾風連射',icon:'➶',desc:'無視閃避並提高 Combo'} },
 ];
 
 export const TALENTS = {
@@ -14,7 +14,7 @@ export const TALENTS = {
     {id:'warrior-rage',tier:3,name:'戰意爆發',icon:'💢',desc:'裂地斬傷害 +15'},
   ],
   mage:[
-    {id:'mage-spellflow',tier:2,name:'咒文循環',icon:'✎',desc:'拼字答對時額外 +12 能量'},
+    {id:'mage-spellflow',tier:2,name:'咒文循環',icon:'✎',desc:'拼字答對時額外 +10 能量'},
     {id:'mage-ward',tier:2,name:'秘法護幕',icon:'◇',desc:'守護額外 +8 護盾'},
     {id:'mage-arcane',tier:3,name:'奧術共鳴',icon:'✦',desc:'拼字題的斬擊傷害再 +20%'},
     {id:'mage-starshield',tier:3,name:'星盾',icon:'🔷',desc:'星界爆發額外 +12 護盾'},
