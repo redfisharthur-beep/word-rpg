@@ -1,8 +1,13 @@
 const KEY='word-rpg-save-v1';
 
 const initialState={
-  session:{entered:false,loginMethod:'guest'},
+  session:{entered:false,loginMethod:'guest',roleChosen:false},
   player:{name:'',level:1,exp:0,hp:100,maxHp:100,role:'warrior',pet:'fox',coins:0,stones:0},
+  pets:{
+    fox:{level:1,evolved:false},
+    owl:{level:1,evolved:false},
+    dragon:{level:1,evolved:false},
+  },
   progress:{unlockedStage:1,cleared:[],masteredWords:[],wordStats:{}},
   inventory:['star-stone'],
 };
@@ -17,6 +22,11 @@ export function loadState(){
       ...saved,
       session:{...initialState.session,...saved.session},
       player:{...initialState.player,...saved.player},
+      pets:{
+        fox:{...initialState.pets.fox,...saved.pets?.fox},
+        owl:{...initialState.pets.owl,...saved.pets?.owl},
+        dragon:{...initialState.pets.dragon,...saved.pets?.dragon},
+      },
       progress:{...initialState.progress,...saved.progress},
     };
   }catch{
