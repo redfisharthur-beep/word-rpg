@@ -1,16 +1,26 @@
 export const COLORS={green:'綠色',blue:'藍色',red:'紅色',yellow:'黃色',neutral:'輔助'};
 export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:false,role:'warrior',pet:null,monsterId:null};
+const ROLE_BASE={warrior:{hp:540,atk:96,def:62},mage:{hp:470,atk:112,def:45},archer:{hp:500,atk:106,def:50}};
+const PET_BASE={fox:{hp:20,atk:8,def:2},owl:{hp:35,atk:2,def:6},dragon:{hp:25,atk:6,def:4}};
 const clone=x=>JSON.parse(JSON.stringify(x));
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+export function progressionStats(role='warrior',pet='fox',level=1){
+  const lv=clamp(Math.round(Number(level)||1),1,50),rb=ROLE_BASE[role]||ROLE_BASE.warrior,pb=PET_BASE[pet]||PET_BASE.fox;
+  const roleStats={maxHp:Math.round(rb.hp*(1+(lv-1)*.035)),atk:Math.round(rb.atk*(1+(lv-1)*.025)),def:Math.round(rb.def*(1+(lv-1)*.025))};
+  const petStats={maxHp:Math.round(pb.hp*(1+(lv-1)*.03)),atk:Math.round(pb.atk*(1+(lv-1)*.03)),def:Math.round(pb.def*(1+(lv-1)*.03))};
+  const total={maxHp:roleStats.maxHp+petStats.maxHp,atk:roleStats.atk+petStats.atk,def:roleStats.def+petStats.def,crit:.10};
+  return {level:lv,role:roleStats,pet:petStats,total:{...total,hp:total.maxHp}};
+}
 export function makeFighter(extra={}){return {...clone(BASE),...extra};}
 export function accuracyMultiplier(correct,actor=null){if(correct===3)return 1.5;if(correct===2)return 1;if(correct===1)return .5;if(actor?.pet==='owl')return .25;return 0;}
 export function randomCard(){
   const pool=['stat','stat','stat','combo','desperate','poison','break','sun','preempt','regen','sacrifice','restore','diamond','aegis','boost'];
   const id=pool[rnd(0,pool.length-1)];
   if(id==='stat'){
-    const keys=[['hp','生命值','green'],['def','防禦力','blue'],['atk','攻擊力','red'],['crit','爆擊率','yellow']];
-    const [stat,name,color]=keys[rnd(0,keys.length-1)],pct=rnd(2,6)*10;
-    return {uid:crypto.randomUUID(),id:`stat-${stat}`,kind:'stat',stat,name:`${name}增加`,text:stat==='crit'?`爆擊率直接提升`:`增加 ${pct}%`,pct,color};
+    const keys=[['hp','氣血充盈','green'],['def','罡氣護體','blue'],['atk','戰意沸騰','red'],['crit','破綻洞悉','yellow']];
+    const [stat,name,color]=keys[rnd(0,keys.length-1)],pct=stat==='crit'?rnd(1,5)*10:rnd(2,6)*10;
+    return {uid:crypto.randomUUID(),id:`stat-${stat}`,kind:'stat',stat,name,text:stat==='crit'?`爆擊率提升 ${pct}%`:`增加 ${pct}%`,pct,color};
   }
   const defs={
     combo:['瞬步連擊','red','連續攻擊 3 次，每次 50% 攻擊力'],
@@ -55,7 +65,7 @@ function applyStat(card,actor,power,logs){
   if(card.stat==='hp'){
     const add=Math.round(actor.maxHp*pct);actor.maxHp+=add;actor.hp+=add;logs.push(`生命值 +${Math.round(pct*100)}%`);
   }else if(card.stat==='crit'){
-    const points=(.06+card.pct/500)*power;actor.crit=Math.min(.60,actor.crit+points);logs.push(`爆擊率 +${Math.round(points*100)}%`);
+    const points=(card.pct/100)*power;actor.crit=Math.min(.80,actor.crit+points);logs.push(`爆擊率 +${Math.round(points*100)}%`);
   }else{
     actor[card.stat]*=(1+pct);logs.push(`${card.stat==='atk'?'攻擊力':'防禦力'} +${Math.round(pct*100)}%`);
     if(card.stat==='def'){
