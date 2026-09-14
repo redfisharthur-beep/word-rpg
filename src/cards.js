@@ -3,7 +3,7 @@ export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],a
 const clone=x=>JSON.parse(JSON.stringify(x));
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 export function makeFighter(extra={}){return {...clone(BASE),...extra};}
-export function accuracyMultiplier(correct){return correct===3?1.5:correct===2?1:correct===1?.5:0;}
+export function accuracyMultiplier(correct){return correct===3?1.5:correct===2?1:correct===1?0.5:0;}
 export function randomCard(){
   const pool=['stat','stat','stat','combo','desperate','poison','break','sun','preempt','regen','sacrifice','restore','diamond','aegis','boost'];
   const id=pool[rnd(0,pool.length-1)];
