@@ -95,7 +95,7 @@ export function bondMultiplier(cards=[],card){if(!card||card.color==='neutral')r
 export function supportBoost(card,actor){if(!card||card.id!=='boost')return 1;const extra=actor?.role==='mage'?20:0;return 1+(card.boost+extra)/100;}
 export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offensiveIndex=0,cards=[],slotIndex=0,speedWin=false}={}){
   const logs=[],acc=accuracyMultiplier(correct,actor);
-  if(acc<=0){logs.push('全錯，本次行動無動作');return logs;}
+  if(acc<=0){logs.push('失敗..凍結中');return logs;}
   if(card?.id==='boost'){
     const shield=Math.max(1,Math.round(effectiveAtk(actor)*.30*acc));actor.shield+=shield;
     logs.push(`神功附體 +${card.boost+(actor.role==='mage'?20:0)}%`);logs.push(`護盾 +${shield}`);return logs;
@@ -120,7 +120,7 @@ export function applyPetRoundEnd(actor,cards=[],logs=[]){
   if(actor?.pet==='owl'&&actor.hp>0){const stable=cards.filter(c=>c?.color==='green'||c?.color==='blue').length;if(stable>=2)healHpOnly(actor,Math.round(actor.maxHp*.08),logs,'夜梟守心');}
   return logs;
 }
-export function resolveBasic(actor,target,correct){const logs=[],p=accuracyMultiplier(correct,actor);if(p<=0){logs.push('全錯，本回合無動作');return logs;}if(correct===0&&actor?.pet==='owl')logs.push('夜梟洞察：保留 25% 效果');hit(actor,target,p,logs,'基本攻擊');return logs;}
+export function resolveBasic(actor,target,correct){const logs=[],p=accuracyMultiplier(correct,actor);if(p<=0){logs.push('失敗..凍結中');return logs;}if(correct===0&&actor?.pet==='owl')logs.push('夜梟洞察：保留 25% 效果');hit(actor,target,p,logs,'基本攻擊');return logs;}
 export function resolveAutoBasic(actor,target){const logs=[];hit(actor,target,1,logs,'普通攻擊',true);return logs;}
 export function cardSummary(card){if(!card)return '';if(card.kind==='stat')return `${card.name} ${card.pct}%`;if(card.id==='boost')return `${card.name} ${card.boost}%`;return card.name;}
 export function cloneFighter(f){return clone(f);}
