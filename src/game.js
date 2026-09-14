@@ -2,154 +2,80 @@ import { ASSETS, visual } from './assets.js';
 import { createPkMode } from './pk.js';
 
 const app=document.querySelector('#app');
-const SAVE_KEY='word-rpg-v3';
+const SAVE_KEY='word-rpg-v4';
 const WORDS=[
-['apple','蘋果',['蘋果','香蕉','牛奶','麵包']],['book','書',['書','筆','桌子','門']],['cat','貓',['貓','狗','鳥','魚']],['run','跑步',['跑步','睡覺','坐下','吃飯']],['happy','開心的',['開心的','生氣的','疲累的','害怕的']],['water','水',['水','果汁','牛奶','茶']],['friend','朋友',['朋友','老師','醫生','學生']],['school','學校',['學校','公園','醫院','商店']],['green','綠色的',['綠色的','紅色的','藍色的','黃色的']],['small','小的',['小的','大的','高的','長的']],
-['river','河流',['河流','山','天空','森林']],['forest','森林',['森林','海洋','沙漠','城市']],['cloud','雲',['雲','雨','風','雪']],['quiet','安靜的',['安靜的','吵鬧的','快速的','明亮的']],['brave','勇敢的',['勇敢的','害怕的','疲累的','孤單的']],['follow','跟隨',['跟隨','離開','等待','停止']],['listen','聆聽',['聆聽','觀看','觸摸','奔跑']],['light','光',['光','影子','聲音','煙霧']],['path','小徑',['小徑','橋','房間','屋頂']],['rabbit','兔子',['兔子','狐狸','老虎','烏龜']],
-['protect','保護',['保護','攻擊','忘記','丟棄']],['whisper','低語',['低語','大叫','跳躍','哭泣']],['bridge','橋',['橋','道路','城堡','洞穴']],['stone','石頭',['石頭','木頭','葉子','花朵']],['deep','深的',['深的','淺的','短的','薄的']],['danger','危險',['危險','和平','秘密','希望']],['search','尋找',['尋找','隱藏','關閉','推動']],['across','穿越',['穿越','下面','旁邊','後面']],['sudden','突然的',['突然的','緩慢的','平靜的','柔軟的']],['bubble','泡泡',['泡泡','火焰','冰塊','沙子']]
+['apple','蘋果',['蘋果','香蕉','牛奶','麵包']],['book','書',['書','筆','桌子','門']],['cat','貓',['貓','狗','鳥','魚']],['run','跑步',['跑步','睡覺','坐下','吃飯']],['happy','開心的',['開心的','生氣的','疲累的','害怕的']],['water','水',['水','果汁','牛奶','茶']],['friend','朋友',['朋友','老師','醫生','學生']],['school','學校',['學校','公園','醫院','商店']],['green','綠色的',['綠色的','紅色的','藍色的','黃色的']],['small','小的',['小的','大的','高的','長的']],['river','河流',['河流','山','天空','森林']],['forest','森林',['森林','海洋','沙漠','城市']],['cloud','雲',['雲','雨','風','雪']],['quiet','安靜的',['安靜的','吵鬧的','快速的','明亮的']],['brave','勇敢的',['勇敢的','害怕的','疲累的','孤單的']],['follow','跟隨',['跟隨','離開','等待','停止']],['listen','聆聽',['聆聽','觀看','觸摸','奔跑']],['light','光',['光','影子','聲音','煙霧']],['path','小徑',['小徑','橋','房間','屋頂']],['rabbit','兔子',['兔子','狐狸','老虎','烏龜']],['protect','保護',['保護','攻擊','忘記','丟棄']],['whisper','低語',['低語','大叫','跳躍','哭泣']],['bridge','橋',['橋','道路','城堡','洞穴']],['stone','石頭',['石頭','木頭','葉子','花朵']],['deep','深的',['深的','淺的','短的','薄的']],['danger','危險',['危險','和平','秘密','希望']],['search','尋找',['尋找','隱藏','關閉','推動']],['across','穿越',['穿越','下面','旁邊','後面']],['sudden','突然的',['突然的','緩慢的','平靜的','柔軟的']],['bubble','泡泡',['泡泡','火焰','冰塊','沙子']]
 ];
-
 const ROLES={
- warrior:{name:'戰士',art:ASSETS.role.warrior,icon:'⚔️',desc:'耐打、護盾、反擊',passive:'不屈：受到傷害 -10%',favored:['def','hp','counter','shield','fortress','reprisal'],base:{hp:150,atk:17,def:6}},
- mage:{name:'法師',art:ASSETS.role.mage,icon:'🪄',desc:'火焰、劇毒、爆發',passive:'元素精通：火焰／毒傷 +25%',favored:['fire','poison','heal','arcane','surge'],base:{hp:134,atk:19,def:4}},
- archer:{name:'弓手',art:ASSETS.role.archer,icon:'🏹',desc:'暴擊、連擊、先手',passive:'先制：每組第1回合暴擊／連擊 +12%',favored:['crit','combo','rage','aim','rapid'],base:{hp:140,atk:18,def:5,crit:.10}},
+ warrior:{name:'戰士',art:ASSETS.role.warrior,base:{hp:165,atk:20,def:8},trait:'格擋後，下次強攻更痛'},
+ mage:{name:'法師',art:ASSETS.role.mage,base:{hp:140,atk:24,def:4},trait:'蓄能後，下一擊爆發'},
+ archer:{name:'弓手',art:ASSETS.role.archer,base:{hp:150,atk:22,def:5},trait:'連續答對時，攻擊成長最快'}
 };
-
 const PETS={
- fox:{name:'靈狐',art:ASSETS.pet.fox,icon:'🦊',passive:'靈巧追擊：每回合 30% 機率追加 45% 攻擊'},
- owl:{name:'夜梟',art:ASSETS.pet.owl,icon:'🦉',passive:'守望：受到傷害 -12%，每組開始回復 3 HP'},
- dragon:{name:'幼龍',art:ASSETS.pet.dragon,icon:'🐉',passive:'龍息：每次主攻擊額外造成 3 點無視防禦傷害'},
+ fox:{name:'靈狐',art:ASSETS.pet.fox,trait:'連對 3 次，追加追擊'},
+ owl:{name:'夜梟',art:ASSETS.pet.owl,trait:'每戰第一次答錯，傷害減半'},
+ dragon:{name:'幼龍',art:ASSETS.pet.dragon,trait:'爆發攻擊額外增加傷害'}
 };
-
 const STAGES=[
- {id:1,name:'苔蘚小徑',enemy:'苔球獸',art:ASSETS.enemy.moss,icon:'🟢',hp:310,atk:10,def:2,trait:'🌿 纏藤',traitText:'每組第 2 回合，你的傷害降低 30%',mechanic:'vine',reward:'擊破後回復 12% 生命'},
- {id:2,name:'霧林追獵',enemy:'霧角兔',art:ASSETS.enemy.rabbit,icon:'🐇',hp:500,atk:14,def:4,trait:'💨 殘影',traitText:'主攻擊有 28% 機率被閃避',mechanic:'dodge',reward:'擊破後回復 14% 生命'},
- {id:3,name:'古樹守門',enemy:'木甲蟲',art:ASSETS.enemy.beetle,icon:'🪲',hp:760,atk:18,def:7,trait:'🪨 硬殼',traitText:'前 2 回合額外 +6 防禦，第 3 回合裂開',mechanic:'shell',reward:'擊破後回復 16% 生命'},
- {id:4,name:'暮色祭壇',enemy:'影語王',art:ASSETS.enemy.shadowKing,icon:'👁️',hp:1180,atk:22,def:9,trait:'🌑 暗影循環',traitText:'第 2 回合減傷 25%，第 3 回合強攻並吸血',mechanic:'shadow',boss:true,reward:'最終試煉'},
+ {name:'苔球獸',art:ASSETS.enemy.moss,hp:115,atk:18,intents:['attack','guard','attack']},
+ {name:'霧角兔',art:ASSETS.enemy.rabbit,hp:155,atk:22,intents:['guard','attack','charge']},
+ {name:'木甲蟲',art:ASSETS.enemy.beetle,hp:205,atk:26,intents:['guard','charge','attack']},
+ {name:'影語王',art:ASSETS.enemy.shadowKing,hp:290,atk:31,intents:['charge','attack','guard','attack'],boss:true}
 ];
-
-const U=(id,icon,name,desc,apply,roleOnly=null)=>({id,icon,name,desc,apply,roleOnly});
-const UPGRADES=[
- U('atk','⚔️','力量成長',l=>`攻擊提升 ${7+Math.floor(l*2)}%`,(r,l,s)=>r.atk=Math.ceil(r.atk*(1+(7+l*2)/100*s))),
- U('def','🛡️','鐵壁',l=>`防禦提升 ${2+Math.floor(l/2)}`,(r,l,s)=>r.def+=Math.max(1,Math.round((2+Math.floor(l/2))*s))),
- U('hp','❤️','生命祝福',l=>`最大生命 +${12+Math.floor(l*4)}，並回復`,(r,l,s)=>{const v=Math.max(1,Math.round((12+l*4)*s));r.maxHp+=v;r.hp=Math.min(r.maxHp,r.hp+v)}),
- U('crit','💥','致命一擊',l=>`暴擊率 +${5+Math.floor(l*1.5)}%`,(r,l,s)=>r.crit=Math.min(.72,r.crit+(5+l*1.5)/100*s)),
- U('combo','➶','連擊',l=>`追加攻擊率 +${7+Math.floor(l*3)}%`,(r,l,s)=>r.combo=Math.min(.74,r.combo+(7+l*3)/100*s)),
- U('lifesteal','🩸','吸血',l=>`吸血 +${3+Math.floor(l*.8)}%`,(r,l,s)=>r.lifesteal=Math.min(.34,r.lifesteal+(3+l*.8)/100*s)),
- U('counter','↩️','反擊',l=>`反擊傷害 +${10+Math.floor(l*5)}% 攻擊`,(r,l,s)=>r.counter+=((10+l*5)/100)*s),
- U('shield','◇','護體',l=>`每回合護盾 +${4+Math.floor(l*1.5)}`,(r,l,s)=>r.shield+=Math.max(1,Math.round((4+l*1.5)*s))),
- U('fire','🔥','灼燒',l=>`每次攻擊附加 ${3+Math.floor(l*1.5)} 火傷`,(r,l,s)=>r.fire+=Math.max(1,Math.round((3+l*1.5)*s))),
- U('poison','☠️','劇毒',l=>`每次攻擊疊加 ${2+Math.floor(l*.8)} 中毒`,(r,l,s)=>r.poison+=Math.max(1,Math.round((2+l*.8)*s))),
- U('heal','🌿','再生',l=>`每戰鬥回合回復 ${2+Math.floor(l*1.5)} HP`,(r,l,s)=>r.regen+=Math.max(1,Math.round((2+l*1.5)*s))),
- U('rage','✦','狂怒',l=>`連對每層增加 ${2+Math.floor(l*.75)}% 攻擊`,(r,l,s)=>r.rage+=((2+l*.75)/100)*s),
- U('fortress','🧱','堡壘架勢',l=>`每回合額外減傷 ${2+Math.floor(l*1.25)}`,(r,l,s)=>r.roleGuard+=Math.max(1,Math.round((2+l*1.25)*s)),'warrior'),
- U('reprisal','⚔️','復仇戰意',l=>`受擊後下一擊 +${9+Math.floor(l*4)}%`,(r,l,s)=>r.reprisal+=((9+l*4)/100)*s,'warrior'),
- U('arcane','🔮','元素共鳴',l=>`火焰／毒傷再 +${8+Math.floor(l*3)}%`,(r,l,s)=>r.elementAmp+=((8+l*3)/100)*s,'mage'),
- U('surge','✨','奧術爆發',l=>`每組第3回合傷害 +${10+Math.floor(l*4)}%`,(r,l,s)=>r.arcaneBurst+=((10+l*4)/100)*s,'mage'),
- U('aim','🎯','鷹眼',l=>`第1回合暴擊率 +${7+Math.floor(l*2.5)}%`,(r,l,s)=>r.firstCrit+=((7+l*2.5)/100)*s,'archer'),
- U('rapid','🏹','疾射',l=>`第1回合連擊率 +${8+Math.floor(l*3)}%`,(r,l,s)=>r.firstCombo+=((8+l*3)/100)*s,'archer'),
-];
-
-const EVOLUTIONS={
- crit:[{level:3,name:'破甲暴擊'},{level:5,name:'終結追擊'}],combo:[{level:3,name:'強襲連擊'},{level:5,name:'二段連擊'}],
- fire:[{level:3,name:'灼熱餘燼'},{level:5,name:'烈焰爆發'}],poison:[{level:3,name:'濃縮劇毒'},{level:5,name:'致命毒素'}],
- counter:[{level:3,name:'血性反擊'},{level:5,name:'穿甲反擊'}],shield:[{level:3,name:'荊棘護體'},{level:5,name:'鋼鐵荊棘'}],
+const TACTICS={
+ strike:{name:'強攻',hint:'敵人蓄力時最有效'},
+ guard:{name:'守勢',hint:'敵人攻擊時降低傷害'},
+ focus:{name:'蓄能',hint:'下一次強攻大幅提升'}
 };
-const WHEEL=[
- {icon:'⚔️',label:'攻擊 +14%',fn:r=>r.atk=Math.ceil(r.atk*1.14)},{icon:'❤️',label:'回復 28% 生命',fn:r=>r.hp=Math.min(r.maxHp,r.hp+Math.ceil(r.maxHp*.28))},
- {icon:'🛡️',label:'防禦 +3',fn:r=>r.def+=3},{icon:'💥',label:'暴擊 +10%',fn:r=>r.crit=Math.min(.76,r.crit+.10)},
- {icon:'⬆️',label:'隨機技能升 1 級',fn:r=>levelRandomOwned(r)},{icon:'👑',label:'全能力強化',fn:r=>{r.atk+=4;r.def+=2;r.maxHp+=10;r.hp=Math.min(r.maxHp,r.hp+10)}},
-];
-const RARE_REWARDS=[
- {id:'giant-core',icon:'❤️',name:'巨人核心',desc:'最大生命 +26，立即回復 26 HP',apply:r=>{r.maxHp+=26;r.hp=Math.min(r.maxHp,r.hp+26)}},
- {id:'war-rune',icon:'⚔️',name:'戰意刻印',desc:'攻擊永久 +12%',apply:r=>r.atk=Math.ceil(r.atk*1.12)},
- {id:'guardian-sigil',icon:'🛡️',name:'守護徽記',desc:'防禦 +3、每回合護盾 +3',apply:r=>{r.def+=3;r.shield+=3}},
- {id:'hunter-eye',icon:'🎯',name:'獵人之眼',desc:'暴擊率 +8%、連擊率 +8%',apply:r=>{r.crit=Math.min(.84,r.crit+.08);r.combo=Math.min(.86,r.combo+.08)}},
- {id:'element-crystal',icon:'🔮',name:'元素結晶',desc:'火焰 +3、劇毒 +2、元素傷害再 +10%',apply:r=>{r.fire+=3;r.poison+=2;r.elementAmp+=.10}},
- {id:'blood-moon',icon:'🩸',name:'血月徽記',desc:'吸血 +7%、反擊傷害 +15%',apply:r=>{r.lifesteal=Math.min(.40,r.lifesteal+.07);r.counter+=.15}},
- {id:'phoenix-feather',icon:'🔥',name:'鳳凰羽',desc:'最大生命 +16，每回合再生 +2',apply:r=>{r.maxHp+=16;r.hp=Math.min(r.maxHp,r.hp+16);r.regen+=2}},
+const UPGRADES=[
+ {id:'power',name:'強攻成長',desc:'強攻傷害 +20%',apply:r=>r.power*=1.2},
+ {id:'guard',name:'守勢成長',desc:'格擋效果 +15%',apply:r=>r.guard+=.15},
+ {id:'focus',name:'蓄能成長',desc:'蓄能倍率 +25%',apply:r=>r.focus+=.25},
+ {id:'hp',name:'生命成長',desc:'最大生命 +25',apply:r=>{r.maxHp+=25;r.hp=Math.min(r.maxHp,r.hp+25)}},
+ {id:'combo',name:'連擊成長',desc:'每次連對再 +5% 傷害',apply:r=>r.comboAmp+=.05},
+ {id:'heal',name:'回復成長',desc:'每場勝利多回復 12 HP',apply:r=>r.winHeal+=12}
 ];
 
-const PAUSE={review:1150,focus:700,attack:560,impact:780,counter:720,between:820,defeat:1200};
-let meta=loadMeta(),screen='home',run=null,upgradeChoices=[],wheelReward=null,rareChoices=[],locked=false,anim='',answerReview=null,pendingCorrect=true,combatFx={hero:'',enemy:'',proc:''},pkMode=null;
-
-function loadMeta(){try{return {...{role:'warrior',pet:'fox',playerName:'',bestStreak:0,wins:0,runs:0},...JSON.parse(localStorage.getItem(SAVE_KEY)||'{}')}}catch{return {role:'warrior',pet:'fox',playerName:'',bestStreak:0,wins:0,runs:0}}}
-function saveMeta(){localStorage.setItem(SAVE_KEY,JSON.stringify(meta));}
-function shuffle(a){const c=[...a];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c;}
-function pick(a){return a[Math.floor(Math.random()*a.length)];}
-function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function role(){return ROLES[run?.role||meta.role];}
-function pet(){return PETS[run?.pet||meta.pet||'fox'];}
-function stage(){return STAGES[run?.stageIndex||0];}
-function makeQuestion(){const w=pick(WORDS);return {word:w[0],answer:w[1],options:shuffle([...w[2]])};}
-function freshEnemy(s){return {name:s.enemy,art:s.art,icon:s.icon,hp:s.hp,currentHp:s.hp,atk:s.atk,def:s.def,poison:0,burn:0,boss:!!s.boss,mechanic:s.mechanic,trait:s.trait};}
-function skillLevel(id){return run?.skills?.[id]||0;}
-function fmtLevel(v){return Number.isInteger(v)?String(v):v.toFixed(1);}
-function clearFx(){combatFx={hero:'',enemy:'',proc:''};}
-function evolutionState(id,level=skillLevel(id)){const list=EVOLUTIONS[id]||[];let active=null,next=null;for(const e of list){if(level>=e.level)active=e;else if(!next)next=e;}return {active,next};}
-function evolutionNote(id,level){const {active,next}=evolutionState(id,level);if(next)return `下一進化 Lv.${next.level}：${next.name}`;if(active)return `已進化：${active.name}`;return '';}
-function levelRandomOwned(r){const ids=Object.keys(r.skills||{});if(!ids.length){r.atk=Math.ceil(r.atk*1.10);return}const id=pick(ids),u=UPGRADES.find(x=>x.id===id),next=(r.skills[id]||0)+1;r.skills[id]=next;u?.apply(r,next,1);}
-function startPk(){pkMode?.stop(false);pkMode=createPkMode({app,meta,ROLES,PETS,WORDS,UPGRADES,visual,onExit:()=>{pkMode=null;screen='home';render();}});pkMode.start();}
-
-function startRun(){const base=ROLES[meta.role].base;run={role:meta.role,pet:meta.pet||'fox',stageIndex:0,cycle:1,totalAnswers:0,correct:0,streak:0,maxStreak:0,hp:base.hp,maxHp:base.hp,atk:base.atk,def:base.def,crit:base.crit||.05,combo:0,lifesteal:0,counter:0,shield:0,fire:0,poison:0,regen:0,rage:0,roleGuard:0,reprisal:0,elementAmp:0,arcaneBurst:0,firstCrit:0,firstCombo:0,wasHit:false,question:makeQuestion(),enemy:freshEnemy(STAGES[0]),skills:{},rareRewards:[],battleRound:0,won:false};meta.runs++;saveMeta();screen='stage';locked=false;anim='';answerReview=null;clearFx();render();}
-function openSetup(){const input=document.querySelector('#player-name');const name=(input?.value||meta.playerName||'').trim();if(!name){input?.focus();input?.classList.add('name-error');return}meta.playerName=name;saveMeta();screen='setup';render();}
-function render(){app.innerHTML=screen==='home'?renderHome():screen==='setup'?renderSetup():screen==='stage'?renderStageIntro():screen==='play'?renderPlay():screen==='upgrade'?renderUpgrade():screen==='wheel'?renderWheel():screen==='clear'?renderStageClear():screen==='rare'?renderRareReward():screen==='end'?renderEnd():renderHome();bind();}
-
-function renderHome(){return `<main class="home-screen"><div class="home-overlay"></div><section class="home-panel"><div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px;margin:0 auto"><input id="player-name" maxlength="16" autocomplete="name" value="${meta.playerName||''}" placeholder="輸入名字" style="width:100%;box-sizing:border-box;border:0;border-radius:18px;padding:16px 18px;font-size:16px;font-weight:800;background:rgba(255,255,255,.92);box-shadow:0 8px 24px rgba(42,49,46,.12);outline:none"><button class="pk-btn" data-action="line-login" style="background:#06c755;color:#fff;border-color:#06c755">LINE 登入</button><button class="fight-btn" data-action="setup">FIGHT <span>→</span></button></div></section></main>`;}
-function renderSetup(){const r=ROLES[meta.role],p=PETS[meta.pet||'fox'];return `<main class="home-screen"><div class="home-overlay"></div><section class="home-panel"><div class="home-copy"><small>${meta.playerName||'PLAYER'}</small><h1>選擇職業與夥伴</h1></div><div class="role-preview">${visual(r.art,r.icon,'home-role-art')}<div><b>${r.name}</b><span>${r.desc}<br>✦ ${r.passive}</span></div></div><div class="role-row">${Object.entries(ROLES).map(([id,x])=>`<button class="role-btn ${id===meta.role?'active':''}" data-role="${id}">${x.icon}<b>${x.name}</b></button>`).join('')}</div><div style="margin-top:10px;font-size:10px;font-weight:900;color:#7b847f">選擇夥伴</div><div class="role-row" style="margin-top:6px">${Object.entries(PETS).map(([id,x])=>`<button class="role-btn ${id===(meta.pet||'fox')?'active':''}" data-pet="${id}" title="${x.passive}">${visual(x.art,x.icon,'home-role-art')}<b>${x.name}</b></button>`).join('')}</div><div style="margin-top:7px;font-size:10px;color:#7b847f;text-align:center">${p.icon} ${p.passive}</div><div class="home-actions"><button class="fight-btn" data-action="start">開始冒險 <span>→</span></button><button class="home-btn" data-action="back-home">返回</button></div></section></main>`;}
-function renderStageIntro(){const s=stage(),r=role(),p=pet();return `<main class="stage-screen"><section class="stage-card"><small>STAGE ${s.id} / ${STAGES.length}</small><h1>${s.name}</h1>${visual(s.art,s.icon,'stage-enemy-art')}<h2>${s.enemy}</h2><p>先看敵人能力，再答題強化自己；選完能力後自動交戰 3 回合。</p><div class="stage-stats three"><span>❤️ HP <b>${s.hp}</b></span><span>⚔️ 攻擊 <b>${s.atk}</b></span><span>🛡️ 防禦 <b>${s.def}</b></span></div><div class="build-line"><b>${s.trait}</b>　${s.traitText}</div><div class="build-line">${r.icon} ${r.name}｜${r.passive}</div><div class="build-line">${p.icon} ${p.name}｜${p.passive}</div><button class="fight-btn" data-action="enter-stage">開始答題 <span>→</span></button></section></main>`;}
-function renderRoundDots(){return `<div class="round-dots">${[1,2,3].map(n=>`<i class="${run.battleRound===n?'active':run.battleRound>n?'done':''}"></i>`).join('')}</div>`;}
-function renderPlay(){const e=run.enemy,r=role(),p=pet(),enemyPct=clamp(e.currentHp/e.hp*100,0,100),hpPct=clamp(run.hp/run.maxHp*100,0,100);return `<main class="game-shell ${locked?'locked':''}"><header class="game-head"><button data-action="quit">×</button><div><small>STAGE ${stage().id} · CYCLE</small><b>${run.cycle}</b></div><div class="streak-chip">🔥 ${run.streak}</div></header><section class="arena ${anim}"><div class="hero-side">${combatFx.hero?`<div class="combat-number hero-number">${combatFx.hero}</div>`:''}${visual(r.art,r.icon,'hero-art')}<div style="position:absolute;right:4%;bottom:54px;transform:scale(.48);transform-origin:bottom right">${visual(p.art,p.icon,'hero-art')}</div><div class="hero-name">${r.name} <span style="font-size:10px;font-weight:700">＋ ${p.icon}${p.name}</span></div><div class="hpbar"><i style="width:${hpPct}%"></i></div><small>${run.hp} / ${run.maxHp}</small><div class="stats-mini"><span>⚔️ ${run.atk}</span><span>🛡️ ${run.def}</span><span>💥 ${Math.round(run.crit*100)}%</span></div></div><div class="vs-line"><span>${run.battleRound?`ROUND ${run.battleRound}/3`:'READY'}</span><b>VS</b>${renderRoundDots()}${combatFx.proc?`<em>${combatFx.proc}</em>`:'<em>&nbsp;</em>'}</div><div class="enemy-side">${combatFx.enemy?`<div class="combat-number enemy-number">${combatFx.enemy}</div>`:''}<div class="enemy-label">${e.boss?'BOSS':'ENEMY'} · ${e.name}</div>${visual(e.art,e.icon,'enemy-art')}<div class="hpbar enemy"><i style="width:${enemyPct}%"></i></div><small>${Math.max(0,e.currentHp)} / ${e.hp}</small><div class="stats-mini enemy-stats"><span>⚔️ ${e.atk}</span><span>🛡️ ${e.def}</span><span>${e.trait}</span></div>${e.poison?`<span class="effect-tag">☠️ ${e.poison}</span>`:''}</div></section><div class="skill-strip">${renderOwnedSkills()}</div>${renderQuiz()}</main>`;}
-function renderQuiz(){const q=run.question,battleFocus=anim||run.battleRound>0;return `<section class="quiz-card ${answerReview?'reviewing':''} ${battleFocus?'battle-focus':''}"><div class="quiz-top"><span>${answerReview?'作答結果':battleFocus?'三回合戰鬥中':'選出正確中文'}</span><b>${!answerReview&&!battleFocus&&run.streak>=2?'再答對就有轉盤！':''}</b></div><h2>${q.word}</h2><div class="answers">${q.options.map(o=>{let cls='';if(answerReview){if(o===q.answer)cls='correct-answer';else if(o===answerReview.selected&&!answerReview.correct)cls='wrong-answer';}return `<button class="${cls}" data-answer="${o}" ${(locked||battleFocus)?'disabled':''}>${o}</button>`}).join('')}</div>${answerReview?`<div class="answer-summary ${answerReview.correct?'ok':'bad'}"><b>${answerReview.correct?'✓ 答對':'✕ 答錯'}</b><span>正解：${q.answer}</span></div>`:''}</section>`;}
-function renderOwnedSkills(){const owned=Object.entries(run.skills).sort((a,b)=>b[1]-a[1]);const relics=(run.rareRewards||[]).slice(-2).map(id=>RARE_REWARDS.find(x=>x.id===id)).filter(Boolean);return [`<span class="main-build">${pet().icon} ${pet().name}</span>`,...owned.slice(0,4).map(([id,l],i)=>{const u=UPGRADES.find(x=>x.id===id),e=evolutionState(id,l).active;return `<span class="${i===0?'main-build':''}">${u?.icon||'✦'} ${u?.name||id} <b>Lv.${fmtLevel(l)}</b>${e?` · ${e.name}`:''}</span>`}),...relics.map(x=>`<span class="main-build">${x.icon} ${x.name}</span>`)].join('');}
-
-function answer(value){if(screen!=='play'||locked||run.battleRound>0)return;locked=true;run.totalAnswers++;pendingCorrect=value===run.question.answer;answerReview={selected:value,correct:pendingCorrect};if(pendingCorrect){run.correct++;run.streak++;run.maxStreak=Math.max(run.maxStreak,run.streak);meta.bestStreak=Math.max(meta.bestStreak,run.streak);saveMeta();}else run.streak=0;render();setTimeout(()=>{answerReview=null;upgradeChoices=rollUpgrades();screen='upgrade';locked=false;render();},PAUSE.review);}
-function rollUpgrades(){const r=role(),allowed=UPGRADES.filter(u=>!u.roleOnly||u.roleOnly===run.role),weighted=[];for(const u of allowed){weighted.push(u);for(let i=0;i<Math.min(4,Math.floor(skillLevel(u.id)));i++)weighted.push(u);if(r.favored.includes(u.id))weighted.push(u,u);}const result=[];for(const u of shuffle(weighted)){if(!result.some(x=>x.id===u.id))result.push(u);if(result.length===3)break}if(!result.some(u=>u.roleOnly===run.role)){const exclusive=shuffle(allowed.filter(u=>u.roleOnly===run.role));if(exclusive.length)result[2]=exclusive[0];}return result;}
-function chooseUpgrade(id){const u=UPGRADES.find(x=>x.id===id);if(!u)return;const gain=pendingCorrect?1:.5,next=skillLevel(id)+gain;run.skills[id]=next;u.apply(run,next,pendingCorrect?1:.5);if(pendingCorrect&&run.streak>0&&run.streak%3===0){wheelReward=null;screen='wheel';render();return}startBattleSet();}
-function renderUpgrade(){const rate=pendingCorrect?1:.5;return `<main class="choice-screen"><div class="choice-head"><small>${pendingCorrect?'FULL POWER':'HALF POWER'}</small><h1>${pendingCorrect?'答對：三選一完整強化':'答錯：仍可三選一，但只有 50% 效果'}</h1><p>${role().icon} ${role().name}｜${pet().icon} ${pet().name}</p></div><div class="upgrade-grid">${upgradeChoices.map(u=>{const cur=skillLevel(u.id),next=cur+(pendingCorrect?1:.5),note=evolutionNote(u.id,next);return `<button data-upgrade="${u.id}"><span>${u.icon}</span><div><em>${u.roleOnly?'職業專屬 · ':''}${cur?`Lv.${fmtLevel(cur)} → Lv.${fmtLevel(next)}`:`NEW → Lv.${fmtLevel(next)}`}</em><b>${u.name}</b><small>${u.desc(Math.max(1,next))}${rate<1?' · 本次 50% 效果':''}${note?`<br>✦ ${note}`:''}</small></div></button>`}).join('')}</div><div class="build-line">${summarizeBuild()}</div></main>`;}
-function summarizeBuild(){const parts=[`${pet().icon} ${pet().name}`],ownedSkills=Object.entries(run.skills).sort((a,b)=>b[1]-a[1]);for(const [id,l] of ownedSkills){const u=UPGRADES.find(x=>x.id===id),e=evolutionState(id,l).active;parts.push(`${u?.icon||'✦'} ${u?.name||id} Lv.${fmtLevel(l)}${e?`【${e.name}】`:''}`)}for(const id of run.rareRewards||[]){const x=RARE_REWARDS.find(r=>r.id===id);if(x)parts.push(`${x.icon} ${x.name}`)}return parts.join('　');}
-
-function renderWheel(){return `<main class="wheel-screen"><small>STREAK BONUS</small><h1>🔥 連續答對 ${run.streak} 題</h1><p>額外獎勵，結束後立即進入 3 回合戰鬥。</p><div class="wheel ${wheelReward?'stopped':'spinning'}">${WHEEL.map((x,i)=>`<div class="wheel-item i${i}"><span>${x.icon}</span></div>`).join('')}<b>LUCK</b></div>${wheelReward?`<div class="wheel-result"><span>${wheelReward.icon}</span><b>${wheelReward.label}</b></div><button class="continue-btn" data-action="wheel-next">開始戰鬥</button>`:`<button class="spin-btn" data-action="spin">轉！</button>`}</main>`;}
-function spinWheel(){if(wheelReward)return;wheelReward=pick(WHEEL);wheelReward.fn(run);render();}
-
-function startBattleSet(){screen='play';locked=true;answerReview=null;run.battleRound=1;run.wasHit=false;anim='';clearFx();if(run.pet==='owl'){const before=run.hp;run.hp=Math.min(run.maxHp,run.hp+3);if(run.hp>before)combatFx.hero=`+${run.hp-before}`;}render();setTimeout(playBattleRound,PAUSE.focus);}
-function enemyRoundProfile(){const m=run.enemy.mechanic,n=run.battleRound;let heroDamageMult=1,enemyDefBonus=0,evadeChance=0,enemyAtkMult=1,enemyHeal=0,label='';if(m==='vine'&&n===2){heroDamageMult=.7;label='🌿 纏藤';}if(m==='dodge')evadeChance=.28;if(m==='shell'&&n<=2){enemyDefBonus=6;label='🪨 硬殼';}if(m==='shadow'&&n===2){heroDamageMult=.75;label='🌑 暗影護幕';}if(m==='shadow'&&n===3){enemyAtkMult=1.45;enemyHeal=10;label='👁️ 吞噬';}return {heroDamageMult,enemyDefBonus,evadeChance,enemyAtkMult,enemyHeal,label};}
-function playBattleRound(){if(screen!=='play'||run.battleRound<1)return;clearFx();const r=role(),p=enemyRoundProfile(),critLv=skillLevel('crit'),comboLv=skillLevel('combo'),fireLv=skillLevel('fire'),poisonLv=skillLevel('poison');if(run.regen){const before=run.hp;run.hp=Math.min(run.maxHp,run.hp+run.regen);if(run.hp>before)combatFx.hero=`+${run.hp-before}`;}
- let raw=Math.round(run.atk*(1+run.rage*Math.max(0,run.streak-1)));if(run.wasHit&&run.reprisal){raw=Math.round(raw*(1+run.reprisal));combatFx.proc='⚔️ 復仇戰意';run.wasHit=false;}if(r===ROLES.mage&&run.battleRound===3&&run.arcaneBurst){raw=Math.round(raw*(1+run.arcaneBurst));combatFx.proc=[combatFx.proc,'✨ 奧術爆發'].filter(Boolean).join(' · ');}const critChance=clamp(run.crit+(r===ROLES.archer&&run.battleRound===1?.12+run.firstCrit:0),0,.88);let crit=false;if(Math.random()<critChance){raw=Math.round(raw*(critLv>=3?2.35:2));crit=true}
- const effectiveDef=run.enemy.def+p.enemyDefBonus;let damage=Math.max(1,Math.round((raw-effectiveDef)*p.heroDamageMult));const elemMult=r===ROLES.mage?1.22+run.elementAmp:1+run.elementAmp,fireHit=Math.round(run.fire*elemMult);damage+=fireHit;let combo=0,secondCombo=0,finisher=0,petHit=0;const comboChance=clamp(run.combo+(r===ROLES.archer&&run.battleRound===1?.12+run.firstCombo:0),0,.88);if(comboChance>0&&Math.random()<comboChance){combo=Math.max(1,Math.round((run.atk*(comboLv>=3?.80:.58)-effectiveDef)*p.heroDamageMult));if(comboLv>=5)secondCombo=Math.max(1,Math.round((run.atk*.40-Math.floor(effectiveDef*.5))*p.heroDamageMult));}if(crit&&critLv>=5)finisher=Math.max(1,Math.round(run.atk*.40*p.heroDamageMult));if(run.pet==='fox'&&Math.random()<.30)petHit=Math.max(1,Math.round(run.atk*.45));if(run.pet==='dragon')petHit+=3;const dodged=p.evadeChance>0&&Math.random()<p.evadeChance;if(dodged){damage=combo=secondCombo=finisher=0;}
- combatFx.proc=[combatFx.proc,p.label,dodged?'💨 殘影閃避':'',crit&&!dodged?'💥 暴擊':'',combo?comboLv>=5?'➶ 二段連擊':'➶ 連擊':'',finisher?'✦ 終結追擊':'',petHit?run.pet==='fox'?'🦊 靈狐追擊':'🐉 龍息':''].filter(Boolean).join(' · ');anim='hero-attack';render();setTimeout(()=>{const total=damage+combo+secondCombo+finisher+petHit;run.enemy.currentHp-=total;combatFx.enemy=dodged&&petHit===0?'MISS':`-${total}`;if(!dodged&&fireHit&&fireLv>=3){run.enemy.burn+=Math.max(1,Math.ceil(fireHit*.45));if(fireLv>=5&&run.battleRound===3){const burst=Math.max(2,Math.round(fireHit*1.7));run.enemy.currentHp-=burst;combatFx.enemy=`-${total+burst}`;combatFx.proc=[combatFx.proc,'🔥 烈焰爆發'].filter(Boolean).join(' · ');}}if(!dodged&&run.poison){const basePoison=run.poison*elemMult,pm=poisonLv>=5?1.8:poisonLv>=3?1.3:1,add=Math.max(1,Math.round(basePoison*pm));run.enemy.poison+=add;combatFx.proc=[combatFx.proc,`☠️ +${add}`].filter(Boolean).join(' · ');}if(!dodged&&run.lifesteal&&total>0){const heal=Math.max(1,Math.round(total*run.lifesteal));run.hp=Math.min(run.maxHp,run.hp+heal);combatFx.hero=`+${heal}`;}anim='enemy-hit';render();setTimeout(()=>afterHeroAttack(p),PAUSE.impact);},PAUSE.attack);}
-function afterHeroAttack(p){let dot=0,tags=[];if(run.enemy.burn>0){dot+=run.enemy.burn;tags.push(`🔥 ${run.enemy.burn}`)}if(run.enemy.poison>0){dot+=run.enemy.poison;tags.push(`☠️ ${run.enemy.poison}`)}if(dot){run.enemy.currentHp-=dot;combatFx.enemy=`-${dot}`;combatFx.proc=tags.join(' · ')}if(run.enemy.currentHp<=0){anim='enemy-down';render();setTimeout(()=>finishBattleSet(true),PAUSE.defeat);return}clearFx();if(p.label)combatFx.proc=p.label;anim='enemy-turn';render();setTimeout(()=>{const r=role(),enemyAtk=Math.round(run.enemy.atk*p.enemyAtkMult),pre=Math.max(1,enemyAtk-run.def),roleReduction=r===ROLES.warrior?.9:1,petReduction=run.pet==='owl'?.88:1,incoming=Math.max(1,Math.round((pre-run.shield-run.roleGuard)*roleReduction*petReduction)),blocked=Math.max(0,pre-incoming);run.hp=Math.max(0,run.hp-incoming);run.wasHit=incoming>0;combatFx.hero=`-${incoming}`;if(run.pet==='owl')combatFx.proc=[combatFx.proc,'🦉 守望'].filter(Boolean).join(' · ');if(p.enemyHeal>0&&incoming>0){const heal=Math.min(p.enemyHeal,run.enemy.hp-run.enemy.currentHp);if(heal>0){run.enemy.currentHp+=heal;combatFx.enemy=`+${heal}`;combatFx.proc=[combatFx.proc,'🩸 吸血'].filter(Boolean).join(' · ');}}const counterLv=skillLevel('counter'),shieldLv=skillLevel('shield');let counter=0,thorns=0;if(run.counter>0){counter=counterLv>=5?Math.max(1,Math.round(run.atk*run.counter)):Math.max(1,Math.round(run.atk*run.counter)-run.enemy.def);if(r===ROLES.warrior)counter=Math.round(counter*1.18);run.enemy.currentHp-=counter;combatFx.enemy=`-${counter}`;combatFx.proc=[combatFx.proc,counterLv>=5?'↩️ 穿甲反擊':'↩️ 反擊'].filter(Boolean).join(' · ');if(counterLv>=3){const heal=Math.max(1,Math.round(counter*.22));run.hp=Math.min(run.maxHp,run.hp+heal);combatFx.hero=`-${incoming} / +${heal}`;combatFx.proc+=' · 🩸 回復';}}if(shieldLv>=3&&blocked>0){thorns=Math.max(1,Math.round(blocked*(shieldLv>=5?.52:.28)));run.enemy.currentHp-=thorns;combatFx.enemy=`-${counter+thorns}`;combatFx.proc=[combatFx.proc,shieldLv>=5?'◇ 鋼鐵荊棘':'◇ 荊棘護體'].filter(Boolean).join(' · ');}anim='hero-hit';render();setTimeout(()=>{if(run.hp<=0){finish(false);return}if(run.enemy.currentHp<=0){anim='enemy-down';render();setTimeout(()=>finishBattleSet(true),PAUSE.defeat);return}if(run.battleRound>=3){finishBattleSet(false);return}run.battleRound++;anim='';clearFx();render();setTimeout(playBattleRound,PAUSE.between);},PAUSE.counter);},PAUSE.counter);}
-
-function finishBattleSet(dead){anim='';clearFx();if(dead){run.battleRound=0;screen='clear';locked=false;render();return}run.battleRound=0;run.cycle++;run.question=makeQuestion();locked=false;answerReview=null;screen='play';render();}
-function strongestBuild(){const owned=Object.entries(run.skills).sort((a,b)=>b[1]-a[1]);if(!owned.length)return `${pet().icon} ${pet().name}`;const [id,l]=owned[0],u=UPGRADES.find(x=>x.id===id),e=evolutionState(id,l).active;return `${u?.icon||'✦'} ${u?.name||id} Lv.${fmtLevel(l)}${e?`・${e.name}`:''}`;}
-function renderStageClear(){const s=stage();return `<main class="stage-screen"><section class="stage-card clear"><small>STAGE ${s.id} CLEAR</small><div class="clear-icon">✓</div><h1>擊破 ${s.enemy}</h1><p>${s.boss?'你完成了這次冒險。':`${s.reward}。先拿一個稀有獎勵，再前往下一關。`}</p><div class="clear-summary"><span>循環 <b>${run.cycle}</b></span><span>剩餘 HP <b>${run.hp}/${run.maxHp}</b></span><span>夥伴 <b>${pet().icon} ${pet().name}</b></span></div><div class="build-line">${summarizeBuild()}</div>${s.boss?`<button class="fight-btn" data-action="finish">查看結果 <span>→</span></button>`:`<button class="fight-btn" data-action="stage-reward">領取稀有獎勵 <span>✦</span></button>`}</section></main>`;}
-function openRareReward(){const owned=new Set(run.rareRewards||[]),pool=RARE_REWARDS.filter(x=>!owned.has(x.id));rareChoices=shuffle(pool.length>=3?pool:RARE_REWARDS).slice(0,3);screen='rare';render();}
-function renderRareReward(){return `<main class="choice-screen"><div class="choice-head"><small>STAGE TREASURE</small><h1>三選一・稀有獎勵</h1><p>${pet().icon} ${pet().name} 會陪你把這個 Build 帶到 Boss。</p></div><div class="upgrade-grid">${rareChoices.map(x=>`<button data-rare="${x.id}"><span>${x.icon}</span><div><em>RARE · 永久持有</em><b>${x.name}</b><small>${x.desc}</small></div></button>`).join('')}</div><div class="build-line">${summarizeBuild()}</div></main>`;}
-function chooseRareReward(id){const x=RARE_REWARDS.find(r=>r.id===id);if(!x)return;x.apply(run);run.rareRewards.push(id);nextStage();}
-function nextStage(){const heal=Math.ceil(run.maxHp*[.12,.14,.16,.0][run.stageIndex]);run.hp=Math.min(run.maxHp,run.hp+heal);run.stageIndex++;run.cycle=1;run.battleRound=0;run.enemy=freshEnemy(stage());run.question=makeQuestion();answerReview=null;clearFx();screen='stage';render();}
-function finish(won){run.won=won;if(won)meta.wins++;meta.bestStreak=Math.max(meta.bestStreak,run.maxStreak);saveMeta();screen='end';locked=false;run.battleRound=0;clearFx();render();}
-function renderEnd(){return `<main class="end-screen"><div class="end-card"><div class="end-icon">${run.won?'👑':'💀'}</div><small>${run.won?'CLEAR':'DEFEAT'}</small><h1>${run.won?'擊敗影語王！':'這次冒險結束'}</h1><div class="end-stats"><span>答對<b>${run.correct}</b></span><span>最高連對<b>${run.maxStreak}</b></span><span>夥伴<b>${pet().name}</b></span></div><div class="build-summary">${summarizeBuild()}</div><button class="fight-btn" data-action="again">再玩一次 <span>↻</span></button><button class="home-btn" data-action="home">回首頁</button></div></main>`;}
-function quit(){if(confirm('放棄這次挑戰？')){run=null;screen='home';locked=false;clearFx();render()}}
-function bind(){
- document.querySelectorAll('[data-role]').forEach(el=>el.onclick=()=>{meta.role=el.dataset.role;saveMeta();render()});
- document.querySelectorAll('[data-pet]').forEach(el=>el.onclick=()=>{meta.pet=el.dataset.pet;saveMeta();render()});
- document.querySelector('#player-name')?.addEventListener('input',e=>{e.target.classList.remove('name-error');meta.playerName=e.target.value;saveMeta();});
- document.querySelector('#player-name')?.addEventListener('keydown',e=>{if(e.key==='Enter')openSetup();});
- document.querySelector('[data-action="setup"]')?.addEventListener('click',openSetup);
- document.querySelector('[data-action="line-login"]')?.addEventListener('click',()=>alert('LINE 登入尚未設定 Channel ID／LIFF ID，設定後即可接上正式登入。'));
- document.querySelector('[data-action="back-home"]')?.addEventListener('click',()=>{screen='home';render()});
- document.querySelector('[data-action="start"]')?.addEventListener('click',startRun);
- document.querySelector('[data-action="pk"]')?.addEventListener('click',startPk);
- document.querySelector('[data-action="enter-stage"]')?.addEventListener('click',()=>{screen='play';render()});
- document.querySelectorAll('[data-answer]').forEach(el=>el.onclick=()=>answer(el.dataset.answer));
- document.querySelectorAll('[data-upgrade]').forEach(el=>el.onclick=()=>chooseUpgrade(el.dataset.upgrade));
- document.querySelectorAll('[data-rare]').forEach(el=>el.onclick=()=>chooseRareReward(el.dataset.rare));
- document.querySelector('[data-action="spin"]')?.addEventListener('click',spinWheel);
- document.querySelector('[data-action="wheel-next"]')?.addEventListener('click',startBattleSet);
- document.querySelector('[data-action="stage-reward"]')?.addEventListener('click',openRareReward);
- document.querySelector('[data-action="finish"]')?.addEventListener('click',()=>finish(true));
- document.querySelector('[data-action="quit"]')?.addEventListener('click',quit);
- document.querySelector('[data-action="again"]')?.addEventListener('click',startRun);
- document.querySelector('[data-action="home"]')?.addEventListener('click',()=>{run=null;screen='home';clearFx();render()});
-}
+let meta=loadMeta(),screen='home',run=null,selectedTactic=null,answerState=null,upgradeChoices=[],anim='',pkMode=null;
+const shuffle=a=>{const c=[...a];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function loadMeta(){try{return {...{role:'warrior',pet:'fox',playerName:''},...JSON.parse(localStorage.getItem(SAVE_KEY)||'{}')}}catch{return {role:'warrior',pet:'fox',playerName:''}}}
+function saveMeta(){localStorage.setItem(SAVE_KEY,JSON.stringify(meta))}
+function question(){const w=pick(WORDS);return {word:w[0],answer:w[1],options:shuffle(w[2])}}
+function role(){return ROLES[run?.role||meta.role]}
+function pet(){return PETS[run?.pet||meta.pet]}
+function stage(){return STAGES[run.stageIndex]}
+function startRun(){const b=ROLES[meta.role].base;run={role:meta.role,pet:meta.pet,stageIndex:0,hp:b.hp,maxHp:b.hp,atk:b.atk,def:b.def,enemyHp:STAGES[0].hp,turn:0,streak:0,focusReady:1,power:1,guard:.5,focus:.65,comboAmp:.05,winHeal:8,owlSave:true,q:question()};screen='battle';selectedTactic=null;answerState=null;render()}
+function resetEnemy(){run.enemyHp=stage().hp;run.turn=0;run.focusReady=1;run.owlSave=true;run.q=question();selectedTactic=null;answerState=null}
+function openSetup(){const el=document.querySelector('#player-name');const name=(el?.value||meta.playerName).trim();if(!name){el?.focus();return}meta.playerName=name;saveMeta();screen='setup';render()}
+function startPk(){pkMode?.stop(false);pkMode=createPkMode({app,meta,ROLES,PETS,WORDS,visual,onExit:()=>{pkMode=null;screen='setup';render()}});pkMode.start()}
+function enemyIntent(){return stage().intents[run.turn%stage().intents.length]}
+function intentName(i){return i==='attack'?'攻擊':i==='guard'?'防守':'蓄力'}
+function chooseTactic(id){if(!TACTICS[id]||answerState)return;selectedTactic=id;run.q=question();render()}
+function answer(value){if(!selectedTactic||answerState)return;const correct=value===run.q.answer;answerState={selected:value,correct};render();setTimeout(()=>resolveTurn(correct),380)}
+function resolveTurn(correct){const intent=enemyIntent(),r=role();let dealt=0,received=0;let quality=correct?1:.28;if(selectedTactic==='strike'){
+ let mult=run.power*run.focusReady*(1+run.streak*run.comboAmp);if(intent==='charge')mult*=1.35;if(intent==='guard')mult*=.65;if(r===ROLES.archer&&correct)mult*=1+Math.min(.35,run.streak*.04);if(r===ROLES.mage&&run.focusReady>1)mult*=1.15;if(run.pet==='dragon'&&run.focusReady>1)mult*=1.18;dealt=Math.max(1,Math.round(run.atk*mult*quality));run.focusReady=1;
+ }else if(selectedTactic==='guard'){
+ dealt=Math.max(1,Math.round(run.atk*.28*quality));if(correct&&r===ROLES.warrior)run.focusReady=Math.max(run.focusReady,1.3);
+ }else{
+ dealt=Math.max(1,Math.round(run.atk*.12*quality));if(correct)run.focusReady=1+run.focus;
+ }
+ if(correct){run.streak++;if(run.pet==='fox'&&run.streak%3===0)dealt+=Math.round(run.atk*.55)}else run.streak=0;
+ run.enemyHp=Math.max(0,run.enemyHp-dealt);
+ if(run.enemyHp>0){let enemyMult=intent==='charge'?.25:intent==='guard'?.55:1;if(intent==='attack')enemyMult=1.2;let reduction=run.def;if(selectedTactic==='guard')reduction+=stage().atk*run.guard*(correct?1:.35);received=Math.max(0,Math.round(stage().atk*enemyMult-reduction));if(!correct&&run.pet==='owl'&&run.owlSave){received=Math.round(received*.5);run.owlSave=false}run.hp=Math.max(0,run.hp-received)}
+ anim='impact';render();setTimeout(()=>{anim='';if(run.enemyHp<=0)return clearStage();if(run.hp<=0){screen='end';return render()}run.turn++;selectedTactic=null;answerState=null;run.q=question();render()},520)}
+function clearStage(){run.hp=Math.min(run.maxHp,run.hp+run.winHeal);if(run.stageIndex>=STAGES.length-1){screen='win';return render()}upgradeChoices=shuffle(UPGRADES).slice(0,3);screen='upgrade';render()}
+function takeUpgrade(id){const u=UPGRADES.find(x=>x.id===id);if(!u)return;u.apply(run);run.stageIndex++;resetEnemy();screen='battle';render()}
+function renderHome(){return `<main class="home-screen"><section class="home-panel home-login"><input id="player-name" value="${esc(meta.playerName)}" maxlength="16" placeholder="輸入名字"><button class="line-image-btn" data-action="line-login" aria-label="LINE 登入"></button><button class="fight-hotspot" data-action="setup" aria-label="進入遊戲"></button></section></main>`}
+function slot(id){return `<span class="asset-slot" data-asset="${id}"></span>`}
+function renderSetup(){return `<main class="setup-screen"><section class="setup-card"><h1>選擇角色</h1><div class="pick-grid">${Object.entries(ROLES).map(([id,x])=>`<button class="pick-card ${meta.role===id?'active':''}" data-role="${id}">${visual(x.art,'','pick-art')}<b>${x.name}</b><small>${x.trait}</small></button>`).join('')}</div><h1>選擇夥伴</h1><div class="pick-grid pets">${Object.entries(PETS).map(([id,x])=>`<button class="pick-card ${meta.pet===id?'active':''}" data-pet="${id}">${visual(x.art,'','pick-art')}<b>${x.name}</b><small>${x.trait}</small></button>`).join('')}</div><div class="setup-actions"><button class="primary-btn" data-action="start">開始冒險</button><button class="secondary-btn" data-action="pk">線上對戰</button></div></section></main>`}
+function renderBattle(){const s=stage(),intent=enemyIntent(),hp=clamp(run.hp/run.maxHp*100,0,100),ehp=clamp(run.enemyHp/s.hp*100,0,100);return `<main class="battle-screen ${anim}"><header class="battle-top"><button class="text-btn" data-action="quit">返回</button><b>${meta.playerName}</b><span>連續 ${run.streak}</span></header><section class="combat-stage"><div class="fighter hero">${visual(role().art,'','fighter-art')}<div class="name-line">${role().name}</div><div class="hp"><i style="width:${hp}%"></i></div></div><div class="battle-center"><strong>${intentName(intent)}</strong><small>敵人下一步</small></div><div class="fighter enemy">${visual(s.art,'','fighter-art')}<div class="name-line">${s.name}</div><div class="hp enemy-hp"><i style="width:${ehp}%"></i></div></div></section>${selectedTactic?renderQuestion():renderTactics()}</main>`}
+function renderTactics(){return `<section class="tactic-area"><h1>這回合怎麼打？</h1><div class="tactic-grid">${Object.entries(TACTICS).map(([id,x])=>`<button class="tactic-card" data-tactic="${id}">${slot('tactic-'+id)}<b>${x.name}</b><small>${x.hint}</small></button>`).join('')}</div></section>`}
+function renderQuestion(){const q=run.q;return `<section class="word-area"><div class="chosen-tactic">${TACTICS[selectedTactic].name}</div><h2>${q.word}</h2><div class="answer-grid">${q.options.map(o=>`<button class="answer-btn ${answerState&&o===q.answer?'right':''} ${answerState&&o===answerState.selected&&!answerState.correct?'wrong':''}" data-answer="${o}" ${answerState?'disabled':''}>${o}</button>`).join('')}</div></section>`}
+function renderUpgrade(){return `<main class="upgrade-screen"><section class="upgrade-card"><h1>選一個成長方向</h1><div class="upgrade-grid">${upgradeChoices.map(u=>`<button data-upgrade="${u.id}">${slot('upgrade-'+u.id)}<b>${u.name}</b><small>${u.desc}</small></button>`).join('')}</div></section></main>`}
+function renderEnd(win=false){return `<main class="result-screen"><section class="result-card"><h1>${win?'完成冒險':'挑戰失敗'}</h1><button class="primary-btn" data-action="retry">再試一次</button><button class="secondary-btn" data-action="home">回首頁</button></section></main>`}
+function render(){app.innerHTML=screen==='home'?renderHome():screen==='setup'?renderSetup():screen==='battle'?renderBattle():screen==='upgrade'?renderUpgrade():screen==='win'?renderEnd(true):renderEnd(false);bind()}
+function bind(){document.querySelector('[data-action="setup"]')?.addEventListener('click',openSetup);document.querySelector('[data-action="start"]')?.addEventListener('click',startRun);document.querySelector('[data-action="pk"]')?.addEventListener('click',startPk);document.querySelector('[data-action="quit"]')?.addEventListener('click',()=>{screen='setup';render()});document.querySelector('[data-action="retry"]')?.addEventListener('click',startRun);document.querySelector('[data-action="home"]')?.addEventListener('click',()=>{screen='home';render()});document.querySelector('[data-action="line-login"]')?.addEventListener('click',()=>alert('LINE 登入尚未設定'));document.querySelectorAll('[data-role]').forEach(el=>el.addEventListener('click',()=>{meta.role=el.dataset.role;saveMeta();render()}));document.querySelectorAll('[data-pet]').forEach(el=>el.addEventListener('click',()=>{meta.pet=el.dataset.pet;saveMeta();render()}));document.querySelectorAll('[data-tactic]').forEach(el=>el.addEventListener('click',()=>chooseTactic(el.dataset.tactic)));document.querySelectorAll('[data-answer]').forEach(el=>el.addEventListener('click',()=>answer(el.dataset.answer)));document.querySelectorAll('[data-upgrade]').forEach(el=>el.addEventListener('click',()=>takeUpgrade(el.dataset.upgrade)))}
 render();
