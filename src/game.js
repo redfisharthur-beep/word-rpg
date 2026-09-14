@@ -20,7 +20,7 @@ let meta=loadMeta(),screen='home',run=null,pkMode=null,actionTimer=null,selectTi
 const shuffle=a=>{const c=[...a];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c};
 const pick=a=>a[Math.floor(Math.random()*a.length)],clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function loadMeta(){const base={playerName:'',role:'warrior',pet:'fox',level:1,xp:0};try{const x={...base,...JSON.parse(localStorage.getItem(SAVE_KEY)||'{}')};x.level=clamp(Math.round(Number(x.level)||1),1,50);x.xp=Math.max(0,Math.round(Number(x.xp)||0));return x}catch{return base}}
+function loadMeta(){const base={playerName:'',role:'warrior',pet:'fox',level:1,xp:0};try{const x={...base,...JSON.parse(localStorage.getItem(SAVE_KEY)||'{}')};x.level=Math.max(1,Math.min(50,Math.round(Number(x.level)||1)));x.xp=Math.max(0,Math.round(Number(x.xp)||0));return x}catch{return base}}
 function saveMeta(){localStorage.setItem(SAVE_KEY,JSON.stringify(meta))}
 function xpNeed(level=meta.level){return 120+Math.max(0,level-1)*80}
 function titleFor(level=meta.level){return TITLE_STEPS.find(([lv])=>level>=lv)?.[1]||'初行者'}
