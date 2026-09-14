@@ -1,9 +1,9 @@
 export const COLORS={green:'綠色',blue:'藍色',red:'紅色',yellow:'黃色',neutral:'輔助'};
-export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:false,role:'warrior'};
+export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:false,role:'warrior',pet:null};
 const clone=x=>JSON.parse(JSON.stringify(x));
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 export function makeFighter(extra={}){return {...clone(BASE),...extra};}
-export function accuracyMultiplier(correct){return correct===3?1.5:correct===2?1:correct===1?0.5:0;}
+export function accuracyMultiplier(correct,actor=null){if(correct===3)return 1.5;if(correct===2)return 1;if(correct===1)return .5;if(actor?.pet==='owl')return .25;return 0;}
 export function randomCard(){
   const pool=['stat','stat','stat','combo','desperate','poison','break','sun','preempt','regen','sacrifice','restore','diamond','aegis','boost'];
   const id=pool[rnd(0,pool.length-1)];
@@ -41,6 +41,7 @@ function hit(attacker,defender,mult,logs,label,canCrit=true){
   defender.hp=Math.max(0,defender.hp-dmg);logs.push(`${label}${crit?'（爆擊）':''} ${dmg}`);return dmg;
 }
 function heal(f,amount,logs,label){const missing=f.maxHp-f.hp,take=Math.min(missing,amount);f.hp+=take;const over=amount-take;if(over>0)f.shield+=over;logs.push(`${label} ${take}${over>0?`，護盾 +${over}`:''}`);}
+function healHpOnly(f,amount,logs,label){const take=Math.max(0,Math.min(f.maxHp-f.hp,amount));f.hp+=take;if(take>0)logs.push(`${label} +${take}`);}
 function cleanDurations(f){for(const k of ['poison','armorBreak','atkDown','defBoost'])f[k]=(f[k]||[]).filter(x=>x.turns>0);if(f.critLock<0)f.critLock=0;}
 export function afterAction(actor,other,logs=[]){
   if(actor.regen&&actor.hp>0){const v=Math.round(effectiveAtk(actor)*.30);heal(actor,v,logs,'生生不息');}
@@ -67,20 +68,30 @@ const OFFENSIVE=new Set(['combo','desperate','poison','break','sun','preempt','s
 export function isOffensive(card){return !!card&&OFFENSIVE.has(card.id);}
 export function bondMultiplier(cards=[],card){if(!card||card.color==='neutral')return 1;return cards.filter(x=>x?.color===card.color).length>=2?1.5:1;}
 export function supportBoost(card,actor){if(!card||card.id!=='boost')return 1;const extra=actor?.role==='mage'?20:0;return 1+(card.boost+extra)/100;}
-export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offensiveIndex=0}={}){
-  const logs=[],acc=accuracyMultiplier(correct);
+export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offensiveIndex=0,cards=[],slotIndex=0,speedWin=false}={}){
+  const logs=[],acc=accuracyMultiplier(correct,actor);
   if(acc<=0){logs.push('全錯，本次行動無動作');return logs;}
   if(card?.id==='boost'){logs.push(`神功附體蓄力 +${card.boost+(actor.role==='mage'?20:0)}%`);return logs;}
   if(!card){logs.push('沒有卡牌');return logs;}
-  let roleAmp=1;
+  let roleAmp=1,petAmp=1;
   if(actor.role==='warrior'&&card.color==='blue')roleAmp*=1.30;
   if(actor.role==='mage'&&card.color==='yellow')roleAmp*=1.25;
   if(actor.role==='archer'&&card.color==='red')roleAmp*=1.20;
   if(actor.role==='archer'&&isOffensive(card))roleAmp*=1+Math.min(2,offensiveIndex)*.15;
-  applyCard(card,actor,target,acc*bond*boost*roleAmp,logs);
+  if(actor.pet==='fox'&&speedWin&&slotIndex===0){petAmp*=1.20;logs.push('靈狐先機 +20%');}
+  if(actor.pet==='dragon'&&card.color==='yellow'){petAmp*=1.20;logs.push('幼龍黃牌共鳴 +20%');}
+  const yellowCount=cards.filter(x=>x?.color==='yellow').length;
+  if(actor.pet==='dragon'&&yellowCount>=2&&slotIndex===cards.length-1){petAmp*=1.30;logs.push('幼龍終式爆發 +30%');}
+  applyCard(card,actor,target,acc*bond*boost*roleAmp*petAmp,logs);
   if(actor.role==='warrior'&&card.color==='blue'&&actor.hp>0){const v=Math.max(1,Math.round(effectiveDef(actor)*.20));actor.shield+=v;logs.push(`戰士護盾 +${v}`);}
+  const redCount=cards.filter(x=>x?.color==='red').length;
+  if(actor.pet==='fox'&&redCount>=2&&slotIndex===cards.length-1&&target.hp>0){hit(actor,target,.40*acc,logs,'靈狐追擊');}
   return logs;
 }
-export function resolveBasic(actor,target,correct){const logs=[],p=accuracyMultiplier(correct);if(p<=0){logs.push('全錯，本回合無動作');return logs;}hit(actor,target,p,logs,'基本攻擊');return logs;}
+export function applyPetRoundEnd(actor,cards=[],logs=[]){
+  if(actor?.pet==='owl'&&actor.hp>0){const stable=cards.filter(c=>c?.color==='green'||c?.color==='blue').length;if(stable>=2)healHpOnly(actor,Math.round(actor.maxHp*.08),logs,'夜梟守心');}
+  return logs;
+}
+export function resolveBasic(actor,target,correct){const logs=[],p=accuracyMultiplier(correct,actor);if(p<=0){logs.push('全錯，本回合無動作');return logs;}if(correct===0&&actor?.pet==='owl')logs.push('夜梟洞察：保留 25% 效果');hit(actor,target,p,logs,'基本攻擊');return logs;}
 export function cardSummary(card){if(!card)return '';if(card.kind==='stat')return `${card.name} ${card.pct}%`;if(card.id==='boost')return `${card.name} ${card.boost}%`;return card.name;}
 export function cloneFighter(f){return clone(f);}
