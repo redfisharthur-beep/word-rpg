@@ -1,5 +1,5 @@
 export const COLORS={green:'綠色',blue:'藍色',red:'紅色',yellow:'黃色',neutral:'輔助'};
-export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:false,role:'warrior',pet:null};
+export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:false,role:'warrior',pet:null,monsterId:null};
 const clone=x=>JSON.parse(JSON.stringify(x));
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 export function makeFighter(extra={}){return {...clone(BASE),...extra};}
@@ -10,7 +10,7 @@ export function randomCard(){
   if(id==='stat'){
     const keys=[['hp','生命值','green'],['def','防禦力','blue'],['atk','攻擊力','red'],['crit','爆擊率','yellow']];
     const [stat,name,color]=keys[rnd(0,keys.length-1)],pct=rnd(2,6)*10;
-    return {uid:crypto.randomUUID(),id:`stat-${stat}`,kind:'stat',stat,name:`${name}增加`,text:`增加 ${pct}%`,pct,color};
+    return {uid:crypto.randomUUID(),id:`stat-${stat}`,kind:'stat',stat,name:`${name}增加`,text:stat==='crit'?`爆擊率直接提升`:`增加 ${pct}%`,pct,color};
   }
   const defs={
     combo:['瞬步連擊','red','連續攻擊 3 次，每次 50% 攻擊力'],
@@ -19,12 +19,12 @@ export function randomCard(){
     break:['破甲一擊','red','70% 傷害，對手防禦降低 30% 2 回合'],
     sun:['熾陽閃','yellow','80% 火焰傷害，對手 2 回合無法爆擊'],
     preempt:['制敵機先','red','90% 傷害，對手攻擊降低 30% 2 回合'],
-    regen:['生生不息','green','之後每次行動恢復 30% 攻擊力生命'],
+    regen:['生生不息','green','先回血，再於之後每次行動持續回血'],
     sacrifice:['玉石俱焚','yellow','300% 傷害，自身失去目前 80% 生命'],
     restore:['返本歸元','green','恢復最大生命 80%，溢出轉護盾'],
     diamond:['金剛不壞','blue','防禦增加 200%，持續 2 回合'],
     aegis:['混元護體','blue','增加 100% 攻擊力護盾直到戰鬥結束'],
-    boost:['神功附體','neutral','強化下一張卡片威力']
+    boost:['神功附體','neutral','強化下一張卡，並立即獲得護盾']
   };
   const [name,color,text]=defs[id];
   return {uid:crypto.randomUUID(),id,kind:id==='boost'?'support':'skill',name,text,color,boost:id==='boost'?rnd(3,8)*10:0};
@@ -50,15 +50,40 @@ export function afterAction(actor,other,logs=[]){
   if(actor.critLock>0)actor.critLock--;
   cleanDurations(actor);cleanDurations(other);return logs;
 }
-function applyStat(card,actor,power,logs){const pct=(card.pct/100)*power;if(card.stat==='hp'){const add=Math.round(actor.maxHp*pct);actor.maxHp+=add;actor.hp+=add;logs.push(`生命值 +${Math.round(pct*100)}%`);}else if(card.stat==='crit'){actor.crit=Math.min(.95,actor.crit*(1+pct));logs.push(`爆擊率 +${Math.round(pct*100)}%`);}else{actor[card.stat]*=(1+pct);logs.push(`${card.stat==='atk'?'攻擊力':'防禦力'} +${Math.round(pct*100)}%`);}}
+function applyStat(card,actor,power,logs){
+  const pct=(card.pct/100)*power;
+  if(card.stat==='hp'){
+    const add=Math.round(actor.maxHp*pct);actor.maxHp+=add;actor.hp+=add;logs.push(`生命值 +${Math.round(pct*100)}%`);
+  }else if(card.stat==='crit'){
+    const points=(.06+card.pct/500)*power;actor.crit=Math.min(.60,actor.crit+points);logs.push(`爆擊率 +${Math.round(points*100)}%`);
+  }else{
+    actor[card.stat]*=(1+pct);logs.push(`${card.stat==='atk'?'攻擊力':'防禦力'} +${Math.round(pct*100)}%`);
+    if(card.stat==='def'){
+      const shield=Math.max(1,Math.round(actor.maxHp*.08*power));actor.shield+=shield;logs.push(`防禦護盾 +${shield}`);
+    }
+  }
+}
 function applyCard(card,actor,target,power,logs){if(power<=0)return;if(card.kind==='stat')return applyStat(card,actor,power,logs);switch(card.id){
-  case'combo':for(let i=0;i<3&&target.hp>0;i++)hit(actor,target,.5*power,logs,'瞬步連擊');break;
+  case'combo':{
+    const hits=target?.monsterId==='rabbit'?[.5,.32,.32]:[.5,.5,.5];
+    for(const m of hits){if(target.hp<=0)break;hit(actor,target,m*power,logs,'瞬步連擊');}
+    if(target?.monsterId==='rabbit')logs.push('霧影卸力：後兩擊傷害降低');
+    break;
+  }
   case'desperate':hit(actor,target,2*power,logs,'破釜沉舟');actor.def*=.5;logs.push('自身防禦 -50%');break;
-  case'poison':hit(actor,target,.7*power,logs,'淬毒之刃');target.poison.push({damage:Math.round(effectiveAtk(actor)*.3*power),turns:3});break;
+  case'poison':{
+    hit(actor,target,.7*power,logs,'淬毒之刃');
+    const resist=target?.monsterId==='moss'?.5:1;
+    target.poison.push({damage:Math.round(effectiveAtk(actor)*.3*power*resist),turns:3});
+    if(resist<1)logs.push('苔殼抗毒：毒素傷害減半');
+    break;
+  }
   case'break':hit(actor,target,.7*power,logs,'破甲一擊');target.armorBreak.push({pct:.3*power,turns:2});break;
   case'sun':hit(actor,target,.8*power,logs,'熾陽閃');target.critLock+=2;break;
   case'preempt':hit(actor,target,.9*power,logs,'制敵機先');target.atkDown.push({pct:.3*power,turns:2});break;
-  case'regen':actor.regen=true;logs.push('生生不息啟動');break;
+  case'regen':{
+    const now=Math.max(1,Math.round(actor.maxHp*.15*power));healHpOnly(actor,now,logs,'生生不息');actor.regen=true;logs.push('持續回血啟動');break;
+  }
   case'sacrifice':hit(actor,target,3*power,logs,'玉石俱焚');actor.hp=Math.max(1,Math.round(actor.hp*.2));logs.push('自身生命大幅下降');break;
   case'restore':heal(actor,Math.round(actor.maxHp*.8*power),logs,'返本歸元');break;
   case'diamond':actor.defBoost.push({pct:2*power,turns:2});logs.push('金剛不壞');break;
@@ -71,7 +96,10 @@ export function supportBoost(card,actor){if(!card||card.id!=='boost')return 1;co
 export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offensiveIndex=0,cards=[],slotIndex=0,speedWin=false}={}){
   const logs=[],acc=accuracyMultiplier(correct,actor);
   if(acc<=0){logs.push('全錯，本次行動無動作');return logs;}
-  if(card?.id==='boost'){logs.push(`神功附體蓄力 +${card.boost+(actor.role==='mage'?20:0)}%`);return logs;}
+  if(card?.id==='boost'){
+    const shield=Math.max(1,Math.round(effectiveAtk(actor)*.30*acc));actor.shield+=shield;
+    logs.push(`神功附體 +${card.boost+(actor.role==='mage'?20:0)}%`);logs.push(`護盾 +${shield}`);return logs;
+  }
   if(!card){logs.push('沒有卡牌');return logs;}
   let roleAmp=1,petAmp=1;
   if(actor.role==='warrior'&&card.color==='blue')roleAmp*=1.30;
@@ -93,5 +121,6 @@ export function applyPetRoundEnd(actor,cards=[],logs=[]){
   return logs;
 }
 export function resolveBasic(actor,target,correct){const logs=[],p=accuracyMultiplier(correct,actor);if(p<=0){logs.push('全錯，本回合無動作');return logs;}if(correct===0&&actor?.pet==='owl')logs.push('夜梟洞察：保留 25% 效果');hit(actor,target,p,logs,'基本攻擊');return logs;}
+export function resolveAutoBasic(actor,target){const logs=[];hit(actor,target,1,logs,'普通攻擊',true);return logs;}
 export function cardSummary(card){if(!card)return '';if(card.kind==='stat')return `${card.name} ${card.pct}%`;if(card.id==='boost')return `${card.name} ${card.boost}%`;return card.name;}
 export function cloneFighter(f){return clone(f);}
