@@ -2,6 +2,7 @@ export const ASSETS={
   role:{warrior:'/images/warrior.png',mage:'/images/mage.png',archer:'/images/archer.png'},
   pet:{fox:'/images/fox.png',owl:'/images/owl.png',dragon:'/images/dragon.png'},
   enemy:{moss:'/images/moss.png',rabbit:'/images/rabbit.png',bubble:'/images/bubble.png',beetle:'/images/beetle.png',shadowKing:'/images/shadow-king.png'},
+  ui:{fight:'/images/fight.png',pk:'/images/PK.png',back:'/images/return.png',vs:'/images/VS.png',confirm:'/images/confirm.png',hp:'/images/HP.png',atk:'/images/ATK.png',def:'/images/DEF.png',crit:'/images/Crit.png'},
   card:{
     'stat-hp':'/images/card-stat-hp.png',
     'stat-def':'/images/card-stat-def.png',
