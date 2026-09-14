@@ -19,6 +19,12 @@ export const ASSETS={
     diamond:'/images/card-diamond.png',
     aegis:'/images/card-aegis.png',
     boost:'/images/card-boost.png'
+  },
+  effect:{
+    slash:'/images/effect-slash.png',
+    crit:'/images/effect-crit.png',
+    guard:'/images/effect-guard.png',
+    heal:'/images/effect-heal.png'
   }
 };
 function safeText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
