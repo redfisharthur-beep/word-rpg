@@ -19,7 +19,7 @@ export function randomCard(){
   const id=pool[rnd(0,pool.length-1)];
   if(id==='stat'){
     const keys=[['hp','氣血充盈','green'],['def','罡氣護體','blue'],['atk','戰意沸騰','red'],['crit','破綻洞悉','yellow']];
-    const [stat,name,color]=keys[rnd(0,keys.length-1)],pct=stat==='crit'?rnd(1,5)*10:rnd(2,6)*10;
+    const [stat,name,color]=keys[rnd(0,keys.length-1)],pct=stat==='crit'?rnd(1,3)*10:rnd(2,6)*10;
     return {uid:crypto.randomUUID(),id:`stat-${stat}`,kind:'stat',stat,name,text:stat==='crit'?`爆擊率提升 ${pct}%`:`增加 ${pct}%`,pct,color};
   }
   const defs={
