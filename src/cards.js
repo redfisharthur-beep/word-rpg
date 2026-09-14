@@ -1,5 +1,5 @@
 export const COLORS={green:'綠色',blue:'藍色',red:'紅色',yellow:'黃色',neutral:'輔助'};
-export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:false};
+export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:false,role:'warrior'};
 const clone=x=>JSON.parse(JSON.stringify(x));
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 export function makeFighter(extra={}){return {...clone(BASE),...extra};}
@@ -9,8 +9,7 @@ export function randomCard(){
   const id=pool[rnd(0,pool.length-1)];
   if(id==='stat'){
     const keys=[['hp','生命值','green'],['def','防禦力','blue'],['atk','攻擊力','red'],['crit','爆擊率','yellow']];
-    const [stat,name,color]=keys[rnd(0,keys.length-1)];
-    const pct=rnd(2,6)*10;
+    const [stat,name,color]=keys[rnd(0,keys.length-1)],pct=rnd(2,6)*10;
     return {uid:crypto.randomUUID(),id:`stat-${stat}`,kind:'stat',stat,name:`${name}增加`,text:`增加 ${pct}%`,pct,color};
   }
   const defs={
@@ -30,12 +29,12 @@ export function randomCard(){
   const [name,color,text]=defs[id];
   return {uid:crypto.randomUUID(),id,kind:id==='boost'?'support':'skill',name,text,color,boost:id==='boost'?rnd(3,8)*10:0};
 }
-export function dealHand(n=6){return Array.from({length:n},randomCard);}
+export function dealHand(n=9){return Array.from({length:n},randomCard);}
 function activePct(list=[]){return list.reduce((s,x)=>s+x.pct,0);}
 export function effectiveDef(f){return Math.max(0,f.def*(1+activePct(f.defBoost))*(1-activePct(f.armorBreak)));}
 export function effectiveAtk(f){return Math.max(1,f.atk*(1-activePct(f.atkDown)));}
 function hit(attacker,defender,mult,logs,label,canCrit=true){
-  const atk=effectiveAtk(attacker);let raw=atk*mult;let crit=false;
+  const atk=effectiveAtk(attacker);let raw=atk*mult,crit=false;
   if(canCrit&&attacker.critLock<=0&&Math.random()<attacker.crit){raw*=2;crit=true;}
   let dmg=Math.max(1,Math.round(raw*100/(100+effectiveDef(defender))));
   if(defender.shield>0){const block=Math.min(defender.shield,dmg);defender.shield-=block;dmg-=block;}
@@ -64,14 +63,24 @@ function applyCard(card,actor,target,power,logs){if(power<=0)return;if(card.kind
   case'diamond':actor.defBoost.push({pct:2*power,turns:2});logs.push('金剛不壞');break;
   case'aegis':{const shield=Math.round(effectiveAtk(actor)*power);actor.shield+=shield;logs.push(`護盾 +${shield}`);break;}
 }}
-export function bondMultiplier(cards=[]){return cards.length===2&&cards[0]?.color!=='neutral'&&cards[0]?.color===cards[1]?.color?1.5:1;}
-export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1}={}){
+const OFFENSIVE=new Set(['combo','desperate','poison','break','sun','preempt','sacrifice']);
+export function isOffensive(card){return !!card&&OFFENSIVE.has(card.id);}
+export function bondMultiplier(cards=[],card){if(!card||card.color==='neutral')return 1;return cards.filter(x=>x?.color===card.color).length>=2?1.5:1;}
+export function supportBoost(card,actor){if(!card||card.id!=='boost')return 1;const extra=actor?.role==='mage'?20:0;return 1+(card.boost+extra)/100;}
+export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offensiveIndex=0}={}){
   const logs=[],acc=accuracyMultiplier(correct);
   if(acc<=0){logs.push('全錯，本次行動無動作');return logs;}
-  if(card?.id==='boost'){logs.push(`神功附體蓄力 +${card.boost}%`);return logs;}
+  if(card?.id==='boost'){logs.push(`神功附體蓄力 +${card.boost+(actor.role==='mage'?20:0)}%`);return logs;}
   if(!card){logs.push('沒有卡牌');return logs;}
-  applyCard(card,actor,target,acc*bond*boost,logs);return logs;
+  let roleAmp=1;
+  if(actor.role==='warrior'&&card.color==='blue')roleAmp*=1.30;
+  if(actor.role==='mage'&&card.color==='yellow')roleAmp*=1.25;
+  if(actor.role==='archer'&&card.color==='red')roleAmp*=1.20;
+  if(actor.role==='archer'&&isOffensive(card))roleAmp*=1+Math.min(2,offensiveIndex)*.15;
+  applyCard(card,actor,target,acc*bond*boost*roleAmp,logs);
+  if(actor.role==='warrior'&&card.color==='blue'&&actor.hp>0){const v=Math.max(1,Math.round(effectiveDef(actor)*.20));actor.shield+=v;logs.push(`戰士護盾 +${v}`);}
+  return logs;
 }
-export function resolveBasic(actor,target,correct){const logs=[];const p=accuracyMultiplier(correct);if(p<=0){logs.push('全錯，本回合無動作');return logs;}hit(actor,target,p,logs,'基本攻擊');return logs;}
+export function resolveBasic(actor,target,correct){const logs=[],p=accuracyMultiplier(correct);if(p<=0){logs.push('全錯，本回合無動作');return logs;}hit(actor,target,p,logs,'基本攻擊');return logs;}
 export function cardSummary(card){if(!card)return '';if(card.kind==='stat')return `${card.name} ${card.pct}%`;if(card.id==='boost')return `${card.name} ${card.boost}%`;return card.name;}
 export function cloneFighter(f){return clone(f);}
