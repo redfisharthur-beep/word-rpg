@@ -1,5 +1,5 @@
 import {DurableObject} from 'cloudflare:workers';
-import {dealHand,makeFighter,resolveCardAction,resolveBasic,afterAction,cloneFighter,bondMultiplier,supportBoost,isOffensive} from '../src/cards.js';
+import {dealHand,makeFighter,resolveCardAction,resolveBasic,afterAction,cloneFighter,bondMultiplier,supportBoost,isOffensive,applyPetRoundEnd} from '../src/cards.js';
 
 const WORD_COUNT=30;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -14,7 +14,7 @@ export class Matchmaker extends DurableObject{
   send(ws,data){try{ws.send(JSON.stringify(data))}catch{}}
   find(id){return this.ctx.getWebSockets().find(x=>x.deserializeAttachment()?.id===id)}
   view(att){return {...cloneFighter(att.fighter),profile:att.profile}}
-  join(ws,p){let att=ws.deserializeAttachment()||{};const profile=this.profile(p);att={...att,state:'waiting',profile,fighter:makeFighter({role:profile.role}),hand:dealHand(9),used:[],round:1,ready:null};ws.serializeAttachment(att);const other=this.ctx.getWebSockets().find(x=>x!==ws&&x.deserializeAttachment()?.state==='waiting');if(!other){this.send(ws,{type:'queued'});return}let oa=other.deserializeAttachment();const matchId=crypto.randomUUID();att={...att,state:'matched',opponentId:oa.id,matchId};oa={...oa,state:'matched',opponentId:att.id,matchId};ws.serializeAttachment(att);other.serializeAttachment(oa);const questions=qset();this.send(ws,{type:'matched',self:this.view(att),opponent:this.view(oa),hand:att.hand,questions});this.send(other,{type:'matched',self:this.view(oa),opponent:this.view(att),hand:oa.hand,questions})}
+  join(ws,p){let att=ws.deserializeAttachment()||{};const profile=this.profile(p);att={...att,state:'waiting',profile,fighter:makeFighter({role:profile.role,pet:profile.pet}),hand:dealHand(9),used:[],round:1,ready:null};ws.serializeAttachment(att);const other=this.ctx.getWebSockets().find(x=>x!==ws&&x.deserializeAttachment()?.state==='waiting');if(!other){this.send(ws,{type:'queued'});return}let oa=other.deserializeAttachment();const matchId=crypto.randomUUID();att={...att,state:'matched',opponentId:oa.id,matchId};oa={...oa,state:'matched',opponentId:att.id,matchId};ws.serializeAttachment(att);other.serializeAttachment(oa);const questions=qset();this.send(ws,{type:'matched',self:this.view(att),opponent:this.view(oa),hand:att.hand,questions});this.send(other,{type:'matched',self:this.view(oa),opponent:this.view(att),hand:oa.hand,questions})}
   cleanReady(data,att){const correct=clamp(Math.round(Number(data.correct)||0),0,3),elapsedMs=clamp(Math.round(Number(data.elapsedMs)||30000),200,30000),available=att.hand.map((_,i)=>i).filter(i=>!att.used.includes(i));let selected=[];if(att.round<3){selected=[...new Set((Array.isArray(data.selected)?data.selected:[]).map(Number).filter(i=>available.includes(i)))].slice(0,3);if(selected.length!==3)return null}return {correct,elapsedMs,selected}}
   ready(ws,data){let a=ws.deserializeAttachment();if(!a||a.state!=='matched'||a.ready)return;const ready=this.cleanReady(data,a);if(!ready){this.send(ws,{type:'error',message:'出牌資料錯誤'});return}a.ready=ready;ws.serializeAttachment(a);const other=this.find(a.opponentId);if(!other){this.send(ws,{type:'opponent-left'});return}let b=other.deserializeAttachment();if(!b?.ready){this.send(ws,{type:'waiting-opponent'});return}this.resolvePair(ws,a,other,b)}
   resolvePair(ws,a,other,b){
@@ -23,18 +23,23 @@ export class Matchmaker extends DurableObject{
     else if(first==='a')sequence.push('a','b','a','b','a','b');
     else sequence.push('b','a','b','a','b','a');
     const counts={a:0,b:0},stateA={pendingBoost:1,offensiveCount:0},stateB={pendingBoost:1,offensiveCount:0},stepsA=[],stepsB=[],allLogsA=[],allLogsB=[];
-    const doCard=(actor,target,card,correct,pair,state)=>{const bond=bondMultiplier(pair,card);let boost=1;if(state.pendingBoost>1&&card?.id!=='boost'){boost=state.pendingBoost;state.pendingBoost=1}const offensiveIndex=state.offensiveCount,logs=resolveCardAction(actor,target,card,correct,{bond,boost,offensiveIndex});if(card?.id==='boost')state.pendingBoost=supportBoost(card,actor);if(isOffensive(card))state.offensiveCount++;afterAction(actor,target,logs);return logs};
+    const doCard=(actor,target,card,correct,pair,slot,state,speedWin)=>{const bond=bondMultiplier(pair,card);let boost=1;if(state.pendingBoost>1&&card?.id!=='boost'){boost=state.pendingBoost;state.pendingBoost=1}const offensiveIndex=state.offensiveCount,logs=resolveCardAction(actor,target,card,correct,{bond,boost,offensiveIndex,cards:pair,slotIndex:slot,speedWin});if(card?.id==='boost')state.pendingBoost=supportBoost(card,actor);if(isOffensive(card))state.offensiveCount++;afterAction(actor,target,logs);return logs};
     for(const who of sequence){
       if(A.hp<=0||B.hp<=0)break;
       const slot=counts[who]++;let logs=[],card=null;
       if(round===3){if(who==='a'){logs=resolveBasic(A,B,ra.correct);afterAction(A,B,logs)}else{logs=resolveBasic(B,A,rb.correct);afterAction(B,A,logs)}}
-      else if(who==='a'){card=cardsA[slot];logs=doCard(A,B,card,ra.correct,cardsA,stateA)}
-      else{card=cardsB[slot];logs=doCard(B,A,card,rb.correct,cardsB,stateB)}
+      else if(who==='a'){card=cardsA[slot];logs=doCard(A,B,card,ra.correct,cardsA,slot,stateA,first==='a')}
+      else{card=cardsB[slot];logs=doCard(B,A,card,rb.correct,cardsB,slot,stateB,first==='b')}
       if(who==='a')allLogsA.push(...logs);else allLogsB.push(...logs);
-      stepsA.push({who:who==='a'?'self':'opponent',slot,card,self:cloneFighter(A),opponent:cloneFighter(B),logs});
-      stepsB.push({who:who==='b'?'self':'opponent',slot,card,self:cloneFighter(B),opponent:cloneFighter(A),logs});
+      stepsA.push({who:who==='a'?'self':'opponent',slot,card,self:cloneFighter(A),opponent:cloneFighter(B),logs:[...logs]});
+      stepsB.push({who:who==='b'?'self':'opponent',slot,card,self:cloneFighter(B),opponent:cloneFighter(A),logs:[...logs]});
     }
-    if(round<3){a.used.push(...ra.selected);b.used.push(...rb.selected)}
+    if(round<3){
+      const petLogsA=[],petLogsB=[];applyPetRoundEnd(A,cardsA,petLogsA);applyPetRoundEnd(B,cardsB,petLogsB);allLogsA.push(...petLogsA);allLogsB.push(...petLogsB);
+      if(stepsA.length){stepsA[stepsA.length-1].logs.push(...petLogsA);stepsA[stepsA.length-1].self=cloneFighter(A);stepsA[stepsA.length-1].opponent=cloneFighter(B)}
+      if(stepsB.length){stepsB[stepsB.length-1].logs.push(...petLogsB);stepsB[stepsB.length-1].self=cloneFighter(B);stepsB[stepsB.length-1].opponent=cloneFighter(A)}
+      a.used.push(...ra.selected);b.used.push(...rb.selected)
+    }
     a.fighter=A;b.fighter=B;
     const finished=round>=3||A.hp<=0||B.hp<=0;let winner=null;
     if(finished){const ar=A.hp/A.maxHp,br=B.hp/B.maxHp;winner=Math.abs(ar-br)<.0001?'draw':ar>br?'a':'b';a.state='finished';b.state='finished'}else{a.round++;b.round++;a.ready=null;b.ready=null}
