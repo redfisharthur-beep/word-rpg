@@ -3,7 +3,7 @@ export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],a
 const clone=x=>JSON.parse(JSON.stringify(x));
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 export function makeFighter(extra={}){return {...clone(BASE),...extra};}
-export function accuracyMultiplier(correct){return correct===3?1.5:correct===2?1:correct===1?0.5:0;}
+export function accuracyMultiplier(correct){return correct===3?1.5:correct===2?1:correct===1?.5:0;}
 export function randomCard(){
   const pool=['stat','stat','stat','combo','desperate','poison','break','sun','preempt','regen','sacrifice','restore','diamond','aegis','boost'];
   const id=pool[rnd(0,pool.length-1)];
@@ -25,7 +25,7 @@ export function randomCard(){
     restore:['返本歸元','green','恢復最大生命 80%，溢出轉護盾'],
     diamond:['金剛不壞','blue','防禦增加 200%，持續 2 回合'],
     aegis:['混元護體','blue','增加 100% 攻擊力護盾直到戰鬥結束'],
-    boost:['神功附體','neutral','強化另一張卡片威力']
+    boost:['神功附體','neutral','強化下一張卡片威力']
   };
   const [name,color,text]=defs[id];
   return {uid:crypto.randomUUID(),id,kind:id==='boost'?'support':'skill',name,text,color,boost:id==='boost'?rnd(3,8)*10:0};
@@ -56,15 +56,22 @@ function applyCard(card,actor,target,power,logs){if(power<=0)return;if(card.kind
   case'desperate':hit(actor,target,2*power,logs,'破釜沉舟');actor.def*=.5;logs.push('自身防禦 -50%');break;
   case'poison':hit(actor,target,.7*power,logs,'淬毒之刃');target.poison.push({damage:Math.round(effectiveAtk(actor)*.3*power),turns:3});break;
   case'break':hit(actor,target,.7*power,logs,'破甲一擊');target.armorBreak.push({pct:.3*power,turns:2});break;
-  case'sun':hit(actor,target,.8*power,logs,'熾陽閃');target.critLock+=Math.max(1,Math.round(2*power));break;
+  case'sun':hit(actor,target,.8*power,logs,'熾陽閃');target.critLock+=2;break;
   case'preempt':hit(actor,target,.9*power,logs,'制敵機先');target.atkDown.push({pct:.3*power,turns:2});break;
   case'regen':actor.regen=true;logs.push('生生不息啟動');break;
   case'sacrifice':hit(actor,target,3*power,logs,'玉石俱焚');actor.hp=Math.max(1,Math.round(actor.hp*.2));logs.push('自身生命大幅下降');break;
   case'restore':heal(actor,Math.round(actor.maxHp*.8*power),logs,'返本歸元');break;
   case'diamond':actor.defBoost.push({pct:2*power,turns:2});logs.push('金剛不壞');break;
-  case'aegis':actor.shield+=Math.round(effectiveAtk(actor)*power);logs.push(`護盾 +${Math.round(effectiveAtk(actor)*power)}`);break;
+  case'aegis':{const shield=Math.round(effectiveAtk(actor)*power);actor.shield+=shield;logs.push(`護盾 +${shield}`);break;}
 }}
-export function resolveCards(actor,target,cards,correct){const logs=[];const acc=accuracyMultiplier(correct);if(acc<=0){logs.push('全錯，本回合無動作');return logs;}const same=cards.length===2&&cards[0].color!=='neutral'&&cards[0].color===cards[1].color;const bond=same?1.5:1;let support=1;const boost=cards.find(c=>c.id==='boost'),other=cards.find(c=>c.id!=='boost');if(boost&&other){support=1+boost.boost/100;logs.push(`神功附體 +${boost.boost}%`);}for(const card of cards){if(card.id==='boost')continue;applyCard(card,actor,target,acc*bond*(card===other?support:1),logs);}if(same)logs.unshift(`${COLORS[cards[0].color]}羈絆 ×1.5`);return logs;}
+export function bondMultiplier(cards=[]){return cards.length===2&&cards[0]?.color!=='neutral'&&cards[0]?.color===cards[1]?.color?1.5:1;}
+export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1}={}){
+  const logs=[],acc=accuracyMultiplier(correct);
+  if(acc<=0){logs.push('全錯，本次行動無動作');return logs;}
+  if(card?.id==='boost'){logs.push(`神功附體蓄力 +${card.boost}%`);return logs;}
+  if(!card){logs.push('沒有卡牌');return logs;}
+  applyCard(card,actor,target,acc*bond*boost,logs);return logs;
+}
 export function resolveBasic(actor,target,correct){const logs=[];const p=accuracyMultiplier(correct);if(p<=0){logs.push('全錯，本回合無動作');return logs;}hit(actor,target,p,logs,'基本攻擊');return logs;}
-export function cardSummary(card){if(card.kind==='stat')return `${card.name} ${card.pct}%`;if(card.id==='boost')return `${card.name} ${card.boost}%`;return card.name;}
+export function cardSummary(card){if(!card)return '';if(card.kind==='stat')return `${card.name} ${card.pct}%`;if(card.id==='boost')return `${card.name} ${card.boost}%`;return card.name;}
 export function cloneFighter(f){return clone(f);}
