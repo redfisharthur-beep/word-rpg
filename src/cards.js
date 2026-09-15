@@ -12,39 +12,24 @@ export const TITLE_TIERS=[
 export function titleTier(level=1){const lv=clamp(Math.round(Number(level)||1),1,50);return TITLE_TIERS.find(x=>lv>=x.level)||TITLE_TIERS[TITLE_TIERS.length-1];}
 const ROLE_SKILLS={
   warrior:[
-    {level:5,id:'warrior-5',name:'鐵壁反擊',color:'blue',text:'80%傷害＋20%護盾',fx:{damage:.8,shieldMax:.20}},
     {level:10,id:'warrior-10',name:'震嶽斬',color:'red',text:'155%重擊',fx:{damage:1.55}},
-    {level:15,id:'warrior-15',name:'戰意怒吼',color:'red',text:'90%傷害＋攻擊+18%',fx:{damage:.9,atkBuff:.18}},
     {level:20,id:'warrior-20',name:'不屈戰魂',color:'green',text:'回血28%＋護盾10%',fx:{healMax:.28,shieldMax:.10}},
-    {level:25,id:'warrior-25',name:'破軍斬',color:'red',text:'145%傷害＋破甲25%',fx:{damage:1.45,armorBreak:.25,turns:2}},
     {level:30,id:'warrior-30',name:'王者壁壘',color:'blue',text:'護盾45%＋防禦+20%',fx:{shieldMax:.45,defBuff:.20}},
-    {level:35,id:'warrior-35',name:'狂戰連斬',color:'red',text:'3連擊・每擊70%',fx:{hits:[.7,.7,.7]}},
     {level:40,id:'warrior-40',name:'守護反擊',color:'blue',text:'135%傷害＋護盾25%',fx:{damage:1.35,shieldMax:.25}},
-    {level:45,id:'warrior-45',name:'戰神降臨',color:'yellow',text:'攻防提升＋爆擊+8%',fx:{atkBuff:.28,defBuff:.20,critBuff:.08}},
     {level:50,id:'warrior-50',name:'天崩地裂',color:'red',text:'260%終極傷害',fx:{damage:2.60}}
   ],
   mage:[
-    {level:5,id:'mage-5',name:'魔力湧動',color:'yellow',text:'攻擊+12%＋護盾10%',fx:{atkBuff:.12,shieldMax:.10}},
     {level:10,id:'mage-10',name:'炎爆術',color:'yellow',text:'155%火焰傷害',fx:{damage:1.55}},
-    {level:15,id:'mage-15',name:'寒霜禁制',color:'blue',text:'95%傷害＋敵攻-25%',fx:{damage:.95,atkDown:.25,turns:2}},
     {level:20,id:'mage-20',name:'奧術回復',color:'green',text:'回血35%',fx:{healMax:.35}},
-    {level:25,id:'mage-25',name:'雷霆鏈',color:'yellow',text:'3連擊・每擊65%',fx:{hits:[.65,.65,.65]}},
     {level:30,id:'mage-30',name:'魔法障壁',color:'blue',text:'護盾50%',fx:{shieldMax:.50}},
-    {level:35,id:'mage-35',name:'元素穿透',color:'yellow',text:'145%傷害＋破甲30%',fx:{damage:1.45,armorBreak:.30,turns:2}},
     {level:40,id:'mage-40',name:'星隕術',color:'yellow',text:'205%星隕傷害',fx:{damage:2.05}},
-    {level:45,id:'mage-45',name:'賢者領域',color:'yellow',text:'攻擊+22%＋爆擊+10%',fx:{atkBuff:.22,critBuff:.10,shieldMax:.20}},
     {level:50,id:'mage-50',name:'終焉魔導',color:'yellow',text:'285%終極傷害',fx:{damage:2.85}}
   ],
   archer:[
-    {level:5,id:'archer-5',name:'疾風箭',color:'red',text:'115%傷害＋爆擊+3%',fx:{damage:1.15,critBuff:.03}},
     {level:10,id:'archer-10',name:'雙星連射',color:'red',text:'2連擊・每擊82%',fx:{hits:[.82,.82]}},
-    {level:15,id:'archer-15',name:'鷹眼鎖定',color:'yellow',text:'爆擊+15%',fx:{critBuff:.15}},
     {level:20,id:'archer-20',name:'回風步',color:'green',text:'85%傷害＋回血20%',fx:{damage:.85,healMax:.20}},
-    {level:25,id:'archer-25',name:'穿甲箭',color:'red',text:'135%傷害＋破甲28%',fx:{damage:1.35,armorBreak:.28,turns:2}},
     {level:30,id:'archer-30',name:'暴雨箭陣',color:'red',text:'3連擊・每擊65%',fx:{hits:[.65,.65,.65]}},
-    {level:35,id:'archer-35',name:'影步狙擊',color:'red',text:'185%傷害＋爆擊+5%',fx:{damage:1.85,critBuff:.05}},
     {level:40,id:'archer-40',name:'風神護佑',color:'green',text:'回血28%＋護盾15%',fx:{healMax:.28,shieldMax:.15}},
-    {level:45,id:'archer-45',name:'致命標記',color:'yellow',text:'破甲35%＋爆擊+12%',fx:{armorBreak:.35,turns:2,critBuff:.12}},
     {level:50,id:'archer-50',name:'天穹一箭',color:'red',text:'300%終極傷害',fx:{damage:3.00}}
   ]
 };
@@ -88,8 +73,12 @@ export function randomCard(){
   return {uid:crypto.randomUUID(),id,kind:id==='boost'?'support':'skill',name,text,color,boost:id==='boost'?rnd(3,8)*10:0};
 }
 export function dealHand(n=9,role=null,level=1){
-  const hand=Array.from({length:n},randomCard),skills=role?unlockedRoleSkills(role,level):[];
-  if(hand.length&&skills.length){const skill=skills[rnd(0,skills.length-1)],at=rnd(0,hand.length-1);hand[at]={...skill,uid:crypto.randomUUID(),kind:'exclusive',exclusive:true,role};}
+  const lv=clamp(Math.round(Number(level)||1),1,50),skills=role?unlockedRoleSkills(role,lv):[];
+  let exclusiveCount=role?(lv>=50?3:lv>=30?2:lv>=10?1:0):0;
+  exclusiveCount=Math.min(n,exclusiveCount,skills.length);
+  const hand=Array.from({length:n-exclusiveCount},randomCard),pool=[...skills];
+  for(let i=0;i<exclusiveCount;i++){const at=rnd(0,pool.length-1),skill=pool.splice(at,1)[0];hand.push({...skill,uid:crypto.randomUUID(),kind:'exclusive',exclusive:true,role});}
+  for(let i=hand.length-1;i>0;i--){const j=rnd(0,i);[hand[i],hand[j]]=[hand[j],hand[i]];}
   return hand;
 }
 function activePct(list=[]){return list.reduce((s,x)=>s+x.pct,0);}
