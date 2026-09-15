@@ -1,7 +1,7 @@
 import {equipmentBonuses,petSkillEffects} from './rpg.js';
 
 export const COLORS={green:'綠色',blue:'藍色',red:'紅色',yellow:'黃色',neutral:'輔助'};
-export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:0,role:'warrior',pet:null,monsterId:null,rpg:null};
+export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:0,regenFresh:false,role:'warrior',pet:null,monsterId:null,rpg:null};
 const ROLE_BASE={warrior:{hp:540,atk:96,def:62},mage:{hp:470,atk:112,def:45},archer:{hp:500,atk:106,def:50}};
 const PET_BASE={fox:{hp:20,atk:8,def:2},owl:{hp:35,atk:2,def:6},dragon:{hp:25,atk:6,def:4}};
 export const TITLE_TIERS=[
@@ -97,9 +97,9 @@ function heal(f,amount,logs,label){const missing=f.maxHp-f.hp,take=Math.min(miss
 function healHpOnly(f,amount,logs,label){const take=Math.max(0,Math.min(f.maxHp-f.hp,amount));f.hp+=take;if(take>0)logs.push(`${label} +${take}`);}
 function cleanDurations(f){for(const k of ['poison','armorBreak','atkDown','defBoost'])f[k]=(f[k]||[]).filter(x=>x.turns>0);if(f.critLock<0)f.critLock=0;}
 export function afterAction(actor,other,logs=[]){
-  if(Number(actor.regen)>0&&actor.hp>0){const v=Math.round(effectiveAtk(actor)*.30);heal(actor,v,logs,'生生不息');actor.regen=Math.max(0,Number(actor.regen)-1);}
+  if(actor.regenFresh)actor.regenFresh=false;else if(Number(actor.regen)>0&&actor.hp>0){const v=Math.round(effectiveAtk(actor)*.30);heal(actor,v,logs,'生生不息');actor.regen=Math.max(0,Number(actor.regen)-1);}
   if((actor.poison||[]).length&&actor.hp>0){let total=0;for(const p of actor.poison){total+=p.damage;p.turns--;}actor.hp=Math.max(0,actor.hp-total);logs.push(`毒素 ${total}`);}
-  for(const k of ['armorBreak','atkDown','defBoost'])for(const s of actor[k]||[])s.turns--;
+  for(const k of ['armorBreak','atkDown','defBoost'])for(const state of actor[k]||[]){if(state.fresh)state.fresh=false;else state.turns--;}
   if(actor.critLock>0)actor.critLock--;
   cleanDurations(actor);cleanDurations(other);return logs;
 }
@@ -135,7 +135,7 @@ function applyCard(card,actor,target,power,logs){if(power<=0)return;if(card?.exc
     if(target?.monsterId==='rabbit')logs.push('霧影卸力：後兩擊傷害降低');
     break;
   }
-  case'desperate':hit(actor,target,2*power,logs,'破釜沉舟');actor.defBoost.push({pct:-.5,turns:2});logs.push('自身防禦 -50%・2回合');break;
+  case'desperate':hit(actor,target,2*power,logs,'破釜沉舟');actor.defBoost.push({pct:-.5,turns:2,fresh:true});logs.push('自身防禦 -50%・2回合');break;
   case'poison':{
     hit(actor,target,.7*power,logs,'淬毒之刃');
     const resist=target?.monsterId==='moss'?.5:1;
@@ -147,11 +147,11 @@ function applyCard(card,actor,target,power,logs){if(power<=0)return;if(card?.exc
   case'sun':hit(actor,target,.8*power,logs,'熾陽閃');target.critLock+=2;break;
   case'preempt':hit(actor,target,.9*power,logs,'制敵機先');target.atkDown.push({pct:.3*power,turns:2});break;
   case'regen':{
-    const now=Math.max(1,Math.round(actor.maxHp*.15*power));healHpOnly(actor,now,logs,'生生不息');actor.regen=3;logs.push('持續回血 3回合');break;
+    const now=Math.max(1,Math.round(actor.maxHp*.15*power));healHpOnly(actor,now,logs,'生生不息');actor.regen=3;actor.regenFresh=true;logs.push('持續回血 3回合');break;
   }
   case'sacrifice':hit(actor,target,3*power,logs,'玉石俱焚');actor.hp=Math.max(1,Math.round(actor.hp*.2));logs.push('自身生命大幅下降');break;
   case'restore':heal(actor,Math.round(actor.maxHp*.8*power),logs,'返本歸元');break;
-  case'diamond':actor.defBoost.push({pct:2*power,turns:2});logs.push('金剛不壞');break;
+  case'diamond':actor.defBoost.push({pct:2*power,turns:2,fresh:true});logs.push('金剛不壞');break;
   case'aegis':{const shield=Math.round(effectiveAtk(actor)*power);actor.shield+=shield;logs.push(`護盾 +${shield}`);break;}
 }}
 const OFFENSIVE=new Set(['combo','desperate','poison','break','sun','preempt','sacrifice']);
