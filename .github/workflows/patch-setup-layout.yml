@@ -1,0 +1,63 @@
+name: Patch setup layout
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-setup-layout.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update setup source styles
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          game = Path('src/game.js')
+          text = game.read_text(encoding='utf-8')
+          old = "${guest?'訪客模式 · 不累積 EXP':esc(titleFor(meta.level))}"
+          new = "${guest?'訪客':esc(titleFor(meta.level))}"
+          if old not in text:
+              raise SystemExit('Guest label source not found; refusing to patch.')
+          text = text.replace(old, new, 1)
+          game.write_text(text, encoding='utf-8')
+
+          css = Path('src/styles.css')
+          text = css.read_text(encoding='utf-8')
+          replacements = [
+              ('.role-feature{min-height:350px;padding:20px 24px}', '.role-feature{min-height:400px;padding:24px 26px}'),
+              ('.pet-feature{min-height:240px;padding:12px 18px}', '.pet-feature{min-height:205px;padding:8px 16px}'),
+              ('.growth-art img{display:block;width:100%;height:300px;object-fit:contain;filter:drop-shadow(0 12px 14px rgba(52,60,56,.14));transform:translateX(-4%)}', '.growth-art img{display:block;width:100%;height:350px;object-fit:contain;filter:drop-shadow(0 12px 14px rgba(52,60,56,.14));transform:translateX(-4%)}'),
+              ('.pet-growth-art img{height:185px;width:min(100%,260px)}', '.pet-growth-art img{height:125px;width:min(100%,190px)}'),
+              ('.role-feature{min-height:0;padding:7px 7px 9px}', '.role-feature{min-height:340px;padding:10px 8px 12px}'),
+              ('.pet-feature{min-height:0;padding:5px 7px 7px}', '.pet-feature{min-height:160px;padding:5px 7px 6px}'),
+              ('.growth-art img{height:218px;transform:translateX(-8%)}', '.growth-art img{height:285px;transform:translateX(-6%)}'),
+              ('.pet-growth-art img{height:140px;width:min(100%,190px);transform:translateX(-9%)}', '.pet-growth-art img{height:92px;width:min(100%,130px);transform:translateX(-4%)}'),
+              ('.role-feature .visual-wrap{max-height:235px}', '.role-feature .visual-wrap{max-height:300px}'),
+              ('.pet-feature .visual-wrap{max-height:155px}', '.pet-feature .visual-wrap{max-height:105px}')
+          ]
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Expected CSS source not found: {old}')
+              text = text.replace(old, new, 1)
+          css.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit source update and remove temporary workflow
+        shell: bash
+        run: |
+          rm .github/workflows/patch-setup-layout.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/game.js src/styles.css .github/workflows/patch-setup-layout.yml
+          git commit -m "ui: enlarge role panel and shrink pet panel"
+          git push
