@@ -1,0 +1,44 @@
+name: Fix exclusive card art fit
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-exclusive-card-art.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update original CSS
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/styles.css')
+          s=p.read_text()
+          reps={
+          ".exclusive-card-art{width:min(150px,88%);height:132px;display:grid;place-items:center;overflow:hidden}":".exclusive-card-art{width:min(150px,88%);height:132px;display:grid;place-items:center;overflow:visible;padding:2px}",
+          ".exclusive-card-art img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 8px 9px rgba(50,58,54,.18))}":".exclusive-card-art img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center;filter:drop-shadow(0 8px 9px rgba(50,58,54,.18))}",
+          ".battle-card .exclusive-card-art{width:min(70px,92%);height:54px;transform:translateY(5px)}": ".battle-card .exclusive-card-art{width:min(70px,92%);height:54px;transform:translateY(5px);overflow:visible;padding:1px}",
+          ".mini-card .exclusive-card-art{width:50px;height:42px;transform:translateY(3px)}": ".mini-card .exclusive-card-art{width:50px;height:42px;transform:translateY(3px);overflow:visible;padding:1px}"
+          }
+          for old,new in reps.items():
+              c=s.count(old)
+              if c!=1:
+                  raise SystemExit(f'expected 1 match, got {c}: {old}')
+              s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Verify CSS targets
+        run: |
+          grep -F ".exclusive-card-art{width:min(150px,88%);height:132px;display:grid;place-items:center;overflow:visible;padding:2px}" src/styles.css
+          grep -F ".battle-card .exclusive-card-art{width:min(70px,92%);height:54px;transform:translateY(5px);overflow:visible;padding:1px}" src/styles.css
+          grep -F ".mini-card .exclusive-card-art{width:50px;height:42px;transform:translateY(3px);overflow:visible;padding:1px}" src/styles.css
+      - name: Commit source changes
+        run: |
+          git config user.name "redfisharthur-beep"
+          git config user.email "redfisharthur@gmail.com"
+          git rm .github/workflows/fix-exclusive-card-art.yml
+          git add src/styles.css
+          git commit -m "fix: keep exclusive skill art fully visible"
+          git push
