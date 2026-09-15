@@ -1,0 +1,51 @@
+name: Align mini exclusive card art
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-mini-exclusive-size.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update original CSS
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/styles.css')
+          s=p.read_text()
+          old='.mini-card .exclusive-card-art img{width:84%;height:84%;max-width:84%;max-height:84%;object-fit:contain}'
+          new='.mini-card .exclusive-card-art img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}'
+          n=s.count(old)
+          if n != 2:
+              raise SystemExit(f'expected 2 mini exclusive image rules, got {n}')
+          p.write_text(s.replace(old,new))
+          PY
+      - name: Verify requested UI rules
+        shell: bash
+        run: |
+          node --check src/game.js
+          node --check src/pk.js
+          node --check src/rpg.js
+          grep -Fq "back:'/images/return.png'" src/assets.js
+          ! grep -Fq '<h1>裝備</h1>' src/game.js
+          ! grep -Fq '<h1>寵物技能</h1>' src/game.js
+          grep -Fq "equipmentGroup('寶石','gems',[0,1,2]" src/game.js
+          grep -Fq "equipmentGroup('裝甲','armor',[equipmentSlot(eq.armor)])" src/game.js
+          grep -Fq "equipmentGroup('戒指','rings',[0,1]" src/game.js
+          grep -Fq "<em>護盾</em>" src/game.js
+          grep -Fq "'爆擊率'" src/game.js
+          grep -Fq "<em>護盾</em>" src/pk.js
+          test "$(grep -oF '.mini-card .exclusive-card-art img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}' src/styles.css | wc -l)" -eq 2
+      - name: Commit source and remove workflow
+        shell: bash
+        run: |
+          git config user.name 'redfisharthur-beep'
+          git config user.email 'redfisharthur@gmail.com'
+          git rm .github/workflows/fix-mini-exclusive-size.yml
+          git add src/styles.css
+          git commit -m 'ui: align exclusive mini card art with normal cards'
+          git push
