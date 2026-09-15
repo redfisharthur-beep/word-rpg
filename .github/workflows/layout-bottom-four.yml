@@ -1,0 +1,71 @@
+name: Layout bottom four actions
+on:
+  push:
+    paths:
+      - '.github/workflows/layout-bottom-four.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update original source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def once(text, old, new, label):
+              n=text.count(old)
+              if n!=1:
+                  raise SystemExit(f'{label}: expected 1, found {n}')
+              return text.replace(old,new,1)
+
+          # assets.js
+          p=Path('src/assets.js'); s=p.read_text()
+          old="ui:{fight:'/images/fight.png',pk:'/images/PK.png',back:'/images/return.png',vs:'/images/VS.png',confirm:'/images/confirm.png',victor:'/images/victor.png',fail:'/images/fail.png',levelUp:'/images/level%20up.png',hp:'/images/HP.png',atk:'/images/ATK.png',def:'/images/DEF.png',crit:'/images/Crit.png'},"
+          new="ui:{equipment:'/images/equipment.png',fight:'/images/fight.png',pk:'/images/PK.png',petSkill:'/images/pet-skill.png',back:'/images/return.png',vs:'/images/VS.png',confirm:'/images/confirm.png',victor:'/images/victor.png',fail:'/images/fail.png',levelUp:'/images/level%20up.png',hp:'/images/HP.png',atk:'/images/ATK.png',def:'/images/DEF.png',crit:'/images/Crit.png'},"
+          s=once(s,old,new,'assets ui')
+          p.write_text(s)
+
+          # game.js
+          p=Path('src/game.js'); s=p.read_text()
+          s=once(s,'<button class="system-entry equipment-entry" data-action="equipment">裝備</button>','', 'remove equipment text button')
+          s=once(s,'<button class="system-entry pet-tree-entry" data-action="pet-tree">寵物技能</button>','', 'remove pet skill text button')
+          old="<div class=\"setup-actions\">${imageButton(ASSETS.ui.fight,'開始冒險','data-action=\"start\"')}${imageButton(ASSETS.ui.pk,'線上對戰','data-action=\"pk\"')}</div>"
+          new="<div class=\"setup-actions setup-actions-four\">${imageButton(ASSETS.ui.equipment,'裝備','data-action=\"equipment\"')}${imageButton(ASSETS.ui.fight,'開始冒險','data-action=\"start\"')}${imageButton(ASSETS.ui.pk,'線上對戰','data-action=\"pk\"')}${imageButton(ASSETS.ui.petSkill,'寵物技能','data-action=\"pet-tree\"')}</div>"
+          s=once(s,old,new,'four action row')
+          p.write_text(s)
+
+          # styles.css
+          p=Path('src/styles.css'); s=p.read_text()
+          old=".setup-actions{display:flex;justify-content:center;align-items:center;gap:18px}.setup-actions>button{width:min(180px,28vw)!important}.setup-actions img{display:block;width:100%;max-height:118px;object-fit:contain}"
+          new=".setup-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:center;justify-items:stretch;gap:14px;width:100%;margin-top:2px}.setup-actions>button{width:100%!important;min-width:0;height:112px}.setup-actions img{display:block;width:100%;height:100%;max-height:112px;object-fit:contain}"
+          s=once(s,old,new,'desktop setup actions')
+          old=".setup-actions{display:flex;justify-content:center;gap:10px}.setup-actions>button{width:min(138px,35vw)!important}.setup-actions img{max-height:88px}"
+          new=".setup-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;width:100%}.setup-actions>button{width:100%!important;min-width:0;height:72px}.setup-actions img{width:100%;height:100%;max-height:72px;object-fit:contain}"
+          s=once(s,old,new,'mobile setup actions')
+          p.write_text(s)
+          PY
+      - name: Syntax check
+        run: |
+          node --check src/assets.js
+          node --check src/game.js
+      - name: Verify layout
+        run: |
+          grep -q "equipment:'/images/equipment.png'" src/assets.js
+          grep -q "petSkill:'/images/pet-skill.png'" src/assets.js
+          grep -q "setup-actions setup-actions-four" src/game.js
+          grep -q "grid-template-columns:repeat(4,minmax(0,1fr))" src/styles.css
+          ! grep -q 'system-entry equipment-entry' src/game.js
+          ! grep -q 'system-entry pet-tree-entry' src/game.js
+      - name: Commit source changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/assets.js src/game.js src/styles.css
+          git commit -m 'ui: place equipment fight pk pet skill in equal bottom row'
+          git push
+          git rm .github/workflows/layout-bottom-four.yml
+          git commit -m 'chore: remove temporary layout workflow'
+          git push
