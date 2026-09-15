@@ -1,0 +1,48 @@
+name: Fix exact status durations
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-duration-semantics.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch durations
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/cards.js');s=p.read_text()
+          s=s.replace("regen:0,role:'warrior'","regen:0,regenFresh:false,role:'warrior'",1)
+          old="if(Number(actor.regen)>0&&actor.hp>0){const v=Math.round(effectiveAtk(actor)*.30);heal(actor,v,logs,'生生不息');actor.regen=Math.max(0,Number(actor.regen)-1);}"
+          new="if(actor.regenFresh)actor.regenFresh=false;else if(Number(actor.regen)>0&&actor.hp>0){const v=Math.round(effectiveAtk(actor)*.30);heal(actor,v,logs,'生生不息');actor.regen=Math.max(0,Number(actor.regen)-1);}"
+          if old not in s: raise SystemExit('regen afterAction target missing')
+          s=s.replace(old,new,1)
+          old="for(const k of ['armorBreak','atkDown','defBoost'])for(const s of actor[k]||[])s.turns--;"
+          new="for(const k of ['armorBreak','atkDown','defBoost'])for(const state of actor[k]||[]){if(state.fresh)state.fresh=false;else state.turns--;}"
+          if old not in s: raise SystemExit('duration loop target missing')
+          s=s.replace(old,new,1)
+          s=s.replace("actor.defBoost.push({pct:-.5,turns:2})","actor.defBoost.push({pct:-.5,turns:2,fresh:true})",1)
+          s=s.replace("actor.regen=3;logs.push('持續回血 3回合')","actor.regen=3;actor.regenFresh=true;logs.push('持續回血 3回合')",1)
+          s=s.replace("case'diamond':actor.defBoost.push({pct:2*power,turns:2});", "case'diamond':actor.defBoost.push({pct:2*power,turns:2,fresh:true});",1)
+          p.write_text(s)
+          p=Path('src/game.js');s=p.read_text().replace("run.player.regen=0;run.stageIndex++","run.player.regen=0;run.player.regenFresh=false;run.stageIndex++",1);p.write_text(s)
+          PY
+      - name: Syntax check
+        run: |
+          node --check src/cards.js
+          node --check src/game.js
+      - name: Verify
+        run: |
+          grep -q "regenFresh=true" src/cards.js
+          grep -q "turns:2,fresh:true" src/cards.js
+      - name: Commit
+        run: |
+          git config user.name "redfisharthur-beep"
+          git config user.email "redfisharthur@gmail.com"
+          git rm .github/workflows/fix-duration-semantics.yml
+          git add src/cards.js src/game.js
+          git commit -m "fix: make timed card effects last exact turns"
+          git push
