@@ -1,0 +1,47 @@
+name: Refresh result capsules
+on:
+  push:
+    paths:
+      - '.github/workflows/result-capsule-refresh.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update original source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          game = Path('src/game.js')
+          s = game.read_text()
+          old = "function rewardHtml(){const r=run?.lastReward;if(!r)return '';if(r.guest)return `<div class=\"growth-reward\"><b>訪客模式</b><span>不累積 EXP · 角色不升級</span></div>`;if(r.max)return `<div class=\"growth-reward\"><b>Lv.50 · 滿級</b><span>${esc(titleFor(50))}</span></div>`;return `<div class=\"growth-reward\"><b>EXP +${r.amount}</b><span>Lv.${meta.level} · ${esc(titleFor(meta.level))}</span>${r.levels.length?uiImg(ASSETS.ui.levelUp,'升級','display:block;width:min(230px,62vw);max-height:100px;object-fit:contain;margin:8px auto 0;'):''}</div>`}"
+          new = "function rewardHtml(){const r=run?.lastReward;if(!r)return '';if(r.guest)return `<div class=\"growth-reward\"><b>訪客模式</b><span>不累積 EXP · 角色不升級</span></div>`;if(r.max)return `<div class=\"growth-reward\"><b>Lv.50 · 滿級</b><span>${esc(titleFor(50))}</span></div>`;return `<div class=\"growth-reward\"><b>EXP +${r.amount}</b><span>Lv.${meta.level} · ${esc(titleFor(meta.level))}</span></div>${r.levels.length?`<div class=\"level-up-standalone\">${uiImg(ASSETS.ui.levelUp,'升級','display:block;width:min(230px,62vw);max-height:100px;object-fit:contain;margin:0 auto;')}</div>`:''}`}"
+          if old not in s:
+              raise SystemExit('rewardHtml target not found')
+          game.write_text(s.replace(old, new, 1))
+
+          css = Path('src/styles.css')
+          c = css.read_text()
+          c = c.replace(".growth-reward{display:grid;gap:5px;margin:8px auto 14px;padding:14px 18px;border-radius:18px;background:rgba(214,224,216,.9);width:min(360px,100%)}", ".growth-reward{display:grid;gap:5px;margin:8px auto 10px;padding:14px 18px;border-radius:18px;background:rgba(226,220,210,.94);width:min(360px,100%)}", 1)
+          c = c.replace(".battle-summary>div{display:grid;gap:4px;padding:14px 8px;border-radius:18px;background:rgba(218,213,203,.88)}", ".battle-summary>div{display:grid;gap:4px;padding:14px 8px;border-radius:18px;background:rgba(226,220,210,.94)}", 1)
+          c = c.replace(".wrong-item{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(120px,1fr);gap:2px 12px;padding:10px 12px;border-radius:14px;background:rgba(231,228,220,.72);margin-top:7px}", ".wrong-item{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(120px,1fr);gap:2px 12px;padding:10px 12px;border-radius:14px;background:rgba(226,220,210,.94);margin-top:7px}", 1)
+          anchor = ".growth-reward strong{font-size:19px;color:#56715f}"
+          insert = anchor + ".level-up-standalone{display:grid;place-items:center;width:min(360px,100%);margin:2px auto 14px;padding:0;background:transparent!important;border:0!important;box-shadow:none!important}.level-up-standalone img{display:block;background:transparent!important;border:0!important;box-shadow:none!important}"
+          if anchor not in c:
+              raise SystemExit('level-up style anchor not found')
+          c = c.replace(anchor, insert, 1)
+          css.write_text(c)
+          PY
+      - name: Syntax check
+        run: node --check src/game.js
+      - name: Commit source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/result-capsule-refresh.yml
+          git add src/game.js src/styles.css
+          git commit -m "style: unify result capsules and free level up art"
+          git push
