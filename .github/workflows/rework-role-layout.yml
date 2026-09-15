@@ -49,14 +49,18 @@ jobs:
           if media not in c:
               raise SystemExit('mobile media not found')
           before, mobile = c.split(media, 1)
-          mobile = re.sub(r"\.role-feature\{min-height:\d+px;padding:[^}]+\}", ".role-feature{min-height:350px;padding:64px 6px 10px 10px}", mobile, count=1)
-          mobile = re.sub(r"\.role-growth-art img\{[^}]*\}", ".role-growth-art img{height:305px;width:100%;max-width:100%;transform:translateX(4%) scale(1.08);transform-origin:center center}", mobile, count=1)
-          mobile = re.sub(r"\.role-feature \.growth-panel\{[^}]*\}", ".role-feature .growth-panel{transform:none}", mobile, count=1)
-          m_anchor = ".pet-growth-art img{height:112px;width:min(100%,155px);transform:translateX(0)}"
-          m_inject = ".pet-growth-art img{height:112px;width:min(100%,155px);transform:translateX(0)}.role-feature.growth-feature{grid-template-columns:minmax(0,1.5fr) minmax(108px,.5fr)}.role-feature .growth-level{top:10px;left:8px;right:8px;gap:7px;justify-content:center}.role-feature .growth-player-name{font-size:14px!important}.role-feature .growth-level b{font-size:20px}.role-feature .growth-title{font-size:14px!important}.role-growth-panel .growth-stats{justify-self:start}"
-          if m_anchor not in mobile:
-              raise SystemExit('mobile anchor not found')
-          mobile = mobile.replace(m_anchor, m_inject, 1)
+          mobile, n1 = re.subn(r"\.role-feature\{min-height:\d+px;padding:[^}]+\}", ".role-feature{min-height:350px;padding:64px 6px 10px 10px}", mobile, count=1)
+          mobile, n2 = re.subn(r"\.role-growth-art img\{[^}]*\}", ".role-growth-art img{height:305px;width:100%;max-width:100%;transform:translateX(4%) scale(1.08);transform-origin:center center}", mobile, count=1)
+          mobile, n3 = re.subn(r"\.role-feature \.growth-panel\{[^}]*\}", ".role-feature .growth-panel{transform:none}", mobile, count=1)
+          if min(n1,n2,n3) != 1:
+              raise SystemExit('mobile role targets not found')
+          pet_pat = r"\.pet-growth-art img\{[^}]*\}"
+          m = re.search(pet_pat, mobile)
+          if not m:
+              raise SystemExit('mobile pet anchor not found')
+          pet_rule = m.group(0)
+          m_inject = pet_rule + ".role-feature.growth-feature{grid-template-columns:minmax(0,1.5fr) minmax(108px,.5fr)}.role-feature .growth-level{top:10px;left:8px;right:8px;gap:7px;justify-content:center}.role-feature .growth-player-name{font-size:14px!important}.role-feature .growth-level b{font-size:20px}.role-feature .growth-title{font-size:14px!important}.role-growth-panel .growth-stats{justify-self:start}"
+          mobile = mobile.replace(pet_rule, m_inject, 1)
           c = before + media + mobile
           css.write_text(c)
           PY
