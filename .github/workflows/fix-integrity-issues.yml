@@ -1,0 +1,62 @@
+name: Fix integrity issues
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-integrity-issues.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch original source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/rpg.js'); s=p.read_text()
+          old="""export function cleanRpg(raw={}){\n  const base=emptyRpg(),src=raw&&typeof raw==='object'?raw:{},inventory=Array.isArray(src.inventory)?src.inventory.map(normalizeItem).filter(Boolean).slice(-60):[];\n  const ids=new Set(inventory.map(x=>x.id)),eq=src.equipped&&typeof src.equipped==='object'?src.equipped:{},gems=Array.isArray(eq.gems)?[...new Set(eq.gems.filter(id=>ids.has(id)&&inventory.find(x=>x.id===id)?.type==='gem'))].slice(0,3):[];\n  const armor=ids.has(eq.armor)&&inventory.find(x=>x.id===eq.armor)?.type==='armor'?eq.armor:null;\n  const legacyRing=ids.has(eq.ring)&&inventory.find(x=>x.id===eq.ring)?.type==='ring'?eq.ring:null,rawRings=Array.isArray(eq.rings)?eq.rings:(legacyRing?[legacyRing]:[]),rings=[...new Set(rawRings.filter(id=>ids.has(id)&&inventory.find(x=>x.id===id)?.type==='ring'))].slice(0,2);\n  const crystals=Math.max(0,Math.round(Number(src.crystals)||0)),petEnhance={};\n  for(const pet of PET_IDS)petEnhance[pet]=clamp(Math.round(Number(src.petEnhance?.[pet])||0),0,4);\n  const petSkills={};\n  for(const pet of PET_IDS){const valid=new Set(PET_TREES[pet].map(x=>x.id)),list=Array.isArray(src.petSkills?.[pet])?src.petSkills[pet].filter(id=>valid.has(id)):[];petSkills[pet]=PET_TREES[pet].filter(x=>list.includes(x.id)).map(x=>x.id);}\n  return {...base,inventory,equipped:{gems,armor,rings},crystals,petEnhance,petSkills};\n}"""
+          new="""export function cleanRpg(raw={}){\n  const base=emptyRpg(),src=raw&&typeof raw==='object'?raw:{},rawItems=Array.isArray(src.inventory)?src.inventory.map(normalizeItem).filter(Boolean):[];\n  const seen=new Set(),deduped=[];for(let i=rawItems.length-1;i>=0;i--){const item=rawItems[i];if(seen.has(item.id))continue;seen.add(item.id);deduped.push(item)}deduped.reverse();\n  const byId=new Map(deduped.map(x=>[x.id,x])),eq=src.equipped&&typeof src.equipped==='object'?src.equipped:{},gems=Array.isArray(eq.gems)?[...new Set(eq.gems.filter(id=>byId.get(id)?.type==='gem'))].slice(0,3):[];\n  const armor=byId.get(eq.armor)?.type==='armor'?eq.armor:null;\n  const legacyRing=byId.get(eq.ring)?.type==='ring'?eq.ring:null,rawRings=Array.isArray(eq.rings)?eq.rings:(legacyRing?[legacyRing]:[]),rings=[...new Set(rawRings.filter(id=>byId.get(id)?.type==='ring'))].slice(0,2);\n  const protectedIds=new Set([...gems,armor,...rings].filter(Boolean));let inventory=deduped;\n  if(inventory.length>60){const recentFree=inventory.filter(x=>!protectedIds.has(x.id)).slice(-(60-protectedIds.size)),keep=new Set([...protectedIds,...recentFree.map(x=>x.id)]);inventory=inventory.filter(x=>keep.has(x.id));}\n  const crystals=Math.max(0,Math.round(Number(src.crystals)||0)),petEnhance={};\n  for(const pet of PET_IDS)petEnhance[pet]=clamp(Math.round(Number(src.petEnhance?.[pet])||0),0,4);\n  const petSkills={};\n  for(const pet of PET_IDS){const valid=new Set(PET_TREES[pet].map(x=>x.id)),list=Array.isArray(src.petSkills?.[pet])?src.petSkills[pet].filter(id=>valid.has(id)):[];petSkills[pet]=PET_TREES[pet].filter(x=>list.includes(x.id)).map(x=>x.id);}\n  return {...base,inventory,equipped:{gems,armor,rings},crystals,petEnhance,petSkills};\n}"""
+          if s.count(old)!=1: raise SystemExit(f'cleanRpg target count={s.count(old)}')
+          s=s.replace(old,new)
+          old2="export function addLoot(rpg,item){const clean=cleanRpg(rpg),normalized=normalizeItem(item);if(!normalized)return clean;clean.inventory=[...clean.inventory,normalized].slice(-60);return cleanRpg(clean);}"
+          new2="export function addLoot(rpg,item){const clean=cleanRpg(rpg),normalized=normalizeItem(item);if(!normalized)return clean;clean.inventory=[...clean.inventory,normalized];return cleanRpg(clean);}"
+          if s.count(old2)!=1: raise SystemExit(f'addLoot target count={s.count(old2)}')
+          p.write_text(s.replace(old2,new2))
+
+          p=Path('src/game.js'); s=p.read_text()
+          old3="let meta=loadMeta(),screen='home',run=null,pkMode=null,actionTimer=null,selectTimeout=null,selectTicker=null,questionTimeout=null,questionTicker=null,answerFeedback=null,spokenQuestionKey='';"
+          new3="let meta=loadMeta(),screen='home',run=null,pkMode=null,actionTimer=null,selectTimeout=null,selectTicker=null,questionTimeout=null,questionTicker=null,answerFeedback=null,spokenQuestionKey='',progressSyncQueue=Promise.resolve();"
+          if s.count(old3)!=1: raise SystemExit(f'meta target count={s.count(old3)}')
+          s=s.replace(old3,new3)
+          old4="async function syncLineProgress(){if(meta.authMode!=='line')return;try{await fetch('/api/progress',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:meta.role,pet:meta.pet,level:meta.level,xp:meta.xp,rpg:meta.rpg})})}catch{}}\nfunction saveMeta(){persistLocal();if(meta.authMode==='line')void syncLineProgress()}"
+          new4="async function syncLineProgress(body){try{await fetch('/api/progress',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body})}catch{}}\nfunction saveMeta(){persistLocal();if(meta.authMode==='line'){const body=JSON.stringify({role:meta.role,pet:meta.pet,level:meta.level,xp:meta.xp,rpg:meta.rpg});progressSyncQueue=progressSyncQueue.catch(()=>{}).then(()=>syncLineProgress(body))}}"
+          if s.count(old4)!=1: raise SystemExit(f'sync target count={s.count(old4)}')
+          p.write_text(s.replace(old4,new4))
+          PY
+      - name: Verify patch
+        shell: bash
+        run: |
+          node --check src/rpg.js
+          node --check src/game.js
+          grep -Fq "protectedIds=new Set([...gems,armor,...rings].filter(Boolean))" src/rpg.js
+          grep -Fq "clean.inventory=[...clean.inventory,normalized];return cleanRpg(clean)" src/rpg.js
+          grep -Fq "progressSyncQueue=progressSyncQueue.catch(()=>{}).then(()=>syncLineProgress(body))" src/game.js
+          node --input-type=module <<'NODE'
+          import {emptyRpg,rollLoot,addLoot,equipItem} from './src/rpg.js';
+          const seq=v=>{let i=0;return ()=>v[Math.min(i++,v.length-1)]};
+          const loot=(type=.1,sub=.1)=>rollLoot(3,50,seq([0,.97,type,sub]));
+          let r=emptyRpg(),anchor=loot(.1,.1);r=addLoot(r,anchor);r=equipItem(r,anchor.id);for(let i=0;i<65;i++)r=addLoot(r,loot(.9,i%2?.9:.1));
+          if(r.inventory.length>60||!r.inventory.some(x=>x.id===anchor.id)||!r.equipped.gems.includes(anchor.id))throw new Error('equipped preservation failed');
+          console.log('PRESERVE_OK');
+          NODE
+      - name: Commit source and remove workflow
+        shell: bash
+        run: |
+          git config user.name 'redfisharthur-beep'
+          git config user.email 'redfisharthur@gmail.com'
+          git rm .github/workflows/fix-integrity-issues.yml
+          git add src/rpg.js src/game.js
+          git commit -m 'fix: protect equipped gear and serialize cloud saves'
+          git push
