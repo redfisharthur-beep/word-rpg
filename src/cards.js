@@ -48,7 +48,7 @@ export function progressionStats(role='warrior',pet='fox',level=1,rpg=null){
   return {level:lv,role:roleStats,pet:petStats,title:tier,total:{...total,hp:total.maxHp}};
 }
 export function makeFighter(extra={}){return {...clone(BASE),...extra};}
-export function accuracyMultiplier(correct,actor=null){if(correct===3)return 1.5;if(correct===2)return 1.15;if(correct===1)return .65;if(actor?.pet==='owl'){const fx=petSkillEffects(actor.pet,actor.rpg||{});return .25+fx.zeroAccuracy}return 0;}
+export function accuracyMultiplier(correct,actor=null){if(correct===3)return 1.5;if(correct===2)return 1.15;if(correct===1){const fx=actor?.pet==='owl'?petSkillEffects(actor.pet,actor.rpg||{}):null;return .65+(fx?.oneAccuracy||0)}return 0;}
 export function randomCard(){
   const pool=['stat','stat','stat','combo','desperate','poison','break','sun','preempt','regen','sacrifice','restore','diamond','aegis','boost'];
   const id=pool[rnd(0,pool.length-1)];
@@ -188,7 +188,7 @@ export function applyPetRoundEnd(actor,cards=[],logs=[]){
   if(actor?.pet==='owl'&&actor.hp>0){const stable=cards.filter(c=>c?.color==='green'||c?.color==='blue').length,fx=petSkillEffects(actor.pet,actor.rpg||{});if(stable>=2)healHpOnly(actor,Math.round(actor.maxHp*(.08+fx.guardHeal)),logs,'夜梟守心');}
   return logs;
 }
-export function resolveBasic(actor,target,correct){const logs=[],p=accuracyMultiplier(correct,actor);if(p<=0){logs.push('失敗..凍結中');return logs;}if(correct===0&&actor?.pet==='owl')logs.push('夜梟洞察：保留 25% 效果');hit(actor,target,p,logs,'基本攻擊');return logs;}
+export function resolveBasic(actor,target,correct){const logs=[],p=accuracyMultiplier(correct,actor);if(p<=0){logs.push('失敗..凍結中');return logs;}hit(actor,target,p,logs,'基本攻擊');return logs;}
 export function resolveAutoBasic(actor,target){const logs=[];hit(actor,target,1,logs,'普通攻擊',true);return logs;}
 export function cardSummary(card){if(!card)return '';if(card.kind==='stat')return `${card.name} ${card.pct}%`;if(card.id==='boost')return `${card.name} ${card.boost}%`;return card.name;}
 export function cloneFighter(f){return clone(f);}
