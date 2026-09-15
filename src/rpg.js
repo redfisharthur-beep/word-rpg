@@ -31,6 +31,8 @@ export const PET_TREES={
 };
 
 const PET_IDS=['fox','owl','dragon'];
+export const CRYSTAL_VALUE={common:1,rare:3,epic:8,legendary:20};
+export const PET_ENHANCE_COST=[5,10,20,40];
 const VALID_LOOT={gem:new Set(['ruby','thunder']),armor:new Set(['guardian','bloodspirit']),ring:new Set(['warbreaker','battlesoul'])};
 const uid=()=>globalThis.crypto?.randomUUID?.()||`loot-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const pick=(arr,r=Math.random)=>arr[Math.floor(r()*arr.length)];
@@ -77,16 +79,18 @@ function normalizeItem(item){
   return normalized;
 }
 
-export function emptyRpg(){return {inventory:[],equipped:{gems:[],armor:null,rings:[]},petSkills:{fox:[],owl:[],dragon:[]}};}
+export function emptyRpg(){return {inventory:[],equipped:{gems:[],armor:null,rings:[]},crystals:0,petEnhance:{fox:0,owl:0,dragon:0},petSkills:{fox:[],owl:[],dragon:[]}};}
 
 export function cleanRpg(raw={}){
   const base=emptyRpg(),src=raw&&typeof raw==='object'?raw:{},inventory=Array.isArray(src.inventory)?src.inventory.map(normalizeItem).filter(Boolean).slice(-60):[];
   const ids=new Set(inventory.map(x=>x.id)),eq=src.equipped&&typeof src.equipped==='object'?src.equipped:{},gems=Array.isArray(eq.gems)?[...new Set(eq.gems.filter(id=>ids.has(id)&&inventory.find(x=>x.id===id)?.type==='gem'))].slice(0,3):[];
   const armor=ids.has(eq.armor)&&inventory.find(x=>x.id===eq.armor)?.type==='armor'?eq.armor:null;
   const legacyRing=ids.has(eq.ring)&&inventory.find(x=>x.id===eq.ring)?.type==='ring'?eq.ring:null,rawRings=Array.isArray(eq.rings)?eq.rings:(legacyRing?[legacyRing]:[]),rings=[...new Set(rawRings.filter(id=>ids.has(id)&&inventory.find(x=>x.id===id)?.type==='ring'))].slice(0,2);
+  const crystals=Math.max(0,Math.round(Number(src.crystals)||0)),petEnhance={};
+  for(const pet of PET_IDS)petEnhance[pet]=clamp(Math.round(Number(src.petEnhance?.[pet])||0),0,4);
   const petSkills={};
   for(const pet of PET_IDS){const valid=new Set(PET_TREES[pet].map(x=>x.id)),list=Array.isArray(src.petSkills?.[pet])?src.petSkills[pet].filter(id=>valid.has(id)):[];petSkills[pet]=PET_TREES[pet].filter(x=>list.includes(x.id)).map(x=>x.id);}
-  return {...base,inventory,equipped:{gems,armor,rings},petSkills};
+  return {...base,inventory,equipped:{gems,armor,rings},crystals,petEnhance,petSkills};
 }
 
 export function skillPointBudget(level=1){return Math.max(0,clamp(Math.round(Number(level)||1),1,50)-1);}
@@ -99,6 +103,12 @@ export function canUnlockPetSkill(pet,nodeId,level,rpg){
 
 export function unlockPetSkill(pet,nodeId,level,rpg){const clean=cleanRpg(rpg);if(!canUnlockPetSkill(pet,nodeId,level,clean))return clean;clean.petSkills[pet]=[...clean.petSkills[pet],nodeId];return clean;}
 export function resetPetSkills(rpg){const clean=cleanRpg(rpg);clean.petSkills={fox:[],owl:[],dragon:[]};return clean;}
+export function petEnhanceLevel(pet,rpg){return cleanRpg(rpg).petEnhance?.[pet]||0;}
+export function petEnhanceCost(pet,rpg){const level=petEnhanceLevel(pet,rpg);return level>=4?0:PET_ENHANCE_COST[level];}
+export function enhancePet(pet,rpg){const clean=cleanRpg(rpg);if(!PET_IDS.includes(pet))return clean;const level=clean.petEnhance[pet]||0;if(level>=4)return clean;const cost=PET_ENHANCE_COST[level];if(clean.crystals<cost)return clean;clean.crystals-=cost;clean.petEnhance[pet]=level+1;return cleanRpg(clean);}
+export function crystalValue(item){return CRYSTAL_VALUE[item?.quality]||0;}
+export function crystallizeItem(rpg,itemId){const clean=cleanRpg(rpg),equipped=new Set([...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean));if(equipped.has(itemId))return clean;const item=clean.inventory.find(x=>x.id===itemId);if(!item)return clean;const gain=crystalValue(item);if(!gain)return clean;clean.inventory=clean.inventory.filter(x=>x.id!==itemId);clean.crystals+=gain;return cleanRpg(clean);}
+
 
 export function petSkillEffects(pet,rpg){
   const clean=cleanRpg(rpg),owned=new Set(clean.petSkills?.[pet]||[]),out={firstCardAmp:0,chaseAmp:0,redAmp:0,oneAccuracy:0,guardHeal:0,stableAmp:0,yellowAmp:0,finisherAmp:0,hpPct:0,atkPct:0,defPct:0,crit:0};
