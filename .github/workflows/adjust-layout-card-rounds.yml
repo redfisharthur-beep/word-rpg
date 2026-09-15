@@ -1,0 +1,118 @@
+name: Adjust layout and persistent card rounds
+
+on:
+  push:
+    paths:
+      - '.github/workflows/adjust-layout-card-rounds.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply source changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def repl(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'missing source for {label}')
+              return text.replace(old, new, 1)
+
+          # ---- game.js ----
+          p=Path('src/game.js'); t=p.read_text(encoding='utf-8')
+          t=t.replace("run.round<3", "run.round<=3")
+          t=repl(t,"if(screen!=='cards'||run.round>=3)return;","if(screen!=='cards'||run.round>3)return;",'single selection timer')
+          t=repl(t,"<div class=\"monster-skill\"><b>${esc(s.skill)}</b><span>${esc(s.skillText)}</span></div>","<div class=\"monster-skill\"><b>${esc(s.skill)}</b></div>",'monster detail text')
+          old="function nextRound(){if(run.player.hp<=0||run.enemy.hp<=0||run.round>=3)return finishBattle();if(run.round===1){run.round=2;run.hand=dealHand(9,meta.role,run.level);run.enemyHand=dealHand(9);run.used=[];run.enemyUsed=[];run.selected=[];run.enemySelected=[];run.selectDeadline=0;screen='cards';render();return}if(run.round===2){startFinalDuel();return}}"
+          new="function nextRound(){if(run.player.hp<=0||run.enemy.hp<=0||run.round>=3)return finishBattle();run.round++;run.selected=[];run.enemySelected=[];run.selectDeadline=0;screen='cards';render()}"
+          t=repl(t,old,new,'single persistent 9-6-3 hand')
+          p.write_text(t,encoding='utf-8')
+
+          # ---- pk.js ----
+          p=Path('src/pk.js'); t=p.read_text(encoding='utf-8')
+          t=t.replace("round<3", "round<=3")
+          t=repl(t,"if(status!=='cards'||round>=3)return;","if(status!=='cards'||round>3)return;",'pk selection timer')
+          old="function next(){if(round>=3||last?.finished){status='finished';render();return}round++;selected=[];selectDeadline=0;if(round===3){correct=0;qIndex=0;send({type:'ready',selected:[],correct:0,elapsedMs:200});status='wait';render();return}if(last?.nextHand){hand=last.nextHand;used=[]}status='cards';render()}"
+          new="function next(){if(round>=3||last?.finished){status='finished';render();return}round++;selected=[];selectDeadline=0;status='cards';render()}"
+          t=repl(t,old,new,'pk persistent 9-6-3 hand')
+          p.write_text(t,encoding='utf-8')
+
+          # ---- worker/index.js ----
+          p=Path('worker/index.js'); t=p.read_text(encoding='utf-8')
+          t=repl(t,"if(att.round>=3)return {correct:0,elapsedMs:200,selected:[]};","if(att.round>3)return {correct:0,elapsedMs:200,selected:[]};",'worker round3 ready')
+          t=t.replace("round<3?ra.selected.map(i=>a.hand[i]):[]", "round<=3?ra.selected.map(i=>a.hand[i]):[]")
+          t=t.replace("round<3?rb.selected.map(i=>b.hand[i]):[]", "round<=3?rb.selected.map(i=>b.hand[i]):[]")
+          t=repl(t,"first=round===3?(Math.random()<.5?'a':'b'):(ra.elapsedMs<=rb.elapsedMs?'a':'b'),sequence=[];","first=ra.elapsedMs<=rb.elapsedMs?'a':'b',sequence=[];",'worker round order')
+          old="if(round===3){for(let cycle=1;cycle<=5;cycle++)sequence.push(first,first==='a'?'b':'a')}\n    else if(first==='a')sequence.push('a','b','a','b','a','b');\n    else sequence.push('b','a','b','a','b','a');"
+          new="if(first==='a')sequence.push('a','b','a','b','a','b');\n    else sequence.push('b','a','b','a','b','a');"
+          t=repl(t,old,new,'worker card sequence')
+          old="if(round===3){if(who==='a'){logs=resolveAutoBasic(A,B);afterAction(A,B,logs)}else{logs=resolveAutoBasic(B,A);afterAction(B,A,logs)}}\n      else if(who==='a'){card=cardsA[slot];logs=doCard(A,B,card,ra.correct,cardsA,slot,stateA,first==='a')}\n      else{card=cardsB[slot];logs=doCard(B,A,card,rb.correct,cardsB,slot,stateB,first==='b')}"
+          new="if(who==='a'){card=cardsA[slot];logs=doCard(A,B,card,ra.correct,cardsA,slot,stateA,first==='a')}\n      else{card=cardsB[slot];logs=doCard(B,A,card,rb.correct,cardsB,slot,stateB,first==='b')}"
+          t=repl(t,old,new,'worker card resolution')
+          t=repl(t,"const cycle=round===3?Math.floor(i/2)+1:null;","const cycle=null;",'worker cycle')
+          t=t.replace("finalRound:round===3", "finalRound:false")
+          t=t.replace("if(round<3){const petLogsA=[]", "if(round<=3){const petLogsA=[]")
+          old="if(finished){const ar=A.hp/A.maxHp,br=B.hp/B.maxHp;winner=Math.abs(ar-br)<.0001?'draw':ar>br?'a':'b';a.state='finished';b.state='finished'}else{a.round++;b.round++;a.ready=null;b.ready=null;if(round===1){a.hand=dealHand(9,a.profile.role,a.profile.level);b.hand=dealHand(9,b.profile.role,b.profile.level);a.used=[];b.used=[];nextHandA=a.hand;nextHandB=b.hand}}"
+          new="if(finished){const ar=A.hp/A.maxHp,br=B.hp/B.maxHp;winner=Math.abs(ar-br)<.0001?'draw':ar>br?'a':'b';a.state='finished';b.state='finished'}else{a.round++;b.round++;a.ready=null;b.ready=null}"
+          t=repl(t,old,new,'worker no redeal')
+          t=t.replace("!finished&&round===1?qset", "!finished&&round<3?qset")
+          t=repl(t,"const orderText=round===3?'最終決戰 · 5 輪普通攻擊':(first==='a'?`你先出手 · ${(ra.elapsedMs/1000).toFixed(1)} 秒`:`對手先出手 · ${(rb.elapsedMs/1000).toFixed(1)} 秒`);","const orderText=first==='a'?`你先出手 · ${(ra.elapsedMs/1000).toFixed(1)} 秒`:`對手先出手 · ${(rb.elapsedMs/1000).toFixed(1)} 秒`;",'worker order text')
+          t=repl(t,"orderText:round===3?'最終決戰 · 5 輪普通攻擊':(first==='b'?`你先出手 · ${(rb.elapsedMs/1000).toFixed(1)} 秒`:`對手先出手 · ${(ra.elapsedMs/1000).toFixed(1)} 秒`)","orderText:first==='b'?`你先出手 · ${(rb.elapsedMs/1000).toFixed(1)} 秒`:`對手先出手 · ${(ra.elapsedMs/1000).toFixed(1)} 秒`",'worker opponent order text')
+          p.write_text(t,encoding='utf-8')
+
+          # ---- cards.js: compact exclusive skill descriptions ----
+          p=Path('src/cards.js'); t=p.read_text(encoding='utf-8')
+          mapping={
+          '80% 傷害＋最大生命 20% 護盾':'80%傷害＋20%護盾','造成 155% 重擊傷害':'155%重擊','90% 傷害＋攻擊提升 18%':'90%傷害＋攻擊+18%','恢復 28% 生命＋10% 護盾':'回血28%＋護盾10%','145% 傷害＋破甲 25% 2回合':'145%傷害＋破甲25%','45% 最大生命護盾＋防禦提升 20%':'護盾45%＋防禦+20%','連續 3 擊，每擊 70%':'3連擊・每擊70%','135% 傷害＋25% 最大生命護盾':'135%傷害＋護盾25%','攻擊 +28%・防禦 +20%・爆擊 +8%':'攻防提升＋爆擊+8%','造成 260% 終極傷害':'260%終極傷害',
+          '攻擊 +12%＋10% 最大生命護盾':'攻擊+12%＋護盾10%','造成 155% 火焰傷害':'155%火焰傷害','95% 傷害＋敵方攻擊 -25% 2回合':'95%傷害＋敵攻-25%','恢復最大生命 35%':'回血35%','連續 3 擊，每擊 65%':'3連擊・每擊65%','獲得最大生命 50% 護盾':'護盾50%','145% 傷害＋破甲 30% 2回合':'145%傷害＋破甲30%','造成 205% 星隕傷害':'205%星隕傷害','攻擊 +22%・爆擊 +10%・20% 護盾':'攻擊+22%＋爆擊+10%','造成 285% 終極魔法傷害':'285%終極傷害',
+          '115% 傷害＋爆擊 +3%':'115%傷害＋爆擊+3%','連續 2 擊，每擊 82%':'2連擊・每擊82%','爆擊率提升 15%':'爆擊+15%','85% 傷害＋恢復最大生命 20%':'85%傷害＋回血20%','135% 傷害＋破甲 28% 2回合':'135%傷害＋破甲28%','185% 傷害＋爆擊 +5%':'185%傷害＋爆擊+5%','恢復 28% 生命＋15% 護盾':'回血28%＋護盾15%','破甲 35% 2回合＋爆擊 +12%':'破甲35%＋爆擊+12%','造成 300% 終極狙擊傷害':'300%終極傷害'}
+          for a,b in mapping.items():
+              t=t.replace("text:'"+a+"'", "text:'"+b+"'")
+          p.write_text(t,encoding='utf-8')
+
+          # ---- styles.css ----
+          p=Path('src/styles.css'); t=p.read_text(encoding='utf-8')
+          t=t.replace('.role-growth-art img{transform:translateX(2%)}','.role-growth-art{padding-left:12px;padding-right:6px}.role-growth-art img{transform:translateX(7%);width:92%}')
+          t=t.replace('.role-feature .growth-panel{transform:translateX(12px)}','.role-feature .growth-panel{transform:translateX(24px)}')
+          t=t.replace('.pet-growth-art img{height:155px;width:min(100%,220px)}','.pet-growth-art img{height:155px;width:min(94%,220px);transform:translateX(6%)}')
+          t=t.replace('.pet-growth-panel{align-content:center}', '.pet-growth-panel{align-content:center;transform:translateX(14px)}')
+          t=t.replace('padding:8px;display:grid;grid-template-rows:minmax(118px,1fr) auto 40px;', 'padding:24px 8px 8px;display:grid;grid-template-rows:minmax(110px,1fr) auto 40px;')
+          t=t.replace('white-space:pre-line;font-size:15px;line-height:1.2;text-align:center;color:#3d4943;margin-top:2px;min-height:36px;font-weight:500}', 'white-space:pre-line;font-size:15px;line-height:1.2;text-align:center;color:#3d4943;margin-top:2px;min-height:36px;font-weight:500;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}')
+          t=t.replace('padding:5px 4px 8px;display:grid;grid-template-rows:58px auto;', 'padding:18px 4px 8px;display:grid;grid-template-rows:50px auto;')
+          t=t.replace('.role-feature{min-height:340px;padding:10px 2px 12px 18px}', '.role-feature{min-height:340px;padding:10px 12px 12px 18px}')
+          t=t.replace('.role-growth-art img{transform:translateX(8%)}', '.role-growth-art img{transform:translateX(12%);width:88%}')
+          t=t.replace('.role-feature .growth-panel{transform:translateX(14px)}', '.role-feature .growth-panel{transform:translateX(20px)}')
+          t=t.replace('.pet-growth-art img{height:112px;width:min(100%,155px);transform:translateX(0)}', '.pet-growth-art img{height:112px;width:min(92%,155px);transform:translateX(8%)}.pet-feature .growth-panel{transform:translateX(12px)}')
+          t=t.replace('.battle-card{aspect-ratio:auto;height:145px;min-height:145px;padding:3px 2px 5px;grid-template-rows:64px 25px 42px;border-radius:11px}', '.battle-card{aspect-ratio:auto;height:145px;min-height:145px;padding:17px 2px 5px;grid-template-rows:56px 24px 34px;border-radius:11px}')
+          t=t.replace('.battle-card .asset-slot{width:min(70px,92%);height:60px;border-radius:0}', '.battle-card .asset-slot{width:min(70px,92%);height:54px;border-radius:0;transform:translateY(5px)}')
+          t=t.replace('.battle-card .exclusive-card-art{width:min(70px,92%);height:60px}', '.battle-card .exclusive-card-art{width:min(70px,92%);height:54px;transform:translateY(5px)}')
+          t=t.replace('.mini-card{width:32%;min-height:92px;padding:3px 1px 6px;grid-template-rows:48px auto}', '.mini-card{width:32%;min-height:92px;padding:15px 1px 6px;grid-template-rows:42px auto}')
+          t=t.replace('.mini-card .asset-slot{width:50px;height:47px;border-radius:0}', '.mini-card .asset-slot{width:50px;height:42px;border-radius:0;transform:translateY(3px)}')
+          t=t.replace('.mini-card .exclusive-card-art{width:50px;height:47px}', '.mini-card .exclusive-card-art{width:50px;height:42px;transform:translateY(3px)}')
+          p.write_text(t,encoding='utf-8')
+          PY
+
+      - name: Syntax check
+        run: |
+          node --check src/game.js
+          node --check src/pk.js
+          node --check src/cards.js
+          node --check worker/index.js
+
+      - name: Commit source update and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/adjust-layout-card-rounds.yml
+          git add src/game.js src/pk.js src/cards.js src/styles.css worker/index.js .github/workflows/adjust-layout-card-rounds.yml
+          git commit -m "feat: use persistent 9-6-3 hands and refine layout" || exit 0
+          git push
