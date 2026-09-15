@@ -1,0 +1,84 @@
+name: Refresh PK queue and Morandi palette
+on:
+  push:
+    paths:
+      - '.github/workflows/morandi-interface.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update original source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, found {count}')
+              return text.replace(old, new, 1)
+
+          pk_path = Path('src/pk.js')
+          pk = pk_path.read_text()
+          old_queue = '''function renderQueue(text){app.innerHTML=`<main class="pk-screen"><section class="pk-card"><h1>${esc(text)}</h1><div class="pk-wait"></div><p class="waiting-text">其他玩家進入後會自動開始</p><button class="secondary-btn" data-pk-cancel>取消</button></section></main>`;app.querySelector('[data-pk-cancel]')?.addEventListener('click',()=>stop(true))}'''
+          new_queue = '''function renderQueue(){app.innerHTML=`<main class="pk-screen"><section class="pk-card pk-queue-card"><h1>配對中</h1><div class="pk-wait" aria-label="配對中"></div><button class="secondary-btn pk-cancel-btn" data-pk-cancel>取消</button></section></main>`;app.querySelector('[data-pk-cancel]')?.addEventListener('click',()=>stop(true))}'''
+          pk = replace_once(pk, old_queue, new_queue, 'PK queue')
+          pk_path.write_text(pk)
+
+          css_path = Path('src/styles.css')
+          css = css_path.read_text()
+
+          old_root = ':root{--paper:#fbfaf7;--ink:#27312d;--muted:#46534d;--sage:#7f9589;--sage-deep:#566d62;--line:rgba(39,49,45,.22);--shadow:0 18px 46px rgba(54,65,59,.15);--green:#d8e8dd;--blue:#d7e4ed;--red:#ead8d5;--yellow:#eee5bd;--neutral:#e5e1da}'
+          new_root = ':root{--paper:#fbfaf7;--ink:#27312d;--muted:#46534d;--sage:#7f9589;--sage-deep:#566d62;--line:rgba(39,49,45,.22);--shadow:0 18px 46px rgba(54,65,59,.15);--green:#d8e8dd;--blue:#d7e4ed;--red:#ead8d5;--yellow:#eee5bd;--neutral:#e5e1da;--m-sand:#e7ddcf;--m-sage:#d8e2d8;--m-blue:#d9e3e9;--m-lilac:#e1dbe7;--m-rose:#eadbd7;--m-gold:#e9e0c8;--m-stone:#ddd7cf;--m-pk:#d9e3e2}'
+          css = replace_once(css, old_root, new_root, 'root palette')
+
+          css = replace_once(css, 'body{background:#d8d5ce}', 'body{background:#d8d1c8}', 'body background')
+
+          card_shell = 'box-shadow:var(--shadow)}.setup-card{display:grid'
+          card_shell_new = 'box-shadow:var(--shadow)}.setup-card{background:rgba(247,241,232,.94)}.result-card{background:rgba(249,245,236,.95)}.pk-card{background:rgba(225,234,233,.96)}.setup-card{display:grid'
+          css = replace_once(css, card_shell, card_shell_new, 'panel category colors')
+
+          zones = '.card-zone,.quiz-zone,.resolve-zone,.action-status{margin-top:14px;background:rgba(255,255,255,.92);border-radius:26px;padding:22px;box-shadow:var(--shadow)}'
+          zones_new = '.card-zone,.quiz-zone,.resolve-zone,.action-status{margin-top:14px;border-radius:26px;padding:22px;box-shadow:var(--shadow)}.card-zone{background:rgba(231,221,207,.95)}.quiz-zone{background:rgba(216,226,216,.96)}.resolve-zone{background:rgba(225,219,232,.96)}.action-status{background:rgba(234,219,215,.96)}'
+          css = replace_once(css, zones, zones_new, 'game zone palette')
+
+          card_colors = {
+              '.battle-card.green{--card-accent:#5f9271}': '.battle-card.green{--card-accent:#5f9271;background:rgba(216,232,221,.72)}',
+              '.battle-card.blue{--card-accent:#668aa5}': '.battle-card.blue{--card-accent:#668aa5;background:rgba(215,228,237,.74)}',
+              '.battle-card.red{--card-accent:#a8665e}': '.battle-card.red{--card-accent:#a8665e;background:rgba(234,216,213,.74)}',
+              '.battle-card.yellow{--card-accent:#9d8735}': '.battle-card.yellow{--card-accent:#9d8735;background:rgba(238,229,189,.72)}',
+              '.battle-card.neutral{--card-accent:#716d65}': '.battle-card.neutral{--card-accent:#716d65;background:rgba(229,225,218,.78)}',
+              '.mini-card.green{--card-accent:#5f9271}': '.mini-card.green{--card-accent:#5f9271;background:rgba(216,232,221,.70)}',
+              '.mini-card.blue{--card-accent:#668aa5}': '.mini-card.blue{--card-accent:#668aa5;background:rgba(215,228,237,.72)}',
+              '.mini-card.red{--card-accent:#a8665e}': '.mini-card.red{--card-accent:#a8665e;background:rgba(234,216,213,.72)}',
+              '.mini-card.yellow{--card-accent:#9d8735}': '.mini-card.yellow{--card-accent:#9d8735;background:rgba(238,229,189,.70)}',
+              '.mini-card.neutral{--card-accent:#716d65}': '.mini-card.neutral{--card-accent:#716d65;background:rgba(229,225,218,.76)}',
+          }
+          for old, new in card_colors.items():
+              css = replace_once(css, old, new, old)
+
+          summary = '.battle-summary>div{display:grid;gap:4px;padding:14px 8px;border-radius:18px;background:rgba(218,213,203,.88)}'
+          summary_new = '.battle-summary>div{display:grid;gap:4px;padding:14px 8px;border-radius:18px;background:rgba(221,215,207,.9)}.battle-summary>div:nth-child(1){background:rgba(216,226,216,.94)}.battle-summary>div:nth-child(2){background:rgba(234,219,215,.94)}.battle-summary>div:nth-child(3){background:rgba(215,228,237,.94)}'
+          css = replace_once(css, summary, summary_new, 'result capsule palette')
+
+          pk_style = '.pk-card{text-align:center;max-width:460px}.pk-card h1{font-size:35px}.pk-wait{width:54px;height:54px;border-radius:50%;border:4px solid #c7ccc8;border-top-color:#566d62;margin:22px auto;animation:spin 1s linear infinite}'
+          pk_style_new = '.pk-card{text-align:center;max-width:460px}.pk-card h1{font-size:35px}.pk-queue-card{width:min(420px,92vw);padding:34px 24px 28px;background:linear-gradient(145deg,rgba(217,227,226,.98),rgba(235,231,221,.96));display:grid;justify-items:center;gap:20px}.pk-queue-card h1{margin:0;font-size:34px}.pk-cancel-btn{width:auto!important;min-width:96px;margin:0!important;padding:11px 24px!important;background:#d9d0c4!important}.pk-wait{width:54px;height:54px;border-radius:50%;border:4px solid #c7ccc8;border-top-color:#758f88;margin:4px auto;animation:spin 1s linear infinite}'
+          css = replace_once(css, pk_style, pk_style_new, 'PK minimal palette')
+
+          css_path.write_text(css)
+          PY
+      - name: Syntax check
+        run: |
+          node --check src/pk.js
+          node --check src/game.js
+      - name: Commit source changes
+        run: |
+          git config user.name "redfisharthur-beep"
+          git config user.email "redfisharthur@gmail.com"
+          git rm --ignore-unmatch .github/workflows/morandi-interface.yml
+          git add src/pk.js src/styles.css
+          git commit -m "feat: simplify PK queue and diversify Morandi palette"
+          git push
