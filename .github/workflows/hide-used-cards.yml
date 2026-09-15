@@ -1,0 +1,45 @@
+name: Hide used cards each round
+
+on:
+  push:
+    paths:
+      - '.github/workflows/hide-used-cards.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update remaining-card rendering
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('src/game.js'); t=p.read_text(encoding='utf-8')
+          old="<div class=\"hand-grid\">${run.hand.map(cardHtml).join('')}</div>"
+          new="<div class=\"hand-grid\">${run.hand.map((c,i)=>run.used.includes(i)?'':cardHtml(c,i)).join('')}</div>"
+          if old not in t: raise SystemExit('single hand renderer not found')
+          p.write_text(t.replace(old,new,1),encoding='utf-8')
+
+          p=Path('src/pk.js'); t=p.read_text(encoding='utf-8')
+          old="<div class=\"hand-grid\">${hand.map(card).join('')}</div>"
+          new="<div class=\"hand-grid\">${hand.map((c,i)=>used.includes(i)?'':card(c,i)).join('')}</div>"
+          if old not in t: raise SystemExit('pk hand renderer not found')
+          p.write_text(t.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Syntax check
+        run: |
+          node --check src/game.js
+          node --check src/pk.js
+      - name: Commit and clean temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/hide-used-cards.yml
+          git add src/game.js src/pk.js .github/workflows/hide-used-cards.yml
+          git commit -m "fix: display 9-6-3 remaining cards" || exit 0
+          git push
