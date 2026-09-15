@@ -1,0 +1,98 @@
+name: Refine stat icons shield and exclusive card layout
+on:
+  push:
+    paths:
+      - '.github/workflows/refine-icons-shield-exclusive.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update original source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path); s=p.read_text()
+              n=s.count(old)
+              if n != 1:
+                  raise SystemExit(f'{path}: expected 1 match, got {n}: {old[:90]}')
+              p.write_text(s.replace(old,new,1))
+
+          replace_once('src/assets.js',
+              "crit:'/images/Crit.png'},",
+              "crit:'/images/Crit.png',shield:'/images/Shield.png'},")
+
+          replace_once('src/game.js',
+              "function shieldStat(value){return `<span class=\"battle-stat-line shield-stat\"><i class=\"stat-spacer\" aria-hidden=\"true\"></i><em>護盾</em><b>${esc(Math.max(0,Math.round(value||0)))}</b></span>`}",
+              "function shieldStat(value){return `<span class=\"battle-stat-line shield-stat\">${uiImg(ASSETS.ui.shield,'護盾','')}<b>${esc(Math.max(0,Math.round(value||0)))}</b></span>`}")
+          replace_once('src/game.js',
+              "width:112px\">${uiImg(ASSETS.ui.back,'返回','display:block;width:100%;height:auto;object-fit:contain;')}",
+              "width:132px\">${uiImg(ASSETS.ui.back,'返回','display:block;width:100%;height:auto;object-fit:contain;')}")
+          replace_once('src/game.js',
+              "<div class=\"name-line\">${esc(s.name)}</div><div class=\"monster-skill\"><b>${esc(s.skill)}</b></div><div class=\"hp enemy-hp\">",
+              "<div class=\"name-line\">${esc(s.name)}</div><div class=\"hp enemy-hp\">")
+
+          replace_once('src/pk.js',
+              "function shieldStat(value){return `<span class=\"battle-stat-line shield-stat\"><i class=\"stat-spacer\" aria-hidden=\"true\"></i><em>護盾</em><b>${esc(Math.max(0,Math.round(value||0)))}</b></span>`}",
+              "function shieldStat(value){return `<span class=\"battle-stat-line shield-stat\">${uiImg(ASSETS.ui.shield,'護盾','')}<b>${esc(Math.max(0,Math.round(value||0)))}</b></span>`}")
+          replace_once('src/pk.js',
+              "width:112px\">${uiImg(ASSETS.ui.back,'返回','display:block;width:100%;height:auto;object-fit:contain;')}",
+              "width:132px\">${uiImg(ASSETS.ui.back,'返回','display:block;width:100%;height:auto;object-fit:contain;')}")
+
+          css=Path('src/styles.css')
+          s=css.read_text()
+          reps=[
+            ('.growth-stat{display:grid;grid-template-columns:38px 1fr;align-items:center;gap:9px}', '.growth-stat{display:grid;grid-template-columns:46px 1fr;align-items:center;gap:9px}'),
+            ('.growth-stat img{width:36px;height:36px;object-fit:contain}', '.growth-stat img{width:44px;height:44px;object-fit:contain}'),
+            ('.stat-row .battle-stat-line{display:grid;grid-template-columns:32px minmax(46px,auto);align-items:center;gap:7px;padding:0;background:transparent;border-radius:0;color:#36413c;font-weight:500;line-height:1.05}', '.stat-row .battle-stat-line{display:grid;grid-template-columns:38px minmax(46px,auto);align-items:center;gap:8px;padding:0;background:transparent;border-radius:0;color:#36413c;font-weight:500;line-height:1.05}'),
+            ('.stat-row .shield-stat{grid-template-columns:32px 52px minmax(46px,auto)}', '.stat-row .shield-stat{grid-template-columns:38px minmax(46px,auto)}'),
+            ('.battle-stat-line img{display:block;width:28px;height:28px;object-fit:contain}', '.battle-stat-line img{display:block;width:34px;height:34px;object-fit:contain}'),
+            ('.stat-spacer{display:block;width:28px;height:28px}', '.stat-spacer{display:block;width:34px;height:34px}'),
+            ('.mini-card .exclusive-card-art{width:62px;height:58px;padding:0}', '.mini-card .exclusive-card-art{width:54px;height:50px;padding:0;transform:translateY(-4px)}'),
+            ('.system-back-btn{border:0;background:transparent;padding:0;width:74px;height:58px;display:grid;place-items:center;justify-self:start}', '.system-back-btn{border:0;background:transparent;padding:0;width:92px;height:70px;display:grid;place-items:center;justify-self:start}'),
+            ('.growth-stat{grid-template-columns:30px 1fr;gap:5px}', '.growth-stat{grid-template-columns:38px 1fr;gap:5px}'),
+            ('.growth-stat img{width:29px;height:29px}', '.growth-stat img{width:36px;height:36px}'),
+            ('.stat-row .battle-stat-line{grid-template-columns:28px minmax(42px,auto);gap:5px}', '.stat-row .battle-stat-line{grid-template-columns:34px minmax(42px,auto);gap:6px}'),
+            ('.stat-row .shield-stat{grid-template-columns:28px 46px minmax(42px,auto)}', '.stat-row .shield-stat{grid-template-columns:34px minmax(42px,auto)}'),
+            ('.battle-stat-line img{width:25px;height:25px}', '.battle-stat-line img{width:30px;height:30px}'),
+            ('.stat-spacer{width:25px;height:25px}', '.stat-spacer{width:30px;height:30px}'),
+            ('.mini-card .exclusive-card-art{width:50px;height:42px;transform:translateY(3px);overflow:visible;padding:0}', '.mini-card .exclusive-card-art{width:44px;height:38px;transform:translateY(-2px);overflow:visible;padding:0}'),
+            ('.mini-card .exclusive-card-art img{width:84%;height:84%;max-width:84%;max-height:84%}', '.mini-card .exclusive-card-art img{width:100%;height:100%;max-width:100%;max-height:100%}'),
+            ('.system-back-btn{width:62px;height:48px}', '.system-back-btn{width:78px;height:60px}')
+          ]
+          for old,new in reps:
+              n=s.count(old)
+              if n != 1:
+                  raise SystemExit(f'src/styles.css: expected 1 match, got {n}: {old[:100]}')
+              s=s.replace(old,new,1)
+          css.write_text(s)
+          PY
+      - name: Verify
+        shell: bash
+        run: |
+          node --check src/assets.js
+          node --check src/game.js
+          node --check src/pk.js
+          test -f images/Shield.png
+          grep -Fq "shield:'/images/Shield.png'" src/assets.js
+          grep -Fq "ASSETS.ui.shield" src/game.js
+          grep -Fq "ASSETS.ui.shield" src/pk.js
+          ! grep -Fq '<div class="monster-skill"><b>${esc(s.skill)}</b></div>' src/game.js
+          grep -Fq '.growth-stat img{width:44px;height:44px;object-fit:contain}' src/styles.css
+          grep -Fq '.battle-stat-line img{display:block;width:34px;height:34px;object-fit:contain}' src/styles.css
+          grep -Fq '.system-back-btn{border:0;background:transparent;padding:0;width:92px;height:70px' src/styles.css
+          grep -Fq '.mini-card .exclusive-card-art{width:54px;height:50px;padding:0;transform:translateY(-4px)}' src/styles.css
+      - name: Commit source and remove workflow
+        shell: bash
+        run: |
+          git config user.name 'redfisharthur-beep'
+          git config user.email 'redfisharthur@gmail.com'
+          git rm .github/workflows/refine-icons-shield-exclusive.yml
+          git add src/assets.js src/game.js src/pk.js src/styles.css
+          git commit -m 'ui: enlarge stat icons and add shield icon'
+          git push
