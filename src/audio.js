@@ -1,4 +1,4 @@
-const TRACKS={menu:'/audio/word-rpg.mp3',fight:'/audio/fight.mp3'};
+const TRACKS={menu:'/audio/word%20rpg.mp3',fight:'/audio/fight.mp3'};
 let player=null,currentMode='none',unlocked=false;
 
 function ensurePlayer(){
