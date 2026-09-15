@@ -1,0 +1,78 @@
+name: Resize nine-card hand
+on:
+  push:
+    paths:
+      - '.github/workflows/resize-hand-cards.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update original card layout styles
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('src/styles.css')
+          s=p.read_text()
+          original=s
+
+          # Desktop/tablet 9-card hand: slightly taller card and materially larger art area.
+          s,n=re.subn(
+            r'\.battle-card\{--card-accent:#858b87;position:relative;aspect-ratio:1/1\.03;min-height:0;border:2px solid var\(--card-accent\);border-radius:16px;padding:24px 8px 8px;display:grid;grid-template-rows:minmax\(110px,1fr\) auto 40px;place-items:center;align-content:stretch;gap:4px;',
+            '.battle-card{--card-accent:#858b87;position:relative;aspect-ratio:1/1.14;min-height:0;border:2px solid var(--card-accent);border-radius:16px;padding:24px 8px 10px;display:grid;grid-template-rows:minmax(140px,1fr) auto 40px;place-items:center;align-content:stretch;gap:5px;',
+            s,count=1)
+          if n!=1: raise SystemExit('desktop battle-card block not found')
+
+          s,n=re.subn(
+            r'\.battle-card \.asset-slot\{width:min\(150px,88%\);height:132px;border:0;border-radius:0;background-color:transparent;display:block\}',
+            '.battle-card .asset-slot{width:min(178px,94%);height:158px;border:0;border-radius:0;background-color:transparent;display:block;overflow:visible}',
+            s,count=1)
+          if n!=1: raise SystemExit('desktop asset-slot block not found')
+
+          s,n=re.subn(
+            r'\.exclusive-card-art\{width:min\(150px,88%\);height:132px;display:grid;place-items:center;overflow:visible;padding:2px\}',
+            '.exclusive-card-art{width:min(178px,94%);height:158px;display:grid;place-items:center;overflow:visible;padding:1px}',
+            s,count=1)
+          if n!=1: raise SystemExit('desktop exclusive art block not found')
+
+          # Mobile: keep 3 columns but give each card more vertical room and a much larger image.
+          s,n=re.subn(
+            r'\.battle-card\{aspect-ratio:auto;height:145px;min-height:145px;padding:17px 2px 5px;grid-template-rows:56px 24px 34px;border-radius:11px\}',
+            '.battle-card{aspect-ratio:auto;height:166px;min-height:166px;padding:16px 2px 6px;grid-template-rows:78px 24px 36px;border-radius:11px}',
+            s,count=1)
+          if n!=1: raise SystemExit('mobile battle-card block not found')
+
+          s,n=re.subn(
+            r'\.battle-card \.asset-slot\{width:min\(70px,92%\);height:54px;border-radius:0;transform:translateY\(5px\)\}',
+            '.battle-card .asset-slot{width:min(86px,95%);height:72px;border-radius:0;transform:translateY(2px);overflow:visible}',
+            s,count=1)
+          if n!=1: raise SystemExit('mobile asset-slot block not found')
+
+          s,n=re.subn(
+            r'\.battle-card \.exclusive-card-art\{width:min\(70px,92%\);height:54px;transform:translateY\(5px\);overflow:visible;padding:1px\}',
+            '.battle-card .exclusive-card-art{width:min(86px,95%);height:72px;transform:translateY(2px);overflow:visible;padding:0}',
+            s,count=1)
+          if n!=1: raise SystemExit('mobile exclusive art block not found')
+
+          if s==original: raise SystemExit('no changes made')
+          p.write_text(s)
+          PY
+      - name: Verify card layout and source
+        run: |
+          grep -F 'aspect-ratio:1/1.14' src/styles.css
+          grep -F 'width:min(178px,94%);height:158px' src/styles.css
+          grep -F 'height:166px;min-height:166px' src/styles.css
+          grep -F 'width:min(86px,95%);height:72px' src/styles.css
+          node --check src/game.js
+          node --check src/assets.js
+      - name: Commit source changes and remove workflow
+        run: |
+          git config user.name 'redfisharthur-beep'
+          git config user.email 'redfisharthur@gmail.com'
+          git add src/styles.css
+          git rm .github/workflows/resize-hand-cards.yml
+          git commit -m 'ui: enlarge nine-card hand artwork'
+          git push
