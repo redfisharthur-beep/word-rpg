@@ -32,7 +32,7 @@ function titleFor(level=meta.level){return TITLE_STEPS.find(([lv])=>level>=lv)?.
 function addXp(amount){if(meta.authMode==='guest'){meta.level=1;meta.xp=0;persistLocal();return {amount:0,old:1,newLevel:1,levels:[],title:'訪客模式',guest:true}}const old=meta.level,levels=[];meta.xp+=Math.max(0,Math.round(amount));while(meta.level<50&&meta.xp>=xpNeed(meta.level)){meta.xp-=xpNeed(meta.level);meta.level++;levels.push(meta.level)}saveMeta();return {amount,old,newLevel:meta.level,levels,title:titleFor(meta.level)}}
 function growth(){return progressionStats(meta.role,meta.pet,meta.authMode==='guest'?1:meta.level)}
 function growthItem(src,value,label){return `<span class="growth-stat" title="${esc(label)}">${uiImg(src,label,'')}<b>${esc(value)}</b></span>`}
-function growthPanel(stats){const guest=meta.authMode==='guest';return `<div class="growth-panel"><div class="growth-level"><b>Lv.${guest?1:meta.level}</b><span>${guest?'訪客模式 · 不累積 EXP':esc(titleFor(meta.level))}</span></div><div class="growth-stats">${growthItem(ASSETS.ui.hp,stats.maxHp,'生命')}${growthItem(ASSETS.ui.atk,stats.atk,'攻擊')}${growthItem(ASSETS.ui.def,stats.def,'防禦')}</div></div>`}
+function growthPanel(stats){const guest=meta.authMode==='guest';return `<div class="growth-panel"><div class="growth-level"><b>Lv.${guest?1:meta.level}</b><span>${guest?'訪客':esc(titleFor(meta.level))}</span></div><div class="growth-stats">${growthItem(ASSETS.ui.hp,stats.maxHp,'生命')}${growthItem(ASSETS.ui.atk,stats.atk,'攻擊')}${growthItem(ASSETS.ui.def,stats.def,'防禦')}</div></div>`}
 function q(){if(!run.wordDeck?.length)run.wordDeck=wordDeck();return makeQuestion(run.wordDeck.pop())}
 function questions(){return [q(),q(),q()]}
 function rawStage(){return STAGES[run.stageIndex]}
