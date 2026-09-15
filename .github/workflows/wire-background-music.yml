@@ -1,0 +1,58 @@
+name: Wire background music
+on:
+  push:
+    paths:
+      - '.github/workflows/wire-background-music.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update original source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('src/game.js')
+          s=p.read_text()
+          old="import {createPkMode} from './pk.js';"
+          new="import {createPkMode} from './pk.js';\nimport {setMusic} from './audio.js';"
+          if old not in s: raise SystemExit('game import target not found')
+          s=s.replace(old,new,1)
+          old="function render(){app.innerHTML=screen==='home'?renderHome():screen==='setup'?renderSetup():screen==='cards'?renderCards():screen==='quiz'?renderQuiz():screen==='action'?renderAction():screen==='stage-clear'?renderStageClear():screen==='win'?renderResult(true):screen==='lose'?renderResult(false):renderHome();bind()}"
+          new="function render(){setMusic(screen==='quiz'?'none':screen==='action'?'fight':'menu');app.innerHTML=screen==='home'?renderHome():screen==='setup'?renderSetup():screen==='cards'?renderCards():screen==='quiz'?renderQuiz():screen==='action'?renderAction():screen==='stage-clear'?renderStageClear():screen==='win'?renderResult(true):screen==='lose'?renderResult(false):renderHome();bind()}"
+          if old not in s: raise SystemExit('game render target not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+
+          p=Path('src/pk.js')
+          s=p.read_text()
+          old="import {cardSummary,isOffensive} from './cards.js';"
+          new="import {cardSummary,isOffensive} from './cards.js';\nimport {setMusic} from './audio.js';"
+          if old not in s: raise SystemExit('pk import target not found')
+          s=s.replace(old,new,1)
+          old="  function render(){if(!alive)return;if(status==='queue')return renderQueue('等待玩家挑戰');if(status==='cards')renderCards();else if(status==='quiz')renderQuiz();else if(status==='wait')renderWait();else if(status==='action')renderAction();else if(status==='finished')renderEnd();bind()}"
+          new="  function render(){if(!alive)return;setMusic(status==='quiz'||status==='wait'?'none':status==='action'?'fight':'menu');if(status==='queue')return renderQueue('等待玩家挑戰');if(status==='cards')renderCards();else if(status==='quiz')renderQuiz();else if(status==='wait')renderWait();else if(status==='action')renderAction();else if(status==='finished')renderEnd();bind()}"
+          if old not in s: raise SystemExit('pk render target not found')
+          s=s.replace(old,new,1)
+          old="  function start(){stop(false);answerFeedback=null;alive=true;status='queue';renderQueue('連線中');socket=new WebSocket(wsUrl());"
+          new="  function start(){stop(false);answerFeedback=null;alive=true;status='queue';setMusic('menu');renderQueue('連線中');socket=new WebSocket(wsUrl());"
+          if old not in s: raise SystemExit('pk start target not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Syntax check
+        run: |
+          node --check src/audio.js
+          node --check src/game.js
+          node --check src/pk.js
+      - name: Commit source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/wire-background-music.yml
+          git add src/game.js src/pk.js src/audio.js
+          git commit -m "feat: switch menu and battle background music by game state"
+          git push
