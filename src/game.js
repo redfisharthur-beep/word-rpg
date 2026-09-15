@@ -16,15 +16,15 @@ const STAGES=[
   {id:'shadow',name:'影語王',art:ASSETS.enemy.shadowKing,hp:1000,atk:155,def:85,crit:.22,skill:'暗影汲取',skillText:'攻擊吸血，半血狂暴並清除負面'}
 ];
 const CARD_HINT={combo:'3次連擊\n每擊 50%',desperate:'重擊 200%\n自身降防',poison:'傷害\n中毒 3回合',break:'傷害\n降防 2回合',sun:'傷害\n封鎖爆擊 2回合',preempt:'傷害\n降攻 2回合',regen:'立即回血\n持續回血',sacrifice:'超高傷害\n消耗生命',restore:'大量回血\n溢出護盾',diamond:'防禦提升\n持續 2回合',aegis:'獲得護盾\n戰鬥期間有效',boost:'強化下張牌\n立即護盾'};
-let meta=loadMeta(),screen='home',run=null,pkMode=null,actionTimer=null,selectTimeout=null,selectTicker=null,questionTimeout=null,questionTicker=null,answerFeedback=null,spokenQuestionKey='';
+let meta=loadMeta(),screen='home',run=null,pkMode=null,actionTimer=null,selectTimeout=null,selectTicker=null,questionTimeout=null,questionTicker=null,answerFeedback=null,spokenQuestionKey='',progressSyncQueue=Promise.resolve();
 const shuffle=a=>{const c=[...a];for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}return c};
 const pick=a=>a[Math.floor(Math.random()*a.length)],clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function speakEnglishOnce(word,key){if(!word||!key||spokenQuestionKey===key||!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined')return;spokenQuestionKey=key;try{window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(String(word));u.lang='en-US';u.rate=.9;u.pitch=1;u.volume=1;window.speechSynthesis.speak(u)}catch{}}
 function loadMeta(){const base={playerName:'',role:'warrior',pet:'fox',level:1,xp:0,authMode:'none',lineUserId:'',linePicture:'',rpg:emptyRpg()};try{const x={...base,...JSON.parse(localStorage.getItem(SAVE_KEY)||'{}')};x.level=Math.max(1,Math.min(50,Math.round(Number(x.level)||1)));x.xp=x.level>=50?0:Math.max(0,Math.round(Number(x.xp)||0));x.rpg=cleanRpg(x.rpg);return x}catch{return base}}
 function persistLocal(){localStorage.setItem(SAVE_KEY,JSON.stringify(meta))}
-async function syncLineProgress(){if(meta.authMode!=='line')return;try{await fetch('/api/progress',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:meta.role,pet:meta.pet,level:meta.level,xp:meta.xp,rpg:meta.rpg})})}catch{}}
-function saveMeta(){persistLocal();if(meta.authMode==='line')void syncLineProgress()}
+async function syncLineProgress(body){try{await fetch('/api/progress',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body})}catch{}}
+function saveMeta(){persistLocal();if(meta.authMode==='line'){const body=JSON.stringify({role:meta.role,pet:meta.pet,level:meta.level,xp:meta.xp,rpg:meta.rpg});progressSyncQueue=progressSyncQueue.catch(()=>{}).then(()=>syncLineProgress(body))}}
 function applyLineSession(data){const p=data?.progress||{},profile=data?.profile||{};meta={...meta,authMode:'line',lineUserId:profile.userId||'',linePicture:profile.picture||'',playerName:String(profile.name||'LINE 玩家').slice(0,16),role:['warrior','mage','archer'].includes(p.role)?p.role:meta.role,pet:['fox','owl','dragon'].includes(p.pet)?p.pet:meta.pet,level:Math.max(1,Math.min(50,Math.round(Number(p.level)||1))),xp:Math.max(0,Math.round(Number(p.xp)||0)),rpg:cleanRpg(p.rpg)};if(meta.level>=50)meta.xp=0;persistLocal()}
 function startGuest(){clearTimers();meta={...meta,authMode:'guest',lineUserId:'',linePicture:'',playerName:'訪客',level:1,xp:0,rpg:emptyRpg()};persistLocal();screen='setup';render()}
 async function startLineLogin(){try{const r=await fetch('/api/session',{credentials:'same-origin'});const data=await r.json();if(data?.authenticated){applyLineSession(data);screen='setup';render();return}}catch{}location.assign('/auth/line')}
