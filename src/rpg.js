@@ -31,14 +31,56 @@ export const PET_TREES={
 };
 
 const PET_IDS=['fox','owl','dragon'];
+const VALID_LOOT={gem:new Set(['ruby','thunder']),armor:new Set(['guardian','bloodspirit']),ring:new Set(['warbreaker','battlesoul'])};
 const uid=()=>globalThis.crypto?.randomUUID?.()||`loot-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const pick=(arr,r=Math.random)=>arr[Math.floor(r()*arr.length)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
+const QVAL={
+  common:{ruby:{atk:.03,def:.03},thunder:{hp:.04,crit:.01},guardian:{def:.08},bloodspirit:{hp:.08},warbreaker:{atk:.04,hp:.04},battlesoul:{def:.04,crit:.01}},
+  rare:{ruby:{atk:.045,def:.045},thunder:{hp:.06,crit:.02},guardian:{def:.12},bloodspirit:{hp:.12},warbreaker:{atk:.06,hp:.06},battlesoul:{def:.06,crit:.02}},
+  epic:{ruby:{atk:.065,def:.065},thunder:{hp:.09,crit:.03},guardian:{def:.18},bloodspirit:{hp:.18},warbreaker:{atk:.09,hp:.09},battlesoul:{def:.09,crit:.035}},
+  legendary:{ruby:{atk:.09,def:.09},thunder:{hp:.13,crit:.05},guardian:{def:.26},bloodspirit:{hp:.26},warbreaker:{atk:.13,hp:.13},battlesoul:{def:.13,crit:.05}}
+};
+
+const ITEM_NAME={ruby:'紅曜石',thunder:'雷光石',guardian:'守護甲',bloodspirit:'血靈甲',warbreaker:'破軍戒',battlesoul:'戰魂戒'};
+const LEGACY_MAP={
+  gem:{ruby:'ruby',emerald:'thunder',sapphire:'ruby',topaz:'thunder',thunder:'thunder'},
+  armor:{guardian:'guardian',fortress:'guardian',vital:'bloodspirit',bloodspirit:'bloodspirit'},
+  ring:{assault:'warbreaker',guard:'battlesoul',swift:'battlesoul',warbreaker:'warbreaker',battlesoul:'battlesoul'}
+};
+
+export function lootImage(item){
+  const type=item?.type,subtype=item?.subtype,quality=item?.quality;
+  if(!VALID_LOOT[type]?.has(subtype)||!QUALITY[quality])return '';
+  return `/images/loot-${type}-${subtype}-${quality}.png`;
+}
+
+function bonusesFor(type,subtype,quality){
+  const v=QVAL[quality]?.[subtype];if(!v)return {};
+  if(type==='gem'&&subtype==='ruby')return {atkPct:v.atk,defPct:v.def};
+  if(type==='gem'&&subtype==='thunder')return {hpPct:v.hp,crit:v.crit};
+  if(type==='armor'&&subtype==='guardian')return {defPct:v.def};
+  if(type==='armor'&&subtype==='bloodspirit')return {hpPct:v.hp};
+  if(type==='ring'&&subtype==='warbreaker')return {atkPct:v.atk,hpPct:v.hp};
+  if(type==='ring'&&subtype==='battlesoul')return {defPct:v.def,crit:v.crit};
+  return {};
+}
+
+function normalizeItem(item){
+  if(!item||typeof item!=='object'||typeof item.id!=='string')return null;
+  const type=['gem','armor','ring'].includes(item.type)?item.type:null;if(!type)return null;
+  const quality=QUALITY[item.quality]?item.quality:'common';
+  const subtype=LEGACY_MAP[type]?.[item.subtype]||null;if(!subtype||!VALID_LOOT[type].has(subtype))return null;
+  const normalized={...item,type,subtype,quality,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:bonusesFor(type,subtype,quality)};
+  normalized.art=lootImage(normalized);
+  return normalized;
+}
+
 export function emptyRpg(){return {inventory:[],equipped:{gems:[],armor:null,ring:null},petSkills:{fox:[],owl:[],dragon:[]}};}
 
 export function cleanRpg(raw={}){
-  const base=emptyRpg(),src=raw&&typeof raw==='object'?raw:{},inventory=Array.isArray(src.inventory)?src.inventory.filter(x=>x&&typeof x==='object'&&typeof x.id==='string').slice(-60):[];
+  const base=emptyRpg(),src=raw&&typeof raw==='object'?raw:{},inventory=Array.isArray(src.inventory)?src.inventory.map(normalizeItem).filter(Boolean).slice(-60):[];
   const ids=new Set(inventory.map(x=>x.id)),eq=src.equipped&&typeof src.equipped==='object'?src.equipped:{},gems=Array.isArray(eq.gems)?[...new Set(eq.gems.filter(id=>ids.has(id)&&inventory.find(x=>x.id===id)?.type==='gem'))].slice(0,3):[];
   const armor=ids.has(eq.armor)&&inventory.find(x=>x.id===eq.armor)?.type==='armor'?eq.armor:null,ring=ids.has(eq.ring)&&inventory.find(x=>x.id===eq.ring)?.type==='ring'?eq.ring:null;
   const petSkills={};
@@ -77,38 +119,23 @@ export function equipmentBonuses(rpg){
   return out;
 }
 
-const QVAL={
-  common:{gem:{atk:.03,hp:.04,def:.04,crit:.01},armor:.05,ringAtk:.04,ringCrit:.01},
-  rare:{gem:{atk:.045,hp:.06,def:.06,crit:.02},armor:.08,ringAtk:.06,ringCrit:.02},
-  epic:{gem:{atk:.065,hp:.09,def:.09,crit:.03},armor:.12,ringAtk:.09,ringCrit:.035},
-  legendary:{gem:{atk:.09,hp:.13,def:.13,crit:.05},armor:.17,ringAtk:.13,ringCrit:.05}
-};
-
 function weightedQuality(stageIndex,r=Math.random){
   const tables=[[70,25,4,1],[60,30,8,2],[50,34,12,4],[35,40,18,7]],weights=tables[clamp(stageIndex,0,3)],roll=r()*100;let acc=0;for(let i=0;i<weights.length;i++){acc+=weights[i];if(roll<acc)return QUALITY_ORDER[i];}return 'common';
 }
 
-function makeGem(quality,r){
-  const kinds=[['ruby','紅曜石','atk'],['emerald','翠心石','hp'],['sapphire','蒼甲石','def'],['topaz','雷光石','crit']],kind=pick(kinds,r),v=QVAL[quality].gem[kind[2]],bonuses={};
-  if(kind[2]==='atk')bonuses.atkPct=v;if(kind[2]==='hp')bonuses.hpPct=v;if(kind[2]==='def')bonuses.defPct=v;if(kind[2]==='crit')bonuses.crit=v;
-  return {id:uid(),type:'gem',subtype:kind[0],quality,name:`${QUALITY[quality].name}${kind[1]}`,bonuses};
+function makeItem(type,subtype,quality){
+  const item={id:uid(),type,subtype,quality,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:bonusesFor(type,subtype,quality)};
+  return {...item,art:lootImage(item)};
 }
-
-function makeArmor(quality,r){
-  const base=QVAL[quality].armor,kinds=[['guardian','守護裝甲',{hpPct:base,defPct:base}],['fortress','重甲',{defPct:base*1.55}],['vital','生命甲',{hpPct:base*1.55}]],kind=pick(kinds,r);
-  return {id:uid(),type:'armor',subtype:kind[0],quality,name:`${QUALITY[quality].name}${kind[1]}`,bonuses:kind[2]};
-}
-
-function makeRing(quality,r){
-  const atk=QVAL[quality].ringAtk,crit=QVAL[quality].ringCrit,kinds=[['assault','破軍戒指',{atkPct:atk,crit}],['guard','守護戒指',{hpPct:atk,defPct:atk}],['swift','迅捷戒指',{crit:crit*1.8}]],kind=pick(kinds,r);
-  return {id:uid(),type:'ring',subtype:kind[0],quality,name:`${QUALITY[quality].name}${kind[1]}`,bonuses:kind[2]};
-}
+function makeGem(quality,r){return makeItem('gem',pick(['ruby','thunder'],r),quality);}
+function makeArmor(quality,r){return makeItem('armor',pick(['guardian','bloodspirit'],r),quality);}
+function makeRing(quality,r){return makeItem('ring',pick(['warbreaker','battlesoul'],r),quality);}
 
 export function rollLoot(stageIndex=0,level=1,r=Math.random){
   const chances=[.45,.55,.68,1],idx=clamp(Math.round(stageIndex)||0,0,3);if(r()>chances[idx])return null;const quality=weightedQuality(idx,r),typeRoll=r();let item=typeRoll<.55?makeGem(quality,r):typeRoll<.80?makeArmor(quality,r):makeRing(quality,r);return {...item,stage:idx+1,level:clamp(Math.round(Number(level)||1),1,50),foundAt:Date.now()};
 }
 
-export function addLoot(rpg,item){const clean=cleanRpg(rpg);if(!item)return clean;clean.inventory=[...clean.inventory,item].slice(-60);return cleanRpg(clean);}
+export function addLoot(rpg,item){const clean=cleanRpg(rpg),normalized=normalizeItem(item);if(!normalized)return clean;clean.inventory=[...clean.inventory,normalized].slice(-60);return cleanRpg(clean);}
 export function equipItem(rpg,itemId){const clean=cleanRpg(rpg),item=clean.inventory.find(x=>x.id===itemId);if(!item)return clean;if(item.type==='gem'){const gems=clean.equipped.gems.filter(id=>id!==itemId);if(gems.length>=3)return clean;clean.equipped.gems=[...gems,itemId];}else if(item.type==='armor')clean.equipped.armor=itemId;else if(item.type==='ring')clean.equipped.ring=itemId;return cleanRpg(clean);}
 export function unequipItem(rpg,itemId){const clean=cleanRpg(rpg);clean.equipped.gems=clean.equipped.gems.filter(id=>id!==itemId);if(clean.equipped.armor===itemId)clean.equipped.armor=null;if(clean.equipped.ring===itemId)clean.equipped.ring=null;return cleanRpg(clean);}
 export function itemBonusText(item){const b=item?.bonuses||{},parts=[];if(b.hpPct)parts.push(`生命 +${Math.round(b.hpPct*100)}%`);if(b.atkPct)parts.push(`攻擊 +${Math.round(b.atkPct*100)}%`);if(b.defPct)parts.push(`防禦 +${Math.round(b.defPct*100)}%`);if(b.crit)parts.push(`爆擊 +${Math.round(b.crit*100)}%`);return parts.join(' · ');}
