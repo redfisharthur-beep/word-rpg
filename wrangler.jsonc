@@ -3,6 +3,10 @@
   "name": "word-rpg",
   "main": "worker/index.js",
   "compatibility_date": "2026-09-13",
+  "keep_vars": true,
+  "secrets": {
+    "required": ["LINE_CHANNEL_SECRET"]
+  },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
