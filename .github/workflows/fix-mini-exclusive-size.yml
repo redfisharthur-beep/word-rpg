@@ -20,9 +20,9 @@ jobs:
           old='.mini-card .exclusive-card-art img{width:84%;height:84%;max-width:84%;max-height:84%;object-fit:contain}'
           new='.mini-card .exclusive-card-art img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}'
           n=s.count(old)
-          if n != 2:
-              raise SystemExit(f'expected 2 mini exclusive image rules, got {n}')
-          p.write_text(s.replace(old,new))
+          if n != 1:
+              raise SystemExit(f'expected 1 mini exclusive image rule, got {n}')
+          p.write_text(s.replace(old,new,1))
           PY
       - name: Verify requested UI rules
         shell: bash
@@ -39,7 +39,7 @@ jobs:
           grep -Fq "<em>護盾</em>" src/game.js
           grep -Fq "'爆擊率'" src/game.js
           grep -Fq "<em>護盾</em>" src/pk.js
-          test "$(grep -oF '.mini-card .exclusive-card-art img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}' src/styles.css | wc -l)" -eq 2
+          test "$(grep -oF '.mini-card .exclusive-card-art img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain}' src/styles.css | wc -l)" -eq 1
       - name: Commit source and remove workflow
         shell: bash
         run: |
