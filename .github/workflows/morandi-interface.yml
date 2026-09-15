@@ -34,8 +34,11 @@ jobs:
           old_root = ':root{--paper:#fbfaf7;--ink:#27312d;--muted:#46534d;--sage:#7f9589;--sage-deep:#566d62;--line:rgba(39,49,45,.22);--shadow:0 18px 46px rgba(54,65,59,.15);--green:#d8e8dd;--blue:#d7e4ed;--red:#ead8d5;--yellow:#eee5bd;--neutral:#e5e1da}'
           new_root = ':root{--paper:#fbfaf7;--ink:#27312d;--muted:#46534d;--sage:#7f9589;--sage-deep:#566d62;--line:rgba(39,49,45,.22);--shadow:0 18px 46px rgba(54,65,59,.15);--green:#d8e8dd;--blue:#d7e4ed;--red:#ead8d5;--yellow:#eee5bd;--neutral:#e5e1da;--m-sand:#e7ddcf;--m-sage:#d8e2d8;--m-blue:#d9e3e9;--m-lilac:#e1dbe7;--m-rose:#eadbd7;--m-gold:#e9e0c8;--m-stone:#ddd7cf;--m-pk:#d9e3e2}'
           css = replace_once(css, old_root, new_root, 'root palette')
-
           css = replace_once(css, 'body{background:#d8d5ce}', 'body{background:#d8d1c8}', 'body background')
+
+          screens = '.result-screen,.pk-screen{min-height:100dvh;display:grid;place-items:center;padding:26px 18px;background:linear-gradient(180deg,#e3e0d9,#f2f0eb)}'
+          screens_new = '.result-screen,.pk-screen{min-height:100dvh;display:grid;place-items:center;padding:26px 18px}.result-screen{background:linear-gradient(180deg,#e8dfd0,#f4efe8)}.pk-screen{background:linear-gradient(180deg,#d7e2e1,#eff1ec)}'
+          css = replace_once(css, screens, screens_new, 'screen category colors')
 
           card_shell = 'box-shadow:var(--shadow)}.setup-card{display:grid'
           card_shell_new = 'box-shadow:var(--shadow)}.setup-card{background:rgba(247,241,232,.94)}.result-card{background:rgba(249,245,236,.95)}.pk-card{background:rgba(225,234,233,.96)}.setup-card{display:grid'
@@ -60,13 +63,18 @@ jobs:
           for old, new in card_colors.items():
               css = replace_once(css, old, new, old)
 
-          summary = '.battle-summary>div{display:grid;gap:4px;padding:14px 8px;border-radius:18px;background:rgba(218,213,203,.88)}'
+          summary = '.battle-summary>div{display:grid;gap:4px;padding:14px 8px;border-radius:18px;background:rgba(226,220,210,.94)}'
           summary_new = '.battle-summary>div{display:grid;gap:4px;padding:14px 8px;border-radius:18px;background:rgba(221,215,207,.9)}.battle-summary>div:nth-child(1){background:rgba(216,226,216,.94)}.battle-summary>div:nth-child(2){background:rgba(234,219,215,.94)}.battle-summary>div:nth-child(3){background:rgba(215,228,237,.94)}'
           css = replace_once(css, summary, summary_new, 'result capsule palette')
+
+          css = replace_once(css, '.wrong-item{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(120px,1fr);gap:2px 12px;padding:10px 12px;border-radius:14px;background:rgba(226,220,210,.94);margin-top:7px}', '.wrong-item{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(120px,1fr);gap:2px 12px;padding:10px 12px;border-radius:14px;background:rgba(225,219,232,.86);margin-top:7px}', 'wrong item palette')
 
           pk_style = '.pk-card{text-align:center;max-width:460px}.pk-card h1{font-size:35px}.pk-wait{width:54px;height:54px;border-radius:50%;border:4px solid #c7ccc8;border-top-color:#566d62;margin:22px auto;animation:spin 1s linear infinite}'
           pk_style_new = '.pk-card{text-align:center;max-width:460px}.pk-card h1{font-size:35px}.pk-queue-card{width:min(420px,92vw);padding:34px 24px 28px;background:linear-gradient(145deg,rgba(217,227,226,.98),rgba(235,231,221,.96));display:grid;justify-items:center;gap:20px}.pk-queue-card h1{margin:0;font-size:34px}.pk-cancel-btn{width:auto!important;min-width:96px;margin:0!important;padding:11px 24px!important;background:#d9d0c4!important}.pk-wait{width:54px;height:54px;border-radius:50%;border:4px solid #c7ccc8;border-top-color:#758f88;margin:4px auto;animation:spin 1s linear infinite}'
           css = replace_once(css, pk_style, pk_style_new, 'PK minimal palette')
+
+          css = replace_once(css, '.setup-card{width:92%;padding:8px;border-radius:18px;background:rgba(255,255,255,.84)}', '.setup-card{width:92%;padding:8px;border-radius:18px;background:rgba(247,241,232,.9)}', 'mobile setup palette')
+          css = replace_once(css, '.result-card,.pk-card{padding:13px;border-radius:24px}', '.result-card,.pk-card{padding:13px;border-radius:24px}.pk-queue-card{padding:28px 20px}', 'mobile PK queue spacing')
 
           css_path.write_text(css)
           PY
