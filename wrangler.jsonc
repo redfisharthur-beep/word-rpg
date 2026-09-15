@@ -6,13 +6,17 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    "run_worker_first": ["/match"]
+    "run_worker_first": ["/match", "/auth/*", "/api/*"]
   },
   "durable_objects": {
     "bindings": [
       {
         "name": "MATCHMAKER",
         "class_name": "Matchmaker"
+      },
+      {
+        "name": "USER_STORE",
+        "class_name": "UserStore"
       }
     ]
   },
@@ -20,6 +24,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["Matchmaker"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["UserStore"]
     }
   ]
 }
