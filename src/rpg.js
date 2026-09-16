@@ -53,14 +53,21 @@ const QVAL={
 };
 
 const ITEM_NAME={ruby:'紅曜石',thunder:'雷光石',guardian:'守護甲',bloodspirit:'血靈甲',warbreaker:'破軍戒',battlesoul:'戰魂戒'};
-export const MYTHIC_ABILITIES={
-  ruby:{name:'神火共振',desc:'紅牌效果 +15%'},
-  thunder:{name:'天雷裁決',desc:'黃牌效果 +15%'},
-  guardian:{name:'不滅聖盾',desc:'每場戰鬥開始獲得最大生命 18% 護盾'},
-  bloodspirit:{name:'血魂回生',desc:'綠牌效果 +20%'},
-  warbreaker:{name:'破軍神威',desc:'每回合第一張攻擊牌效果 +25%'},
-  battlesoul:{name:'戰魂不滅',desc:'受到的傷害降低 12%'}
+export const MYTHIC_POWERS={
+  lifesteal:{type:'gem',name:'血契汲取',desc:'造成傷害時吸取實際傷害 18% 生命'},
+  sunder:{type:'gem',name:'蝕甲魔晶',desc:'攻擊命中使防禦 -8%・3回合，最多 3 層'},
+  stun:{type:'gem',name:'雷縛震擊',desc:'攻擊命中有 12% 機率暈眩，跳過 1 次行動'},
+  thorns:{type:'armor',name:'荊棘反噬',desc:'受到攻擊時反彈實際傷害 18%'},
+  berserk:{type:'armor',name:'血怒狂戰',desc:'生命低於 50% 時，造成傷害 ×2'},
+  ward:{type:'armor',name:'神佑格擋',desc:'受到攻擊時有 18% 機率完全抵擋該次攻擊'},
+  critburst:{type:'ring',name:'弒神暴擊',desc:'爆擊時額外增傷 50%～100%'},
+  flurry:{type:'ring',name:'無盡連斬',desc:'普通攻擊 20% 機率 2 連擊、8% 機率 3 連擊'},
+  fatal:{type:'ring',name:'死神判決',desc:'攻擊有 3% 機率追加目標最大生命 70% 的致命傷害'},
+  truehit:{type:'ring',name:'破界真傷',desc:'攻擊無視防禦，直接以攻擊傷害計算'},
+  antiheal:{type:'ring',name:'禁療烙印',desc:'攻擊命中使治療效果 -70%，持續 2～3回合'}
 };
+const MYTHIC_POWER_POOLS={gem:['lifesteal','sunder','stun'],armor:['thorns','berserk','ward'],ring:['critburst','flurry','fatal','truehit','antiheal']};
+const MYTHIC_DEFAULT_BY_SUBTYPE={ruby:'lifesteal',thunder:'sunder',guardian:'thorns',bloodspirit:'berserk',warbreaker:'critburst',battlesoul:'flurry'};
 const LEGACY_MAP={
   gem:{ruby:'ruby',emerald:'thunder',sapphire:'ruby',topaz:'thunder',thunder:'thunder'},
   armor:{guardian:'guardian',fortress:'guardian',vital:'bloodspirit',bloodspirit:'bloodspirit'},
@@ -90,6 +97,10 @@ function normalizeItem(item){
   const quality=QUALITY[item.quality]?item.quality:'common';
   const subtype=LEGACY_MAP[type]?.[item.subtype]||null;if(!subtype||!VALID_LOOT[type].has(subtype))return null;
   const normalized={...item,type,subtype,quality,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:bonusesFor(type,subtype,quality)};
+  if(quality==='mythic'){
+    const power=String(item.mythicPower||'');
+    normalized.mythicPower=MYTHIC_POWERS[power]?.type===type?power:MYTHIC_DEFAULT_BY_SUBTYPE[subtype];
+  }else delete normalized.mythicPower;
   normalized.art=lootImage(normalized);
   return normalized;
 }
@@ -155,10 +166,26 @@ export function petSkillEffects(pet,rpg){
   return out;
 }
 
-export function mythicAbilityText(item){const a=item?.quality==='mythic'?MYTHIC_ABILITIES[item?.subtype]:null;return a?`${a.name}｜${a.desc}`:'';}
+export function mythicAbilityText(item){
+  if(item?.quality!=='mythic')return '';
+  const a=MYTHIC_POWERS[item?.mythicPower];
+  return a?`${a.name}｜${a.desc}`:'神話能力｜掉落時隨機附加';
+}
 export function mythicEquipmentEffects(rpg){
-  const clean=cleanRpg(rpg),byId=new Map(clean.inventory.map(x=>[x.id,x])),ids=[...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean),items=ids.map(id=>byId.get(id)).filter(x=>x?.quality==='mythic'),out={redAmp:0,yellowAmp:0,greenAmp:0,blueAmp:0,firstOffensiveAmp:0,startShieldPct:0,damageReduction:0,active:[]};
-  for(const item of items){const a=MYTHIC_ABILITIES[item.subtype];if(a)out.active.push({subtype:item.subtype,name:a.name,desc:a.desc});if(item.subtype==='ruby')out.redAmp=Math.max(out.redAmp,.15);if(item.subtype==='thunder')out.yellowAmp=Math.max(out.yellowAmp,.15);if(item.subtype==='guardian')out.startShieldPct=Math.max(out.startShieldPct,.18);if(item.subtype==='bloodspirit')out.greenAmp=Math.max(out.greenAmp,.20);if(item.subtype==='warbreaker')out.firstOffensiveAmp=Math.max(out.firstOffensiveAmp,.25);if(item.subtype==='battlesoul')out.damageReduction=Math.max(out.damageReduction,.12);}
+  const clean=cleanRpg(rpg),byId=new Map(clean.inventory.map(x=>[x.id,x])),ids=[...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean),items=ids.map(id=>byId.get(id)).filter(x=>x?.quality==='mythic'),powers=new Set(items.map(x=>x.mythicPower).filter(x=>MYTHIC_POWERS[x]));
+  const out={lifesteal:0,sunderPct:0,sunderTurns:3,sunderMax:3,stunChance:0,reflect:0,berserk:false,blockChance:0,critBonusMin:0,critBonusMax:0,flurry2Chance:0,flurry3Chance:0,fatalChance:0,fatalPct:0,trueDamage:false,antiHealPct:0,antiHealMinTurns:2,antiHealMaxTurns:3,active:[]};
+  for(const power of powers){const a=MYTHIC_POWERS[power];out.active.push({id:power,name:a.name,desc:a.desc});}
+  if(powers.has('lifesteal'))out.lifesteal=.18;
+  if(powers.has('sunder'))out.sunderPct=.08;
+  if(powers.has('stun'))out.stunChance=.12;
+  if(powers.has('thorns'))out.reflect=.18;
+  if(powers.has('berserk'))out.berserk=true;
+  if(powers.has('ward'))out.blockChance=.18;
+  if(powers.has('critburst')){out.critBonusMin=.50;out.critBonusMax=1.00;}
+  if(powers.has('flurry')){out.flurry2Chance=.20;out.flurry3Chance=.08;}
+  if(powers.has('fatal')){out.fatalChance=.03;out.fatalPct=.70;}
+  if(powers.has('truehit'))out.trueDamage=true;
+  if(powers.has('antiheal'))out.antiHealPct=.70;
   return out;
 }
 
@@ -197,8 +224,8 @@ export function rollLoot(stageIndex=0,level=1,r=Math.random){
 
 export function rollMythicLoot({boss=false,towerFloor=0,level=1}={},r=Math.random){
   const floor=clamp(Math.round(Number(towerFloor)||0),0,10),chance=boss?.03:floor>=10?.12:floor>=8?.04:0;if(chance<=0||r()>=chance)return null;
-  const pool=[['gem','ruby'],['gem','thunder'],['armor','guardian'],['armor','bloodspirit'],['ring','warbreaker'],['ring','battlesoul']],pair=pick(pool,r),item=makeItem(pair[0],pair[1],'mythic');
-  return {...item,source:boss?'boss':'tower',towerFloor:floor,level:clamp(Math.round(Number(level)||1),1,50),foundAt:Date.now()};
+  const pool=[['gem','ruby'],['gem','thunder'],['armor','guardian'],['armor','bloodspirit'],['ring','warbreaker'],['ring','battlesoul']],pair=pick(pool,r),power=pick(MYTHIC_POWER_POOLS[pair[0]],r),item=makeItem(pair[0],pair[1],'mythic');
+  return {...item,mythicPower:power,source:boss?'boss':'tower',towerFloor:floor,level:clamp(Math.round(Number(level)||1),1,50),foundAt:Date.now()};
 }
 
 export function addLoot(rpg,item){const clean=cleanRpg(rpg),normalized=normalizeItem(item);if(!normalized)return clean;clean.inventory=[...clean.inventory,normalized];return cleanRpg(clean);}

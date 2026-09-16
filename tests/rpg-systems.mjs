@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {emptyRpg,cleanRpg,rollLoot,rollMythicLoot,addLoot,equipItem,synthesisInfo,synthesizeItem,equipmentResonance,collectionEntries,collectionProgress,crystallizeItem,petSkillEffects,recordTowerFloor,mythicEquipmentEffects} from '../src/rpg.js';
-import {makeFighter,resolveCardAction} from '../src/cards.js';
+import {makeFighter,resolveCardAction,resolveAutoBasic} from '../src/cards.js';
 const seq=vals=>{let i=0;return ()=>vals[Math.min(i++,vals.length-1)]};
 const loot=(q=.1,type=.1,sub=.1)=>rollLoot(3,50,seq([0,q,type,sub]));
 assert.equal(collectionEntries().length,30);
@@ -12,6 +12,11 @@ let aw=emptyRpg();aw.petEnhance.fox=4;aw=cleanRpg(aw);assert.ok(petSkillEffects(
 let tower=recordTowerFloor(emptyRpg(),7);tower=recordTowerFloor(tower,4);assert.equal(tower.towerBest,7);
 const noMyth=rollMythicLoot({boss:false,towerFloor:7,level:50},seq([0,.1]));assert.equal(noMyth,null);
 const bossMyth=rollMythicLoot({boss:true,level:50},seq([.01,.01]));assert.equal(bossMyth.quality,'mythic');assert.equal(synthesisInfo(addLoot(emptyRpg(),bossMyth),bossMyth.id).can,false);
-let myth=addLoot(emptyRpg(),bossMyth);myth=equipItem(myth,bossMyth.id);assert.ok(mythicEquipmentEffects(myth).redAmp>0);
+let myth=addLoot(emptyRpg(),bossMyth);myth=equipItem(myth,bossMyth.id);assert.ok(mythicEquipmentEffects(myth).lifesteal>0);
 const highTower=rollMythicLoot({towerFloor:10,level:50},seq([.05,.9]));assert.equal(highTower.quality,'mythic');
+const oldRandom=Math.random;
+try{
+  let drain=rollMythicLoot({boss:true,level:50},seq([.01,.01,.01]));assert.equal(drain.mythicPower,'lifesteal');let dr=addLoot(emptyRpg(),drain);dr=equipItem(dr,drain.id);let da=makeFighter({maxHp:500,hp:250,atk:100,def:40,crit:0,rpg:dr}),dt=makeFighter({maxHp:500,hp:500,atk:80,def:40,crit:0,rpg:emptyRpg()});resolveAutoBasic(da,dt);assert.ok(da.hp>250);
+  let fury=rollMythicLoot({boss:true,level:50},seq([.01,.85,.30]));assert.equal(fury.type,'ring');assert.equal(fury.mythicPower,'flurry');let fr=addLoot(emptyRpg(),fury);fr=equipItem(fr,fury.id);let fa=makeFighter({maxHp:500,hp:500,atk:100,def:40,crit:0,rpg:fr}),ft=makeFighter({maxHp:1000,hp:1000,atk:80,def:0,crit:0,rpg:emptyRpg()});Math.random=()=>.01;resolveAutoBasic(fa,ft);assert.ok(ft.hp<=700);
+}finally{Math.random=oldRandom;}
 console.log('RPG systems OK');
