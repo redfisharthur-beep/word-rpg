@@ -41,7 +41,8 @@ jobs:
           set -e
           for f in src/*.js worker/index.js tests/*.mjs; do node --check "$f"; done
           npm test
-          grep -Fq "return session?.sub?[\`line:${session.sub}\`]:[];" worker/index.js
+          grep -Fq 'async function questionIdentityKeys(request,env){const session=await readSession(request,env);' worker/index.js
+          grep -Fq 'line:${session.sub}' worker/index.js
           ! grep -Fq 'CF-Connecting-IP' worker/index.js
           ! grep -Fq 'X-Forwarded-For' worker/index.js
           ! grep -Fq 'ip:${' worker/index.js
