@@ -11,14 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 3
       - name: Recover and run upgrade script
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import subprocess
-          old=subprocess.check_output(['git','show','HEAD^:.github/workflows/daily-1200-questions.yml'],text=True)
+          old=subprocess.check_output(['git','show','HEAD^^:.github/workflows/daily-1200-questions.yml'],text=True)
           marker="          python3 - <<'PY'\n"
           start=old.index(marker)+len(marker)
           end=old.index("\n          PY\n      - name: Verify",start)
@@ -27,13 +27,17 @@ jobs:
           Path('/tmp/daily_upgrade.py').write_text('\n'.join(lines)+'\n')
           PY
           python3 /tmp/daily_upgrade.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/words.mjs');s=p.read_text();s=s.replace("WORDS.map(x=>String(x.word).toLowerCase())","WORDS.map(x=>String(x[0]).toLowerCase())");p.write_text(s)
+          PY
       - name: Verify
         shell: bash
         run: |
           set -e
           for f in src/*.js worker/index.js tests/*.mjs; do node --check "$f"; done
           npm test
-          node -e "import('./src/words.js').then(m=>{if(m.WORDS.length!==1200)process.exit(1);if(new Set(m.WORDS.map(x=>String(x.word).toLowerCase())).size!==1200)process.exit(1);console.log('WORD_COUNT',m.WORDS.length)})"
+          node -e "import('./src/words.js').then(m=>{if(m.WORDS.length!==1200)process.exit(1);if(new Set(m.WORDS.map(x=>String(x[0]).toLowerCase())).size!==1200)process.exit(1);console.log('WORD_COUNT',m.WORDS.length)})"
           grep -Fq 'const WORD_COUNT=1200;' worker/index.js
           grep -Fq "url.pathname==='/api/questions'" worker/index.js
           grep -Fq 'reserveDailyQuestions(this.env' worker/index.js
