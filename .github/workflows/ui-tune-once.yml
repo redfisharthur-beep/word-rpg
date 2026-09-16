@@ -1,0 +1,38 @@
+name: UI Tune Once
+on:
+  push:
+    paths:
+      - '.github/workflows/ui-tune-once.yml'
+permissions:
+  contents: write
+jobs:
+  tune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Tune card UI
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/styles.css')
+          s = p.read_text(encoding='utf-8')
+          replacements = {
+              ".exclusive-card-art img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center;filter:drop-shadow(0 8px 9px rgba(50,58,54,.18))}": ".exclusive-card-art img{display:block;width:88%;height:88%;max-width:88%;max-height:88%;object-fit:contain;object-position:center;filter:drop-shadow(0 8px 9px rgba(50,58,54,.18))}",
+              ".card-order{position:absolute;right:7px;top:5px;width:auto;height:auto;border-radius:0;display:block;background:transparent;color:#41594d;font-size:22px;font-weight:500;line-height:1;letter-spacing:-1px;text-shadow:0 2px 8px rgba(255,255,255,.95);z-index:3}": ".card-order{position:absolute;right:7px;top:5px;width:auto;height:auto;border-radius:0;display:block;background:transparent;color:#41594d;font-size:28px;font-weight:500;line-height:1;letter-spacing:-1px;text-shadow:0 2px 8px rgba(255,255,255,.95);z-index:3}",
+              ".card-order{right:3px;top:3px;font-size:15px;letter-spacing:-1px}": ".card-order{right:3px;top:2px;font-size:22px;letter-spacing:-1px}"
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'Expected CSS not found: {old[:80]}')
+              s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+          rm -f .github/workflows/ui-tune-once.yml
+          git config user.name "OpenAI"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/styles.css .github/workflows/ui-tune-once.yml
+          git commit -m "Tune exclusive card art and play order markers"
+          git push origin HEAD:main
