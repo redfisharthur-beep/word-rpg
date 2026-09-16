@@ -1,0 +1,51 @@
+name: Owl-only answer multipliers
+on:
+  push:
+    paths:
+      - '.github/workflows/owl-exclusive-answer-multiplier.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update scoring logic and tests
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p=Path('src/cards.js')
+          s=p.read_text()
+          old="export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(n===5)return 1.7;if(n===4)return 1.5;if(n===3)return 1.32;if(n===2)return 1.15;if(n===1){const fx=actor?.pet==='owl'?petSkillEffects(actor.pet,actor.rpg||{}):null;return .9+(fx?.oneAccuracy||0)}return .65;}"
+          new="export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(actor?.pet==='owl'){if(n===5)return 1.7;if(n===4)return 1.5;if(n===3)return 1.32;if(n===2)return 1.15;if(n===1){const fx=petSkillEffects(actor.pet,actor.rpg||{});return .9+(fx?.oneAccuracy||0)}return .65;}if(n===5)return 1.5;if(n===4)return 1.32;if(n===3)return 1.15;if(n===2)return .9;if(n===1)return .65;return 0;}"
+          if s.count(old)!=1: raise SystemExit(f'accuracyMultiplier expected 1 match, got {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('tests/words.mjs')
+          s=p.read_text()
+          old="assert.equal(accuracyMultiplier(0),.65);assert.equal(accuracyMultiplier(1),.9);assert.equal(accuracyMultiplier(2),1.15);assert.equal(accuracyMultiplier(3),1.32);assert.equal(accuracyMultiplier(4),1.5);assert.equal(accuracyMultiplier(5),1.7);"
+          new="const normal={pet:'fox',rpg:{}};const owl={pet:'owl',rpg:{}};assert.equal(accuracyMultiplier(0,normal),0);assert.equal(accuracyMultiplier(1,normal),.65);assert.equal(accuracyMultiplier(2,normal),.9);assert.equal(accuracyMultiplier(3,normal),1.15);assert.equal(accuracyMultiplier(4,normal),1.32);assert.equal(accuracyMultiplier(5,normal),1.5);assert.equal(accuracyMultiplier(0,owl),.65);assert.equal(accuracyMultiplier(1,owl),.9);assert.equal(accuracyMultiplier(2,owl),1.15);assert.equal(accuracyMultiplier(3,owl),1.32);assert.equal(accuracyMultiplier(4,owl),1.5);assert.equal(accuracyMultiplier(5,owl),1.7);assert.equal(accuracyMultiplier(1,{pet:'owl',rpg:{petSkills:{owl:['owl-1']}}}),.95);"
+          if s.count(old)!=1: raise SystemExit(f'words multiplier test expected 1 match, got {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Verify
+        shell: bash
+        run: |
+          set -e
+          node --check src/cards.js
+          node --check tests/words.mjs
+          npm test
+          grep -Fq "if(actor?.pet==='owl')" src/cards.js
+          grep -Fq "if(n===5)return 1.5" src/cards.js
+          grep -Fq "if(n===5)return 1.7" src/cards.js
+      - name: Commit source
+        shell: bash
+        run: |
+          git config user.name "openai-workflow"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/cards.js tests/words.mjs
+          git diff --cached --quiet && exit 1
+          git commit -m "feat: make enhanced answer multipliers owl-only"
+          git push origin HEAD:main
