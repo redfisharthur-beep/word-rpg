@@ -1,0 +1,53 @@
+name: Card Art Size Once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/card-art-size-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  resize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Enlarge all card art slightly
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/styles.css')
+          s = p.read_text(encoding='utf-8')
+          replacements = {
+              '.battle-card .asset-slot{width:min(178px,94%);height:158px;': '.battle-card .asset-slot{width:min(186px,96%);height:166px;',
+              '.exclusive-card-art{width:min(178px,94%);height:158px;': '.exclusive-card-art{width:min(186px,96%);height:166px;',
+              '.exclusive-card-art img{display:block;width:88%;height:88%;max-width:88%;max-height:88%;': '.exclusive-card-art img{display:block;width:94%;height:94%;max-width:94%;max-height:94%;',
+              '.mini-card .asset-slot{width:62px;height:58px;': '.mini-card .asset-slot{width:66px;height:62px;',
+              '.mini-card .exclusive-card-art{width:54px;height:50px;': '.mini-card .exclusive-card-art{width:58px;height:54px;',
+              '.battle-card .asset-slot{width:min(86px,95%);height:72px;': '.battle-card .asset-slot{width:min(92px,98%);height:78px;',
+              '.battle-card .exclusive-card-art{width:min(86px,95%);height:72px;': '.battle-card .exclusive-card-art{width:min(92px,98%);height:78px;',
+              '.mini-card .asset-slot{width:50px;height:42px;': '.mini-card .asset-slot{width:54px;height:46px;',
+              '.mini-card .exclusive-card-art{width:44px;height:38px;': '.mini-card .exclusive-card-art{width:48px;height:42px;',
+          }
+          for old, new in replacements.items():
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected exactly one match for {old!r}, got {count}')
+              s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Commit source change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/styles.css
+          git commit -m "Enlarge card artwork slightly"
+          git push
+      - name: Remove one-time workflow
+        run: |
+          git pull --rebase
+          git rm .github/workflows/card-art-size-once.yml
+          git commit -m "chore: remove temporary card art workflow"
+          git push
