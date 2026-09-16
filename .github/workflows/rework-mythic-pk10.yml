@@ -1,0 +1,272 @@
+name: Rework mythic combat powers and PK10
+on:
+  push:
+    paths:
+      - '.github/workflows/rework-mythic-pk10.yml'
+permissions:
+  contents: write
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def sub1(text, pattern, repl, label, flags=re.S):
+              out,n=re.subn(pattern,repl,text,count=1,flags=flags)
+              if n!=1: raise SystemExit(f'{label}: {n} matches')
+              return out
+          def rep1(text, old, new, label):
+              n=text.count(old)
+              if n!=1: raise SystemExit(f'{label}: {n} matches')
+              return text.replace(old,new,1)
+
+          # ---------- src/rpg.js ----------
+          p=Path('src/rpg.js'); s=p.read_text()
+          powers="""export const MYTHIC_POWERS={
+            lifesteal:{type:'gem',name:'血契汲取',desc:'造成傷害時吸取實際傷害 18% 生命'},
+            sunder:{type:'gem',name:'蝕甲魔晶',desc:'攻擊命中使防禦 -8%・3回合，最多 3 層'},
+            stun:{type:'gem',name:'雷縛震擊',desc:'攻擊命中有 12% 機率暈眩，跳過 1 次行動'},
+            thorns:{type:'armor',name:'荊棘反噬',desc:'受到攻擊時反彈實際傷害 18%'},
+            berserk:{type:'armor',name:'血怒狂戰',desc:'生命低於 50% 時，造成傷害 ×2'},
+            ward:{type:'armor',name:'神佑格擋',desc:'受到攻擊時有 18% 機率完全抵擋該次攻擊'},
+            critburst:{type:'ring',name:'弒神暴擊',desc:'爆擊時額外增傷 50%～100%'},
+            flurry:{type:'ring',name:'無盡連斬',desc:'普通攻擊 20% 機率 2 連擊、8% 機率 3 連擊'},
+            fatal:{type:'ring',name:'死神判決',desc:'攻擊有 3% 機率追加目標最大生命 70% 的致命傷害'},
+            truehit:{type:'ring',name:'破界真傷',desc:'攻擊無視防禦，直接以攻擊傷害計算'},
+            antiheal:{type:'ring',name:'禁療烙印',desc:'攻擊命中使治療效果 -70%，持續 2～3回合'}
+          };
+          const MYTHIC_POWER_POOLS={gem:['lifesteal','sunder','stun'],armor:['thorns','berserk','ward'],ring:['critburst','flurry','fatal','truehit','antiheal']};
+          const MYTHIC_DEFAULT_BY_SUBTYPE={ruby:'lifesteal',thunder:'sunder',guardian:'thorns',bloodspirit:'berserk',warbreaker:'critburst',battlesoul:'flurry'};
+          """
+          s=sub1(s,r"export const MYTHIC_ABILITIES=\{.*?\};\n",powers,'mythic power definitions')
+
+          normalize="""function normalizeItem(item){
+            if(!item||typeof item!=='object'||typeof item.id!=='string')return null;
+            const type=['gem','armor','ring'].includes(item.type)?item.type:null;if(!type)return null;
+            const quality=QUALITY[item.quality]?item.quality:'common';
+            const subtype=LEGACY_MAP[type]?.[item.subtype]||null;if(!subtype||!VALID_LOOT[type].has(subtype))return null;
+            const normalized={...item,type,subtype,quality,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:bonusesFor(type,subtype,quality)};
+            if(quality==='mythic'){
+              const power=String(item.mythicPower||'');
+              normalized.mythicPower=MYTHIC_POWERS[power]?.type===type?power:MYTHIC_DEFAULT_BY_SUBTYPE[subtype];
+            }else delete normalized.mythicPower;
+            normalized.art=lootImage(normalized);
+            return normalized;
+          }
+          """
+          s=sub1(s,r"function normalizeItem\(item\)\{.*?\n\}\n\nexport function collectionKey",normalize+"\nexport function collectionKey",'normalize mythic affix')
+
+          effects="""export function mythicAbilityText(item){
+            if(item?.quality!=='mythic')return '';
+            const a=MYTHIC_POWERS[item?.mythicPower];
+            return a?`${a.name}｜${a.desc}`:'神話能力｜掉落時隨機附加';
+          }
+          export function mythicEquipmentEffects(rpg){
+            const clean=cleanRpg(rpg),byId=new Map(clean.inventory.map(x=>[x.id,x])),ids=[...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean),items=ids.map(id=>byId.get(id)).filter(x=>x?.quality==='mythic'),powers=new Set(items.map(x=>x.mythicPower).filter(x=>MYTHIC_POWERS[x]));
+            const out={lifesteal:0,sunderPct:0,sunderTurns:3,sunderMax:3,stunChance:0,reflect:0,berserk:false,blockChance:0,critBonusMin:0,critBonusMax:0,flurry2Chance:0,flurry3Chance:0,fatalChance:0,fatalPct:0,trueDamage:false,antiHealPct:0,antiHealMinTurns:2,antiHealMaxTurns:3,active:[]};
+            for(const power of powers){const a=MYTHIC_POWERS[power];out.active.push({id:power,name:a.name,desc:a.desc});}
+            if(powers.has('lifesteal'))out.lifesteal=.18;
+            if(powers.has('sunder'))out.sunderPct=.08;
+            if(powers.has('stun'))out.stunChance=.12;
+            if(powers.has('thorns'))out.reflect=.18;
+            if(powers.has('berserk'))out.berserk=true;
+            if(powers.has('ward'))out.blockChance=.18;
+            if(powers.has('critburst')){out.critBonusMin=.50;out.critBonusMax=1.00;}
+            if(powers.has('flurry')){out.flurry2Chance=.20;out.flurry3Chance=.08;}
+            if(powers.has('fatal')){out.fatalChance=.03;out.fatalPct=.70;}
+            if(powers.has('truehit'))out.trueDamage=true;
+            if(powers.has('antiheal'))out.antiHealPct=.70;
+            return out;
+          }
+
+          export function equipmentResonance(rpg){"""
+          s=sub1(s,r"export function mythicAbilityText\(item\)\{.*?export function equipmentResonance\(rpg\)\{",effects,'mythic combat effects')
+
+          roll="""export function rollMythicLoot({boss=false,towerFloor=0,level=1}={},r=Math.random){
+            const floor=clamp(Math.round(Number(towerFloor)||0),0,10),chance=boss?.03:floor>=10?.12:floor>=8?.04:0;if(chance<=0||r()>=chance)return null;
+            const pool=[['gem','ruby'],['gem','thunder'],['armor','guardian'],['armor','bloodspirit'],['ring','warbreaker'],['ring','battlesoul']],pair=pick(pool,r),power=pick(MYTHIC_POWER_POOLS[pair[0]],r),item=makeItem(pair[0],pair[1],'mythic');
+            return {...item,mythicPower:power,source:boss?'boss':'tower',towerFloor:floor,level:clamp(Math.round(Number(level)||1),1,50),foundAt:Date.now()};
+          }"""
+          s=sub1(s,r"export function rollMythicLoot\(\{boss=false,towerFloor=0,level=1\}=\{\},r=Math\.random\)\{.*?\n\}",roll,'random mythic affix')
+          p.write_text(s)
+
+          # ---------- src/cards.js ----------
+          p=Path('src/cards.js'); s=p.read_text()
+          s=rep1(s,
+            "export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:0,regenFresh:false,role:'warrior',pet:null,monsterId:null,rpg:null};",
+            "export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],healBlock:[],stun:0,regen:0,regenFresh:false,role:'warrior',pet:null,monsterId:null,rpg:null};",
+            'fighter combat states')
+
+          hit_block="""function applyDamage(defender,amount){
+            let dmg=Math.max(0,Math.round(amount)),shieldDamage=0,hpDamage=0;
+            if(defender.shield>0&&dmg>0){shieldDamage=Math.min(defender.shield,dmg);defender.shield-=shieldDamage;dmg-=shieldDamage;}
+            if(dmg>0&&defender.hp>0){hpDamage=Math.min(defender.hp,dmg);defender.hp=Math.max(0,defender.hp-hpDamage);}
+            return {dealt:shieldDamage+hpDamage,shieldDamage,hpDamage};
+          }
+          function healPenalty(f){return Math.min(.95,Math.max(0,...(f.healBlock||[]).map(x=>Number(x.pct)||0)));}
+          function consumeStun(f,logs){if(Number(f?.stun)>0){f.stun=Math.max(0,Number(f.stun)-1);logs.push('雷縛震擊：暈眩，跳過行動');return true}return false;}
+          function hit(attacker,defender,mult,logs,label,canCrit=true){
+            const atkFx=mythicEquipmentEffects(attacker?.rpg||{}),defFx=mythicEquipmentEffects(defender?.rpg||{});
+            if(defFx.blockChance>0&&Math.random()<defFx.blockChance){logs.push('神佑格擋：完全抵擋');return 0;}
+            const atk=effectiveAtk(attacker);let raw=atk*mult,crit=false;
+            if(atkFx.berserk&&attacker.hp>0&&attacker.hp<attacker.maxHp*.5){raw*=2;logs.push('血怒狂戰：攻擊 ×2');}
+            if(canCrit&&attacker.critLock<=0&&Math.random()<attacker.crit){raw*=2;crit=true;if(atkFx.critBonusMax>0){const bonus=atkFx.critBonusMin+Math.random()*(atkFx.critBonusMax-atkFx.critBonusMin);raw*=1+bonus;logs.push(`弒神暴擊 +${Math.round(bonus*100)}%`);}}
+            const defense=atkFx.trueDamage?0:effectiveDef(defender),dmg=Math.max(1,Math.round(raw*100/(100+defense))),result=applyDamage(defender,dmg);
+            logs.push(`${label}${crit?'（爆擊）':''}${atkFx.trueDamage?'（真傷）':''} ${result.dealt}`);
+            if(result.dealt>0){
+              if(atkFx.lifesteal>0&&attacker.hp>0)healHpOnly(attacker,Math.max(1,Math.round(result.dealt*atkFx.lifesteal)),logs,'血契汲取');
+              if(atkFx.sunderPct>0&&defender.hp>0){const stacks=(defender.armorBreak||[]).filter(x=>x.source==='mythic-sunder').length;if(stacks<atkFx.sunderMax){defender.armorBreak.push({pct:atkFx.sunderPct,turns:atkFx.sunderTurns,source:'mythic-sunder'});logs.push(`蝕甲魔晶：防禦 -${Math.round(atkFx.sunderPct*100)}%（${stacks+1}/${atkFx.sunderMax}）`);}}
+              if(atkFx.stunChance>0&&defender.hp>0&&Math.random()<atkFx.stunChance){defender.stun=Math.max(1,Number(defender.stun)||0);logs.push('雷縛震擊：暈眩');}
+              if(atkFx.antiHealPct>0&&defender.hp>0){const turns=atkFx.antiHealMinTurns+(Math.random()<.5?0:1),rest=(defender.healBlock||[]).filter(x=>x.source!=='mythic-antiheal');rest.push({pct:atkFx.antiHealPct,turns,source:'mythic-antiheal'});defender.healBlock=rest;logs.push(`禁療烙印：恢復 -${Math.round(atkFx.antiHealPct*100)}%・${turns}回合`);}
+              if(atkFx.fatalChance>0&&defender.hp>0&&Math.random()<atkFx.fatalChance){const fatal=Math.max(1,Math.round(defender.maxHp*atkFx.fatalPct)),f=applyDamage(defender,fatal);logs.push(`死神判決：致命傷害 ${f.dealt}`);}
+              if(defFx.reflect>0&&attacker.hp>0){const reflected=Math.max(1,Math.round(result.dealt*defFx.reflect)),back=applyDamage(attacker,reflected);logs.push(`荊棘反噬 ${back.dealt}`);}
+            }
+            return result.dealt;
+          }
+          """
+          s=sub1(s,r"function hit\(attacker,defender,mult,logs,label,canCrit=true\)\{.*?\n\}\nfunction heal",hit_block+"function heal",'direct combat hit engine')
+
+          s=rep1(s,
+            "function heal(f,amount,logs,label){const missing=f.maxHp-f.hp,take=Math.min(missing,amount);f.hp+=take;const over=amount-take;if(over>0)f.shield+=over;logs.push(`${label} ${take}${over>0?`，護盾 +${over}`:''}`);}",
+            "function heal(f,amount,logs,label){const penalty=healPenalty(f),adjusted=Math.max(0,Math.round(amount*(1-penalty))),missing=f.maxHp-f.hp,take=Math.min(missing,adjusted);f.hp+=take;const over=adjusted-take;if(over>0)f.shield+=over;if(penalty>0)logs.push(`禁療：恢復 -${Math.round(penalty*100)}%`);logs.push(`${label} ${take}${over>0?`，護盾 +${over}`:''}`);}",
+            'heal suppression')
+          s=rep1(s,
+            "function healHpOnly(f,amount,logs,label){const take=Math.max(0,Math.min(f.maxHp-f.hp,amount));f.hp+=take;if(take>0)logs.push(`${label} +${take}`);}",
+            "function healHpOnly(f,amount,logs,label){const penalty=healPenalty(f),adjusted=Math.max(0,Math.round(amount*(1-penalty))),take=Math.max(0,Math.min(f.maxHp-f.hp,adjusted));f.hp+=take;if(penalty>0)logs.push(`禁療：恢復 -${Math.round(penalty*100)}%`);if(take>0)logs.push(`${label} +${take}`);}",
+            'hp-only heal suppression')
+          s=rep1(s,
+            "function cleanDurations(f){for(const k of ['poison','armorBreak','atkDown','defBoost'])f[k]=(f[k]||[]).filter(x=>x.turns>0);if(f.critLock<0)f.critLock=0;}",
+            "function cleanDurations(f){for(const k of ['poison','armorBreak','atkDown','defBoost','healBlock'])f[k]=(f[k]||[]).filter(x=>x.turns>0);if(f.critLock<0)f.critLock=0;}",
+            'clean heal block')
+          s=rep1(s,
+            "  for(const k of ['armorBreak','atkDown','defBoost'])for(const state of actor[k]||[]){if(state.fresh)state.fresh=false;else state.turns--;}",
+            "  for(const k of ['armorBreak','atkDown','defBoost','healBlock'])for(const state of actor[k]||[]){if(state.fresh)state.fresh=false;else state.turns--;}",
+            'tick heal block')
+          s=rep1(s,
+            "  const logs=[],acc=accuracyMultiplier(correct,actor),petFx=petSkillEffects(actor?.pet,actor?.rpg||{}),resonance=equipmentResonance(actor?.rpg||{}),mythic=mythicEquipmentEffects(actor?.rpg||{});\n  if(acc<=0)",
+            "  const logs=[];if(consumeStun(actor,logs))return logs;const acc=accuracyMultiplier(correct,actor),petFx=petSkillEffects(actor?.pet,actor?.rpg||{}),resonance=equipmentResonance(actor?.rpg||{});\n  if(acc<=0)",
+            'stun card action and remove card mythic amps')
+
+          # Remove old card-color mythic amplification lines and multiplier.
+          s=re.sub(r"\n  if\(card\.color==='red'&&mythic\.redAmp>0\).*?\n  if\(isOffensive\(card\)&&offensiveIndex===0&&mythic\.firstOffensiveAmp>0\).*?;",'',s,flags=re.S)
+          s=s.replace("applyCard(card,actor,target,acc*bond*boost*roleAmp*petAmp*resAmp*mythicAmp,logs);","applyCard(card,actor,target,acc*bond*boost*roleAmp*petAmp*resAmp,logs);")
+          s=s.replace("let roleAmp=1,petAmp=1,resAmp=1,mythicAmp=1;","let roleAmp=1,petAmp=1,resAmp=1;")
+
+          basics="""function basicAttack(actor,target,mult,logs,label){
+            const fx=mythicEquipmentEffects(actor?.rpg||{});let hits=1;
+            if(fx.flurry3Chance>0){const roll=Math.random();if(roll<fx.flurry3Chance)hits=3;else if(roll<fx.flurry3Chance+fx.flurry2Chance)hits=2;if(hits>1)logs.push(`無盡連斬：${hits}連擊`);}
+            for(let i=0;i<hits&&actor.hp>0&&target.hp>0;i++)hit(actor,target,mult,logs,label,true);
+          }
+          export function resolveBasic(actor,target,correct){const logs=[];if(consumeStun(actor,logs))return logs;const p=accuracyMultiplier(correct,actor);if(p<=0){logs.push('失敗..凍結中');return logs;}basicAttack(actor,target,p,logs,'基本攻擊');return logs;}
+          export function resolveAutoBasic(actor,target){const logs=[];if(consumeStun(actor,logs))return logs;basicAttack(actor,target,1,logs,'普通攻擊');return logs;}"""
+          s=sub1(s,r"export function resolveBasic\(actor,target,correct\)\{.*?export function resolveAutoBasic\(actor,target\)\{.*?\}",basics,'basic attack mythic mechanics')
+          p.write_text(s)
+
+          # ---------- src/pk.js ----------
+          p=Path('src/pk.js'); s=p.read_text()
+          s=rep1(s,
+            "socket.onopen=()=>send({type:'join',profile:{name:meta.playerName,role:meta.role,pet:meta.pet,level:50}});",
+            "socket.onopen=()=>send({type:'join',profile:{name:meta.playerName,role:meta.role,pet:meta.pet,level:50,rpg:meta.rpg}});",
+            'send pk rpg')
+          s=s.replace("function myCards(){return round<=3?selected.map(i=>hand[i]).filter(Boolean):[]}","function myCards(){return round<=2?selected.map(i=>hand[i]).filter(Boolean):[]}")
+          s=s.replace("showCards&&round<=3", "showCards&&round<=2")
+          s=s.replace("if(status!=='cards'||round>3)return", "if(status!=='cards'||round>2)return")
+          s=s.replace("if(round<=3)used.push(...selected);send({type:'ready',selected:round<=3?selected:[]", "if(round<=2)used.push(...selected);send({type:'ready',selected:round<=2?selected:[]")
+          s=s.replace("function next(){if(round>=3||last?.finished)", "function next(){if(round>=2||last?.finished)")
+          old="if(step?.autoDuel){app.innerHTML=`<main class=\"pk-battle combat-focus action-screen auto-duel-screen\">${header({self,opp,step,showCards:false,fx})}</main>`;return}"
+          new="if(step?.autoDuel){app.innerHTML=`<main class=\"pk-battle combat-focus action-screen auto-duel-screen\">${header({self,opp,step,showCards:false,fx})}<section class=\"action-status pk-auto-status\"><h1>第 ${esc(step.cycle||3)} 回合 · 普通攻擊</h1><div class=\"battle-log current-log\">${(step?.logs||[]).slice(-4).map(x=>`<p>${esc(x)}</p>`).join('')}${lifeDelta(prevSelf,prevOpp,self,opp)}</div></section></main>`;return}"
+          s=rep1(s,old,new,'pk auto round display')
+          p.write_text(s)
+
+          # ---------- worker/index.js ----------
+          p=Path('worker/index.js'); s=p.read_text()
+          s=rep1(s,
+            "  profile(p){return {name:String(p.name||'PLAYER').slice(0,16),role:['warrior','mage','archer'].includes(p.role)?p.role:'warrior',pet:['fox','owl','dragon'].includes(p.pet)?p.pet:'fox',level:50}}",
+            "  profile(p){return {name:String(p.name||'PLAYER').slice(0,16),role:['warrior','mage','archer'].includes(p.role)?p.role:'warrior',pet:['fox','owl','dragon'].includes(p.pet)?p.pet:'fox',level:50,rpg:cleanRpg(p.rpg||{})}}",
+            'pk profile rpg')
+          s=rep1(s,
+            "  view(att){return {...cloneFighter(att.fighter),profile:att.profile}}",
+            "  view(att){const fighter=cloneFighter(att.fighter);delete fighter.rpg;const p=att.profile||{};return {...fighter,profile:{name:p.name,role:p.role,pet:p.pet,level:p.level}}}",
+            'pk view sanitize')
+          s=rep1(s,
+            "  join(ws,p){let att=ws.deserializeAttachment()||{};const profile=this.profile(p),stats=progressionStats(profile.role,profile.pet,profile.level).total;att={...att,state:'waiting',profile,fighter:makeFighter({...stats,role:profile.role,pet:profile.pet}),hand:dealHand(9,profile.role,profile.level),used:[],round:1,ready:null,questionUsed:[]};",
+            "  join(ws,p){let att=ws.deserializeAttachment()||{};const profile=this.profile(p),stats=progressionStats(profile.role,profile.pet,profile.level,profile.rpg).total;att={...att,state:'waiting',profile,fighter:makeFighter({...stats,role:profile.role,pet:profile.pet,rpg:profile.rpg}),hand:dealHand(9,profile.role,profile.level),used:[],round:1,ready:null,questionUsed:[]};",
+            'pk progression equipment')
+          s=rep1(s,
+            "  cleanReady(data,att){if(att.round>3)return {correct:0,elapsedMs:200,selected:[]};",
+            "  cleanReady(data,att){if(att.round>2)return null;",
+            'two card rounds only')
+
+          new_resolve="""  resolvePair(ws,a,other,b){
+            const A=a.fighter,B=b.fighter,ra=a.ready,rb=b.ready,round=a.round,cardsA=round<=2?ra.selected.map(i=>a.hand[i]):[],cardsB=round<=2?rb.selected.map(i=>b.hand[i]):[],first=ra.elapsedMs<=rb.elapsedMs?'a':'b',sequence=[];
+            if(first==='a')sequence.push('a','b','a','b','a','b');else sequence.push('b','a','b','a','b','a');
+            const counts={a:0,b:0},stateA={pendingBoost:1,offensiveCount:0},stateB={pendingBoost:1,offensiveCount:0},stepsA=[],stepsB=[],allLogsA=[],allLogsB=[];
+            const doCard=(actor,target,card,correct,pair,slot,state,speedWin)=>{const bond=bondMultiplier(pair,card);let boost=1;if(state.pendingBoost>1&&card?.id!=='boost'){boost=state.pendingBoost;state.pendingBoost=1}const offensiveIndex=state.offensiveCount,logs=resolveCardAction(actor,target,card,correct,{bond,boost,offensiveIndex,cards:pair,slotIndex:slot,speedWin});if(card?.id==='boost')state.pendingBoost=supportBoost(card,actor);if(isOffensive(card))state.offensiveCount++;afterAction(actor,target,logs);return logs};
+            for(let i=0;i<sequence.length;i++){
+              const who=sequence[i];if(A.hp<=0||B.hp<=0)break;const slot=counts[who]++;let logs=[],card=null;
+              if(who==='a'){card=cardsA[slot];logs=doCard(A,B,card,ra.correct,cardsA,slot,stateA,first==='a')}else{card=cardsB[slot];logs=doCard(B,A,card,rb.correct,cardsB,slot,stateB,first==='b')}
+              if(who==='a')allLogsA.push(...logs);else allLogsB.push(...logs);
+              stepsA.push({who:who==='a'?'self':'opponent',slot,cycle:round,finalRound:false,card,self:cloneFighter(A),opponent:cloneFighter(B),logs:[...logs]});
+              stepsB.push({who:who==='b'?'self':'opponent',slot,cycle:round,finalRound:false,card,self:cloneFighter(B),opponent:cloneFighter(A),logs:[...logs]});
+            }
+            if(round<=2){const petLogsA=[],petLogsB=[];applyPetRoundEnd(A,cardsA,petLogsA);applyPetRoundEnd(B,cardsB,petLogsB);allLogsA.push(...petLogsA);allLogsB.push(...petLogsB);if(stepsA.length){stepsA[stepsA.length-1].logs.push(...petLogsA);stepsA[stepsA.length-1].self=cloneFighter(A);stepsA[stepsA.length-1].opponent=cloneFighter(B)}if(stepsB.length){stepsB[stepsB.length-1].logs.push(...petLogsB);stepsB[stepsB.length-1].self=cloneFighter(B);stepsB[stepsB.length-1].opponent=cloneFighter(A)}a.used.push(...ra.selected);b.used.push(...rb.selected)}
+            if(round===2&&A.hp>0&&B.hp>0){
+              for(let autoRound=3;autoRound<=10&&A.hp>0&&B.hp>0;autoRound++){
+                const starter=(autoRound-3)%2===0?first:(first==='a'?'b':'a'),order=[starter,starter==='a'?'b':'a'];
+                for(const who of order){if(A.hp<=0||B.hp<=0)break;let logs=[];if(who==='a'){logs=resolveAutoBasic(A,B);afterAction(A,B,logs);allLogsA.push(...logs)}else{logs=resolveAutoBasic(B,A);afterAction(B,A,logs);allLogsB.push(...logs)}
+                  stepsA.push({who:who==='a'?'self':'opponent',slot:0,cycle:autoRound,autoDuel:true,finalRound:autoRound===10,card:null,self:cloneFighter(A),opponent:cloneFighter(B),logs:[...logs]});
+                  stepsB.push({who:who==='b'?'self':'opponent',slot:0,cycle:autoRound,autoDuel:true,finalRound:autoRound===10,card:null,self:cloneFighter(B),opponent:cloneFighter(A),logs:[...logs]});
+                }
+              }
+            }
+            a.fighter=A;b.fighter=B;const finished=round>=2||A.hp<=0||B.hp<=0;let winner=null,nextHandA=null,nextHandB=null;
+            if(finished){if(A.hp<=0&&B.hp<=0)winner='draw';else if(B.hp<=0)winner='a';else if(A.hp<=0)winner='b';else winner=A.hp===B.hp?'draw':A.hp>B.hp?'a':'b';a.state='finished';b.state='finished'}else{a.round++;b.round++;a.ready=null;b.ready=null}
+            const nextQuestions=!finished&&round<2?qset(a.questionUsed||[]):null;if(nextQuestions){a.questionUsed=[...(a.questionUsed||[]),...nextQuestions];b.questionUsed=[...(b.questionUsed||[]),...nextQuestions]}
+            ws.serializeAttachment(a);other.serializeAttachment(b);
+            const orderText=first==='a'?`你先出手 · ${(ra.elapsedMs/1000).toFixed(1)} 秒`:`對手先出手 · ${(rb.elapsedMs/1000).toFixed(1)} 秒`;
+            this.send(ws,{type:'battle-result',round,self:this.view(a),opponent:this.view(b),correct:ra.correct,logs:allLogsA,steps:stepsA,opponentCards:cardsB,orderText,finished,winner:winner==='a'?'self':winner==='b'?'opponent':winner,nextQuestions,nextHand:nextHandA});
+            this.send(other,{type:'battle-result',round,self:this.view(b),opponent:this.view(a),correct:rb.correct,logs:allLogsB,steps:stepsB,opponentCards:cardsA,orderText:first==='b'?`你先出手 · ${(rb.elapsedMs/1000).toFixed(1)} 秒`:`對手先出手 · ${(ra.elapsedMs/1000).toFixed(1)} 秒`,finished,winner:winner==='b'?'self':winner==='a'?'opponent':winner,nextQuestions,nextHand:nextHandB})
+          }
+          webSocketClose"""
+          s=sub1(s,r"  resolvePair\(ws,a,other,b\)\{.*?\n  \}\n  webSocketClose",new_resolve,'pk ten-round resolution')
+          p.write_text(s)
+
+          # ---------- tests/rpg-systems.mjs ----------
+          p=Path('tests/rpg-systems.mjs'); s=p.read_text()
+          s=s.replace("console.log('RPG systems OK');", """const oldRandom=Math.random;
+          try{
+            let drain=rollMythicLoot({boss:true,level:50},seq([.01,.01,.01]));assert.equal(drain.mythicPower,'lifesteal');let dr=addLoot(emptyRpg(),drain);dr=equipItem(dr,drain.id);let da=makeFighter({maxHp:500,hp:250,atk:100,def:40,crit:0,rpg:dr}),dt=makeFighter({maxHp:500,hp:500,atk:80,def:40,crit:0,rpg:emptyRpg()});resolveAutoBasic(da,dt);assert.ok(da.hp>250);
+            let fury=rollMythicLoot({boss:true,level:50},seq([.01,.85,.30]));assert.equal(fury.type,'ring');assert.equal(fury.mythicPower,'flurry');let fr=addLoot(emptyRpg(),fury);fr=equipItem(fr,fury.id);let fa=makeFighter({maxHp:500,hp:500,atk:100,def:40,crit:0,rpg:fr}),ft=makeFighter({maxHp:1000,hp:1000,atk:80,def:0,crit:0,rpg:emptyRpg()});Math.random=()=>.01;resolveAutoBasic(fa,ft);assert.ok(ft.hp<=700);
+          }finally{Math.random=oldRandom;}
+          console.log('RPG systems OK');""")
+          # Ensure resolveAutoBasic is imported for new tests.
+          s=s.replace("import {makeFighter,resolveCardAction} from '../src/cards.js';","import {makeFighter,resolveCardAction,resolveAutoBasic} from '../src/cards.js';")
+          p.write_text(s)
+          PY
+      - name: Verify
+        shell: bash
+        run: |
+          set -e
+          for f in src/*.js worker/index.js; do node --check "$f"; done
+          npm test
+          grep -Fq "lifesteal:{type:'gem'" src/rpg.js
+          grep -Fq "antiheal:{type:'ring'" src/rpg.js
+          grep -Fq "for(let autoRound=3;autoRound<=10" worker/index.js
+          grep -Fq "round<=2?ra.selected" worker/index.js
+          grep -Fq "rpg:meta.rpg" src/pk.js
+          ! grep -Fq "mythic.redAmp" src/cards.js
+      - name: Commit source only
+        shell: bash
+        run: |
+          set -e
+          git config user.name 'redfisharthur-beep'
+          git config user.email 'redfisharthur@gmail.com'
+          git add src/rpg.js src/cards.js src/pk.js worker/index.js tests/rpg-systems.mjs
+          git commit -m 'feat: direct mythic combat powers and ten-round PK'
+          git push
