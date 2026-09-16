@@ -48,7 +48,7 @@ export function progressionStats(role='warrior',pet='fox',level=1,rpg=null){
   return {level:lv,role:roleStats,pet:petStats,title:tier,total:{...total,hp:total.maxHp}};
 }
 export function makeFighter(extra={}){return {...clone(BASE),...extra};}
-export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(n===5)return 1.5;if(n===4)return 1.32;if(n===3)return 1.15;if(n===2)return .9;if(n===1){const fx=actor?.pet==='owl'?petSkillEffects(actor.pet,actor.rpg||{}):null;return .65+(fx?.oneAccuracy||0)}return 0;}
+export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(n===5)return 1.7;if(n===4)return 1.5;if(n===3)return 1.32;if(n===2)return 1.15;if(n===1){const fx=actor?.pet==='owl'?petSkillEffects(actor.pet,actor.rpg||{}):null;return .9+(fx?.oneAccuracy||0)}return .65;}
 export function randomCard(){
   const pool=['stat','stat','stat','combo','desperate','poison','break','sun','preempt','regen','sacrifice','restore','diamond','aegis','boost'];
   const id=pool[rnd(0,pool.length-1)];
