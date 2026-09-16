@@ -1,0 +1,72 @@
+name: Verify and apply mythic PK10 upgrade
+on:
+  push:
+    paths:
+      - '.github/workflows/run-rework-mythic-pk10-verified.yml'
+permissions:
+  contents: write
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run base patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('.github/workflows/rework-mythic-pk10.yml').read_text()
+          anchor=src.index('      - name: Patch source'); marker='        run: |\n'; start=src.index(marker,anchor)+len(marker); end=src.index('      - name: Verify',start)
+          lines=[line[10:] if line.startswith('          ') else line for line in src[start:end].splitlines()]
+          Path('/tmp/base.sh').write_text('\n'.join(lines)+'\n')
+          PY
+          bash /tmp/base.sh
+      - name: Run clean combat rebuild
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('.github/workflows/run-rework-mythic-pk10-final.yml').read_text()
+          anchor=src.index('      - name: Rebuild combat action functions'); marker='        run: |\n'; start=src.index(marker,anchor)+len(marker); end=src.index('      - name: Verify',start)
+          lines=[line[10:] if line.startswith('          ') else line for line in src[start:end].splitlines()]
+          Path('/tmp/rebuild.sh').write_text('\n'.join(lines)+'\n')
+          PY
+          bash /tmp/rebuild.sh
+      - name: Update obsolete mythic test
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/rpg-systems.mjs'); s=p.read_text()
+          old="let myth=addLoot(emptyRpg(),bossMyth);myth=equipItem(myth,bossMyth.id);assert.ok(mythicEquipmentEffects(myth).redAmp>0);"
+          new="let myth=addLoot(emptyRpg(),bossMyth);myth=equipItem(myth,bossMyth.id);assert.ok(mythicEquipmentEffects(myth).lifesteal>0);"
+          if s.count(old)!=1: raise SystemExit(f'old mythic test count={s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Verify
+        shell: bash
+        run: |
+          set -e
+          for f in src/*.js worker/index.js; do node --check "$f"; done
+          npm test
+          grep -Fq "lifesteal:{type:'gem'" src/rpg.js
+          grep -Fq "stun:{type:'gem'" src/rpg.js
+          grep -Fq "ward:{type:'armor'" src/rpg.js
+          grep -Fq "fatal:{type:'ring'" src/rpg.js
+          grep -Fq "truehit:{type:'ring'" src/rpg.js
+          grep -Fq "antiheal:{type:'ring'" src/rpg.js
+          grep -Fq "for(let autoRound=3;autoRound<=10" worker/index.js
+          grep -Fq "winner=A.hp===B.hp?'draw':A.hp>B.hp?'a':'b'" worker/index.js
+          grep -Fq "progressionStats(profile.role,profile.pet,profile.level,profile.rpg)" worker/index.js
+          grep -Fq "rpg:meta.rpg" src/pk.js
+          ! grep -Fq "mythic.redAmp" src/cards.js
+          ! grep -Fq "firstOffensiveAmp" src/cards.js
+      - name: Commit source only
+        shell: bash
+        run: |
+          set -e
+          git config user.name 'redfisharthur-beep'
+          git config user.email 'redfisharthur@gmail.com'
+          git add src/rpg.js src/cards.js src/pk.js worker/index.js tests/rpg-systems.mjs
+          git commit -m 'feat: direct mythic combat powers and ten-round PK'
+          git push
