@@ -1,0 +1,43 @@
+name: Trial Carry Once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/trial-carry-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  adjust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Keep 90 percent trial stat growth
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('src/game.js')
+          s = p.read_text(encoding='utf-8')
+          old = "carry=nextFloor<=5?.75:nextFloor<=10?.65:nextFloor<=15?.55:.45;"
+          new = "carry=.90;"
+          count = s.count(old)
+          if count != 1:
+              raise SystemExit(f'Expected exactly one trial carry rule, got {count}')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: Commit source change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/game.js
+          git commit -m "Keep 90 percent trial stat growth between floors"
+          git push
+      - name: Remove one-time workflow
+        run: |
+          git pull --rebase
+          git rm .github/workflows/trial-carry-once.yml
+          git commit -m "chore: remove temporary trial workflow"
+          git push
