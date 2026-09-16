@@ -1,0 +1,52 @@
+name: Update five-question multipliers
+on:
+  push:
+    paths:
+      - '.github/workflows/update-five-question-multipliers.yml'
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update source and tests
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p=Path('src/cards.js')
+          s=p.read_text()
+          old="export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(n===5)return 1.5;if(n===4)return 1.32;if(n===3)return 1.15;if(n===2)return .9;if(n===1){const fx=actor?.pet==='owl'?petSkillEffects(actor.pet,actor.rpg||{}):null;return .65+(fx?.oneAccuracy||0)}return 0;}"
+          new="export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(n===5)return 1.7;if(n===4)return 1.5;if(n===3)return 1.32;if(n===2)return 1.15;if(n===1){const fx=actor?.pet==='owl'?petSkillEffects(actor.pet,actor.rpg||{}):null;return .9+(fx?.oneAccuracy||0)}return .65;}"
+          if s.count(old)!=1: raise SystemExit(f'accuracyMultiplier expected 1 match, got {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('tests/words.mjs')
+          s=p.read_text()
+          old="assert.equal(accuracyMultiplier(0),0);assert.ok(accuracyMultiplier(1)<accuracyMultiplier(2));assert.ok(accuracyMultiplier(2)<accuracyMultiplier(3));assert.ok(accuracyMultiplier(3)<accuracyMultiplier(4));assert.ok(accuracyMultiplier(4)<accuracyMultiplier(5));assert.equal(accuracyMultiplier(5),1.5);"
+          new="assert.equal(accuracyMultiplier(0),.65);assert.equal(accuracyMultiplier(1),.9);assert.equal(accuracyMultiplier(2),1.15);assert.equal(accuracyMultiplier(3),1.32);assert.equal(accuracyMultiplier(4),1.5);assert.equal(accuracyMultiplier(5),1.7);"
+          if s.count(old)!=1: raise SystemExit(f'words multiplier test expected 1 match, got {s.count(old)}')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Verify
+        shell: bash
+        run: |
+          set -e
+          node --check src/cards.js
+          node --check tests/words.mjs
+          npm test
+          grep -Fq "if(n===5)return 1.7" src/cards.js
+          grep -Fq "if(n===4)return 1.5" src/cards.js
+          grep -Fq "return .9+(fx?.oneAccuracy||0)" src/cards.js
+          grep -Fq "return .65;" src/cards.js
+      - name: Commit source
+        shell: bash
+        run: |
+          git config user.name "openai-workflow"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/cards.js tests/words.mjs
+          git diff --cached --quiet && exit 1
+          git commit -m "feat: rebalance five-question answer multipliers"
+          git push origin HEAD:main
