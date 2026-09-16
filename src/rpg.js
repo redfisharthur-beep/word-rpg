@@ -126,7 +126,7 @@ export function cleanRpg(raw={}){
   for(const pet of PET_IDS){const valid=new Set(PET_TREES[pet].map(x=>x.id)),list=Array.isArray(src.petSkills?.[pet])?src.petSkills[pet].filter(id=>valid.has(id)):[];petSkills[pet]=PET_TREES[pet].filter(x=>list.includes(x.id)).map(x=>x.id);}
   const collectionSet=new Set((Array.isArray(src.collection)?src.collection:[]).filter(validCollectionKey));
   for(const item of inventory){const key=collectionKey(item);if(key)collectionSet.add(key);}
-  const collection=[...collectionSet],towerBest=clamp(Math.round(Number(src.towerBest)||0),0,10);
+  const collection=[...collectionSet],towerBest=clamp(Math.round(Number(src.towerBest)||0),0,20);
   return {...base,inventory,equipped:{gems,armor,rings},crystals,petEnhance,petSkills,collection,towerBest};
 }
 
@@ -147,7 +147,7 @@ export function crystalValue(item){return CRYSTAL_VALUE[item?.quality]||0;}
 export function crystallizeItem(rpg,itemId){const clean=cleanRpg(rpg),equipped=new Set([...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean));if(equipped.has(itemId))return clean;const item=clean.inventory.find(x=>x.id===itemId);if(!item)return clean;const gain=crystalValue(item);if(!gain)return clean;clean.inventory=clean.inventory.filter(x=>x.id!==itemId);clean.crystals+=gain;return cleanRpg(clean);}
 export function synthesisInfo(rpg,itemId){const clean=cleanRpg(rpg),item=clean.inventory.find(x=>x.id===itemId),equipped=new Set([...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean));if(!item)return {can:false,count:0,nextQuality:null};const qi=QUALITY_ORDER.indexOf(item.quality);if(qi<0||qi>=QUALITY_ORDER.length-1)return {can:false,count:0,nextQuality:null};const matches=clean.inventory.filter(x=>!equipped.has(x.id)&&x.type===item.type&&x.subtype===item.subtype&&x.quality===item.quality);return {can:matches.length>=3,count:matches.length,nextQuality:QUALITY_ORDER[qi+1],consumeIds:matches.slice(0,3).map(x=>x.id)};}
 export function synthesizeItem(rpg,itemId){const clean=cleanRpg(rpg),info=synthesisInfo(clean,itemId),item=clean.inventory.find(x=>x.id===itemId);if(!item||!info.can)return clean;const consume=new Set(info.consumeIds);clean.inventory=clean.inventory.filter(x=>!consume.has(x.id));const made={...makeItem(item.type,item.subtype,info.nextQuality),crafted:true,foundAt:Date.now()};clean.inventory.push(made);const key=collectionKey(made);if(key&&!clean.collection.includes(key))clean.collection.push(key);return cleanRpg(clean);}
-export function recordTowerFloor(rpg,floor){const clean=cleanRpg(rpg);clean.towerBest=Math.max(clean.towerBest,clamp(Math.round(Number(floor)||0),0,10));return cleanRpg(clean);}
+export function recordTowerFloor(rpg,floor){const clean=cleanRpg(rpg);clean.towerBest=Math.max(clean.towerBest,clamp(Math.round(Number(floor)||0),0,20));return cleanRpg(clean);}
 
 
 
@@ -223,7 +223,7 @@ export function rollLoot(stageIndex=0,level=1,r=Math.random){
 }
 
 export function rollMythicLoot({boss=false,towerFloor=0,level=1}={},r=Math.random){
-  const floor=clamp(Math.round(Number(towerFloor)||0),0,10),chance=boss?.03:floor>=10?.12:floor>=8?.04:0;if(chance<=0||r()>=chance)return null;
+  const floor=clamp(Math.round(Number(towerFloor)||0),0,20),chance=boss?.03:floor>=20?.30:floor>=15?.18:floor>=10?.12:floor>=8?.04:0;if(chance<=0||r()>=chance)return null;
   const pool=[['gem','ruby'],['gem','thunder'],['armor','guardian'],['armor','bloodspirit'],['ring','warbreaker'],['ring','battlesoul']],pair=pick(pool,r),power=pick(MYTHIC_POWER_POOLS[pair[0]],r),item=makeItem(pair[0],pair[1],'mythic');
   return {...item,mythicPower:power,source:boss?'boss':'tower',towerFloor:floor,level:clamp(Math.round(Number(level)||1),1,50),foundAt:Date.now()};
 }
