@@ -1,0 +1,850 @@
+name: Expand to 1200 daily-bound questions
+on:
+  push:
+    paths:
+      - '.github/workflows/daily-1200-questions.yml'
+permissions:
+  contents: write
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch vocabulary and question flow
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, json
+
+          # ---------- 1200-word bank ----------
+          p=Path('src/words.js'); s=p.read_text()
+          m=re.search(r"const RAW=`(.*?)`;",s,re.S)
+          if not m: raise SystemExit('RAW word bank not found')
+          rows=[]; seen=set()
+          for line in m.group(1).splitlines():
+              if '|' not in line: continue
+              w,z=line.split('|',1); key=w.strip().lower()
+              if key and key not in seen:
+                  seen.add(key); rows.append((w.strip(),z.strip()))
+          extra="""
+ability|能力
+absence|缺席
+academic|學術的
+acceptance|接受
+access|使用權
+accommodation|住宿
+accompany|陪伴
+accomplish|完成
+achievement|成就
+adapt|適應
+addition|增加
+adjust|調整
+admire|欣賞
+admission|承認
+adopt|採用
+advance|進展
+advantage|優勢
+advertise|廣告宣傳
+advertisement|廣告
+advice|建議
+affect|影響
+afford|負擔得起
+agency|機構
+agriculture|農業
+alarm|警報
+allow|允許
+alternative|替代方案
+amount|數量
+ancient|古老的
+announce|宣布
+annual|每年的
+anxious|焦慮的
+apologize|道歉
+appearance|外表
+application|申請
+apply|申請
+appointment|約會
+appreciate|感激
+approach|方法
+appropriate|適當的
+approve|批准
+argue|爭論
+argument|爭論
+arrangement|安排
+article|文章
+assistant|助理
+associate|聯想
+attach|附加
+attempt|嘗試
+attend|出席
+attention|注意力
+attitude|態度
+attract|吸引
+audience|觀眾
+available|可取得的
+average|平均的
+avoid|避免
+award|獎項
+aware|察覺的
+background|背景
+balance|平衡
+basic|基本的
+behavior|行為
+behave|表現
+belief|信念
+belong|屬於
+benefit|好處
+blame|責怪
+border|邊界
+borrow|借用
+branch|分支
+breathe|呼吸
+budget|預算
+cancel|取消
+career|職涯
+cause|原因
+celebrate|慶祝
+celebration|慶典
+challenge|挑戰
+character|角色
+choice|選擇
+citizen|市民
+climate|氣候
+collect|收集
+collection|收藏
+combination|組合
+comfort|舒適
+command|命令
+comment|評論
+communicate|溝通
+communication|溝通
+community|社區
+compare|比較
+comparison|比較
+compete|競爭
+competition|競賽
+complain|抱怨
+complaint|抱怨
+complete|完成
+concentrate|專心
+condition|狀況
+conference|會議
+connect|連接
+connection|連線
+consider|考慮
+contact|聯絡
+contain|包含
+continue|繼續
+contribute|貢獻
+control|控制
+conversation|對話
+create|創造
+creative|有創意的
+culture|文化
+customer service|客服
+damage|損害
+decision|決定
+decrease|減少
+define|定義
+degree|程度
+deliver|遞送
+delivery|配送
+demand|需求
+depend|依賴
+describe|描述
+description|描述
+design|設計
+detail|細節
+develop|發展
+development|發展
+difference|差異
+direct|直接的
+discover|發現
+discovery|發現
+discuss|討論
+discussion|討論
+disease|疾病
+distance|距離
+divide|分開
+document|文件
+earn|賺取
+education|教育
+effect|效果
+effort|努力
+electric|電的
+electronic|電子的
+employ|雇用
+employee|員工
+employer|雇主
+encourage|鼓勵
+energy|能量
+environment|環境
+equipment|設備
+especially|尤其
+event|事件
+evidence|證據
+exact|精確的
+exchange|交換
+exist|存在
+experience|經驗
+expert|專家
+express|表達
+expression|表達
+fail|失敗
+failure|失敗
+feature|特色
+field|領域
+figure|數字
+focus|專注
+force|力量
+foreign|外國的
+form|形式
+future|未來
+general|一般的
+goal|目標
+growth|成長
+habit|習慣
+happen|發生
+identify|辨識
+improve|改善
+improvement|改善
+include|包括
+increase|增加
+individual|個人的
+industry|產業
+influence|影響
+information|資訊
+instead|反而
+instruction|指示
+introduce|介紹
+introduction|介紹
+issue|議題
+knowledge|知識
+local|當地的
+manage|管理
+management|管理
+material|材料
+measure|測量
+method|方法
+modern|現代的
+natural|自然的
+notice|注意到
+object|物件
+offer|提供
+opinion|意見
+organize|組織
+organization|組織
+patient|有耐心的
+perform|表現
+performance|表現
+perhaps|也許
+period|期間
+population|人口
+position|位置
+prepare|準備
+prevent|預防
+process|流程
+produce|生產
+product|產品
+progress|進步
+protect|保護
+provide|提供
+purpose|目的
+realize|理解
+reason|理由
+reduce|減少
+relationship|關係
+remain|保持
+replace|取代
+require|需要
+research|研究
+result|結果
+risk|風險
+role|角色
+section|部分
+service|服務
+situation|情況
+solution|解決方案
+source|來源
+specific|特定的
+standard|標準
+suggest|建議
+support|支持
+technology|科技
+tradition|傳統
+treatment|治療
+value|價值
+variety|多樣性
+account|帳戶
+accurate|準確的
+activity|活動
+additional|額外的
+administration|行政
+admit|承認
+adventure|冒險
+affair|事情
+aim|目標
+analysis|分析
+analyze|分析
+ancestor|祖先
+anger|憤怒
+announce|宣布
+apart|分開地
+appeal|吸引力
+argue|爭辯
+arrival|到達
+assist|協助
+attack|攻擊
+attractive|有吸引力的
+balance|平衡
+battle|戰鬥
+behavior|行為
+beyond|超越
+brief|簡短的
+broad|廣泛的
+cancel|取消
+capable|有能力的
+capital|首都
+capture|捕捉
+category|類別
+central|中央的
+certain|確定的
+chance|機會
+chapter|章節
+chemical|化學的
+claim|聲稱
+classic|經典的
+clear|清楚的
+combine|結合
+commercial|商業的
+common|常見的
+complex|複雜的
+concern|擔憂
+confirm|確認
+conflict|衝突
+confuse|使困惑
+considerable|相當大的
+constant|持續的
+consumer|消費者
+content|內容
+context|脈絡
+contract|合約
+contrast|對比
+convenient|方便的
+cooperate|合作
+costume|服裝
+courage|勇氣
+current|目前的
+decade|十年
+defense|防禦
+delighted|高興的
+department|部門
+desire|渴望
+destination|目的地
+determine|決定
+device|裝置
+digital|數位的
+director|主管
+disappear|消失
+discount|折扣
+display|顯示
+distribute|分配
+district|地區
+double|兩倍的
+doubt|懷疑
+duty|職責
+economic|經濟的
+efficient|有效率的
+element|元素
+emergency|緊急事件
+emotion|情緒
+entire|整個的
+entrance|入口
+equal|相等的
+escape|逃脫
+essential|必要的
+establish|建立
+estimate|估計
+excellent|優秀的
+except|除了
+existence|存在
+expand|擴大
+expect|期待
+expense|支出
+experiment|實驗
+explanation|解釋
+facility|設施
+factor|因素
+familiar|熟悉的
+formal|正式的
+frequent|頻繁的
+function|功能
+generation|世代
+global|全球的
+guide|指南
+handle|處理
+harm|傷害
+ideal|理想的
+imagine|想像
+immediate|立即的
+importance|重要性
+independent|獨立的
+indicate|指出
+interest|興趣
+international|國際的
+interview|面試
+item|項目
+journey|旅程
+judge|判斷
+lack|缺乏
+latest|最新的
+limit|限制
+location|位置
+major|主要的
+manage|管理
+memory|記憶
+mention|提到
+necessary|必要的
+network|網路
+normal|正常的
+obvious|明顯的
+occasion|場合
+operate|操作
+opportunity|機會
+ordinary|普通的
+original|原始的
+particular|特別的
+pattern|模式
+permission|許可
+physical|身體的
+popular|受歡迎的
+positive|正面的
+practical|實用的
+prefer|偏好
+pressure|壓力
+private|私人的
+professional|專業的
+proper|適當的
+quality|品質
+recent|最近的
+recommend|推薦
+record|紀錄
+regular|規律的
+responsible|負責的
+review|複習
+routine|例行事項
+serious|嚴重的
+similar|相似的
+skill|技能
+special|特別的
+successful|成功的
+suitable|適合的
+survey|調查
+system|系統
+temporary|暫時的
+total|總計
+traditional|傳統的
+usual|通常的
+valuable|有價值的
+various|各種的
+version|版本
+active|活躍的
+actual|實際的
+advanced|進階的
+affection|喜愛
+aggressive|積極的
+amazing|驚人的
+ambition|抱負
+ancient|古代的
+annual|年度的
+anxiety|焦慮
+apparent|明顯的
+architecture|建築
+arrival|抵達
+artificial|人工的
+atmosphere|氣氛
+automatic|自動的
+available|可用的
+basic|基本的
+battery|電池
+boundary|界線
+briefly|簡短地
+broadcast|廣播
+capacity|容量
+ceremony|典禮
+channel|頻道
+circumstance|情況
+civil|公民的
+classical|古典的
+comfortable|舒適的
+commit|投入
+committee|委員會
+competitive|有競爭力的
+conclusion|結論
+confidence|信心
+consequence|結果
+construction|建設
+creative|創意的
+crisis|危機
+curious|好奇的
+daily|每日的
+debate|辯論
+decoration|裝飾
+definition|定義
+dependent|依賴的
+difficulty|困難
+direction|方向
+disadvantage|缺點
+disagreement|意見不合
+disaster|災難
+discipline|紀律
+discount|折扣
+dramatic|戲劇性的
+effective|有效的
+emotion|情緒
+enormous|巨大的
+environmental|環境的
+essential|必要的
+exception|例外
+exhibition|展覽
+expectation|期待
+famous|著名的
+financial|財務的
+formal|正式的
+freedom|自由
+frequently|經常地
+generous|慷慨的
+gradual|逐漸的
+imagination|想像力
+impressive|令人印象深刻的
+independent|獨立的
+industrial|工業的
+intelligent|聰明的
+interesting|有趣的
+legal|合法的
+likely|可能的
+medical|醫療的
+mental|心理的
+natural|自然的
+negative|負面的
+observation|觀察
+official|正式的
+operation|操作
+personal|個人的
+pleasant|愉快的
+powerful|強大的
+primary|主要的
+reasonable|合理的
+regional|區域的
+reliable|可靠的
+remarkable|非凡的
+responsibility|責任
+scientific|科學的
+secondary|次要的
+separate|分開的
+significant|重要的
+social|社會的
+successful|成功的
+technical|技術的
+typical|典型的
+unusual|不尋常的
+visual|視覺的
+voluntary|自願的
+absolute|絕對的
+academic year|學年
+accidentally|意外地
+according|根據
+achievement|成就
+actively|積極地
+adviser|顧問
+aircraft|航空器
+announcement|公告
+appliance|家電
+arrival time|抵達時間
+assignment|作業
+athlete|運動員
+attraction|景點
+available time|可用時間
+awareness|意識
+backup|備份
+bargain|便宜貨
+behavioral|行為的
+booking|預訂
+businessman|商人
+candidate|候選人
+carefully|小心地
+cashless|無現金的
+challenge|挑戰
+champion|冠軍
+communication skill|溝通能力
+complaint|申訴
+concentration|專注力
+consumer|消費者
+contact information|聯絡資訊
+convenience|便利
+cooperation|合作
+creative thinking|創意思考
+customer experience|顧客體驗
+delivery time|配送時間
+digital device|數位裝置
+discount price|折扣價格
+documentary|紀錄片
+efficiently|有效率地
+electricity|電力
+emergency exit|緊急出口
+employee training|員工訓練
+entertainment|娛樂
+environmental protection|環境保護
+exactly|精確地
+feedback|回饋
+financial plan|財務計畫
+fitness|體能
+flexible|有彈性的
+forecast|預測
+foreign language|外語
+formal meeting|正式會議
+general idea|大意
+generation gap|代溝
+guidance|指導
+healthy diet|健康飲食
+household|家庭的
+improvement|改善
+information technology|資訊科技
+international travel|國際旅行
+internet|網際網路
+interviewer|面試官
+learning goal|學習目標
+lifestyle|生活方式
+management skill|管理能力
+mobile device|行動裝置
+motivation|動機
+navigation|導航
+online service|線上服務
+opportunity|機會
+organization skill|組織能力
+payment method|付款方式
+personal information|個人資訊
+presentation|簡報
+problem solving|問題解決
+production|生產
+professional skill|專業技能
+public transport|大眾運輸
+recommendation|推薦
+reservation|預約
+resource|資源
+responsibility|責任
+safety rule|安全規則
+shopping cart|購物車
+social media|社群媒體
+software|軟體
+strategy|策略
+stress|壓力
+successful result|成功結果
+technical support|技術支援
+transportation|交通運輸
+user experience|使用者體驗
+vehicle|交通工具
+website|網站
+workplace|工作場所
+achievement goal|成就目標
+adaptation|適應
+admission fee|入場費
+advanced level|進階程度
+agricultural|農業的
+announcement board|公告欄
+application form|申請表
+appointment time|預約時間
+artwork|藝術作品
+attendance|出席
+attractive design|吸引人的設計
+automatic system|自動系統
+balance point|平衡點
+basic information|基本資訊
+behavior pattern|行為模式
+career plan|職涯規劃
+central area|中心區域
+communication tool|溝通工具
+comparison chart|比較圖表
+competitive advantage|競爭優勢
+conference room|會議室
+connection speed|連線速度
+consumer behavior|消費者行為
+creative idea|創意點子
+decision making|決策
+delivery service|配送服務
+digital content|數位內容
+display screen|顯示螢幕
+education system|教育制度
+effective method|有效方法
+electronic payment|電子支付
+emergency room|急診室
+energy saving|節能
+environmental issue|環境議題
+experience level|經驗程度
+expert advice|專家建議
+financial support|財務支援
+foreign visitor|外國訪客
+future plan|未來計畫
+global market|全球市場
+growth rate|成長率
+health care|醫療照護
+important detail|重要細節
+individual choice|個人選擇
+industry trend|產業趨勢
+information source|資訊來源
+international student|國際學生
+learning method|學習方法
+local culture|在地文化
+management system|管理系統
+medical treatment|醫療治療
+modern life|現代生活
+natural environment|自然環境
+online learning|線上學習
+personal goal|個人目標
+positive attitude|正面態度
+practical experience|實務經驗
+professional service|專業服務
+project management|專案管理
+public area|公共區域
+quality control|品質管理
+recent development|近期發展
+research project|研究專案
+risk management|風險管理
+service quality|服務品質
+social activity|社交活動
+special event|特別活動
+standard procedure|標準流程
+technical problem|技術問題
+traditional culture|傳統文化
+training program|訓練課程
+travel plan|旅行計畫
+user account|使用者帳戶
+visual design|視覺設計
+work experience|工作經驗
+"""
+          for line in extra.strip().splitlines():
+              if '|' not in line: continue
+              w,z=line.split('|',1); key=w.strip().lower()
+              if key and key not in seen:
+                  seen.add(key); rows.append((w.strip(),z.strip()))
+              if len(rows)>=1200: break
+          if len(rows)<1200: raise SystemExit(f'not enough unique vocabulary: {len(rows)}')
+          rows=rows[:1200]
+          raw='const RAW=`'+'\n'.join(f'{w}|{z}' for w,z in rows)+'`;'
+          s=s[:m.start()]+raw+s[m.end():]
+          p.write_text(s)
+
+          # ---------- 5-question scoring ----------
+          p=Path('src/cards.js'); s=p.read_text()
+          old="export function accuracyMultiplier(correct,actor=null){if(correct===3)return 1.5;if(correct===2)return 1.15;if(correct===1){const fx=actor?.pet==='owl'?petSkillEffects(actor.pet,actor.rpg||{}):null;return .65+(fx?.oneAccuracy||0)}return 0;}"
+          new="export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(n===5)return 1.5;if(n===4)return 1.32;if(n===3)return 1.15;if(n===2)return .9;if(n===1){const fx=actor?.pet==='owl'?petSkillEffects(actor.pet,actor.rpg||{}):null;return .65+(fx?.oneAccuracy||0)}return 0;}"
+          if s.count(old)!=1: raise SystemExit('accuracyMultiplier target mismatch')
+          p.write_text(s.replace(old,new,1))
+
+          # ---------- PvE / tower: 10 reserved daily questions ----------
+          p=Path('src/game.js'); s=p.read_text()
+          s=s.replace("import {WORDS,makeQuestion,wordDeck} from './words.js';","import {makeQuestion} from './words.js';",1)
+          old="function q(){if(!run.wordDeck?.length)run.wordDeck=wordDeck();return makeQuestion(run.wordDeck.pop())}\nfunction questions(){return [q(),q(),q()]}"
+          new="async function fetchDailyQuestionBatch(count=10){const r=await fetch(`/api/questions?count=${count}`,{credentials:'same-origin',cache:'no-store'}),data=await r.json().catch(()=>({}));if(!r.ok||!Array.isArray(data.indices)||data.indices.length!==count)throw new Error(data.error||'題庫讀取失敗');return data.indices}\nfunction roundQuestions(){const start=(run.round-1)*5,indices=(run.dailyQuestionIndices||[]).slice(start,start+5);if(indices.length!==5)throw new Error('每日題目不足');return indices.map(makeQuestion)}"
+          if s.count(old)!=1: raise SystemExit('local question helpers mismatch')
+          s=s.replace(old,new,1)
+          s=s.replace("wrongAnswers:[],wordDeck:wordDeck(),stageRewarded:false","wrongAnswers:[],dailyQuestionIndices:[],loadingQuestions:false,stageRewarded:false",1)
+          s=s.replace("run.wrongAnswers=[];run.stageRewarded=false","run.wrongAnswers=[];run.dailyQuestionIndices=[];run.loadingQuestions=false;run.stageRewarded=false",1)
+          s=s.replace("if(screen!=='cards'||run.round>3)return","if(screen!=='cards'||run.round>2)return",1)
+          old="function confirmCards(auto=false){if(run.selected.length!==3){if(!auto)return;autoFillSelection()}if(run.selected.length!==3)return;clearTimeout(selectTimeout);clearInterval(selectTicker);run.selectDeadline=0;run.enemySelected=aiPickIndices();startQuiz()}"
+          new="async function confirmCards(auto=false){if(run.loadingQuestions)return;if(run.selected.length!==3){if(!auto)return;autoFillSelection()}if(run.selected.length!==3)return;clearTimeout(selectTimeout);clearInterval(selectTicker);run.selectDeadline=0;if(run.round===1&&(run.dailyQuestionIndices||[]).length!==10){run.loadingQuestions=true;try{run.dailyQuestionIndices=await fetchDailyQuestionBatch(10)}catch(err){run.loadingQuestions=false;alert(err?.message||'今日題庫讀取失敗');render();return}run.loadingQuestions=false}run.enemySelected=aiPickIndices();startQuiz()}"
+          if s.count(old)!=1: raise SystemExit('confirmCards mismatch')
+          s=s.replace(old,new,1)
+          old="function startQuiz(){answerFeedback=null;run.correct=0;run.qIndex=0;run.qs=questions();run.quizStarted=performance.now();screen='quiz';render();startQuestionTimer()}"
+          new="function startQuiz(){answerFeedback=null;run.correct=0;run.qIndex=0;run.qs=roundQuestions();run.quizStarted=performance.now();screen='quiz';render();startQuestionTimer()}"
+          if s.count(old)!=1: raise SystemExit('startQuiz mismatch')
+          s=s.replace(old,new,1)
+          old="if(run.qIndex>=3){const elapsed=Math.min(30000,Math.max(1,Math.round(performance.now()-run.quizStarted)-1800));resolveRound(elapsed);return}"
+          new="if(run.qIndex>=5){const elapsed=Math.min(50000,Math.max(1,Math.round(performance.now()-run.quizStarted)-4500));resolveRound(elapsed);return}"
+          if s.count(old)!=1: raise SystemExit('solo answer completion mismatch')
+          s=s.replace(old,new,1)
+          s=s.replace("run.stats.total+=3;","run.stats.total+=5;",1)
+          s=s.replace("enemyCorrect=pick([1,2,2,3,3])","enemyCorrect=pick([2,3,3,4,4,5])",1)
+          p.write_text(s)
+
+          # ---------- PK client: 5 questions / round ----------
+          p=Path('src/pk.js'); s=p.read_text()
+          old="if(qIndex>=3){const elapsed=Math.min(30000,Math.max(1,Math.round(performance.now()-started)-1800));if(round<=2)used.push(...selected);send({type:'ready',selected:round<=2?selected:[],correct,elapsedMs:elapsed});status='wait';render();return}"
+          new="if(qIndex>=5){const elapsed=Math.min(50000,Math.max(1,Math.round(performance.now()-started)-4500));if(round<=2)used.push(...selected);send({type:'ready',selected:round<=2?selected:[],correct,elapsedMs:elapsed});status='wait';render();return}"
+          if s.count(old)!=1: raise SystemExit('PK answer completion mismatch')
+          p.write_text(s.replace(old,new,1))
+
+          # ---------- Worker daily identity reservation ----------
+          p=Path('worker/index.js'); s=p.read_text()
+          s=s.replace('const WORD_COUNT=800;','const WORD_COUNT=1200;',1)
+          s=re.sub(r"const qset=\(used=\[\]\)=>\{.*?\};\n",'',s,count=1)
+          helper="""const dailyDate=()=>new Date(Date.now()+8*60*60*1000).toISOString().slice(0,10);
+async function questionIdentityKeys(request,env){const keys=[],session=await readSession(request,env);if(session?.sub)keys.push(`line:${session.sub}`);const ip=(request.headers.get('CF-Connecting-IP')||(request.headers.get('X-Forwarded-For')||'').split(',')[0]||'').trim();if(ip)keys.push(`ip:${await sha256Base64Url(ip)}`);if(!keys.length)keys.push(`ip:${await sha256Base64Url('unknown')}`);return [...new Set(keys)];}
+const questionStub=(env,key)=>env.USER_STORE.get(env.USER_STORE.idFromName(`questions:${key}`));
+async function usedQuestions(env,key,date){const res=await questionStub(env,key).fetch(`https://user/questions?date=${encodeURIComponent(date)}`);if(!res.ok)return [];const data=await res.json();return Array.isArray(data.used)?data.used:[];}
+async function markQuestions(env,key,date,indices){return questionStub(env,key).fetch('https://user/questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,indices})});}
+async function reserveDailyQuestions(env,keys,count){const date=dailyDate(),unique=[...new Set(keys)],need=clamp(Math.round(Number(count)||1),1,20);for(let attempt=0;attempt<8;attempt++){const blocked=new Set();for(const key of unique)for(const i of await usedQuestions(env,key,date))blocked.add(i);const available=[];for(let i=0;i<WORD_COUNT;i++)if(!blocked.has(i))available.push(i);if(available.length<need)throw new Error('今日題庫已完成');for(let i=available.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[available[i],available[j]]=[available[j],available[i]]}const chosen=available.slice(0,need);let conflict=false;for(const key of unique){const res=await markQuestions(env,key,date,chosen);if(res.status===409){conflict=true;break}if(!res.ok)throw new Error('題庫紀錄失敗')}if(!conflict)return chosen}throw new Error('題庫忙碌，請再試一次');}
+async function questionsApi(request,env){if(request.method!=='GET')return json({error:'Method not allowed'},405);const count=clamp(Math.round(Number(new URL(request.url).searchParams.get('count'))||10),1,20),keys=await questionIdentityKeys(request,env);try{return json({date:dailyDate(),indices:await reserveDailyQuestions(env,keys,count),count})}catch(err){return json({error:err?.message||'今日題庫已完成'},429)}}
+"""
+          marker='function callbackUrl(url,env)'
+          if s.count(marker)!=1: raise SystemExit('worker helper insertion marker mismatch')
+          s=s.replace(marker,helper+marker,1)
+          s=s.replace("if(url.pathname==='/api/progress')return progressApi(request,env);","if(url.pathname==='/api/progress')return progressApi(request,env);if(url.pathname==='/api/questions')return questionsApi(request,env);",1)
+
+          user_class="""export class UserStore extends DurableObject{
+  constructor(ctx,env){super(ctx,env);this.ctx=ctx;this.env=env}
+  async fetch(request){const url=new URL(request.url);if(url.pathname==='/questions'){const date=url.searchParams.get('date')||'';let record=await this.ctx.storage.get('dailyQuestions')||{date:'',used:[]};if(request.method==='GET'){if(record.date!==date)return json({date,used:[]});return json({date,used:Array.isArray(record.used)?record.used:[]})}if(request.method==='POST'){let body;try{body=await request.json()}catch{return json({error:'Invalid JSON'},400)}const day=String(body.date||''),indices=[...new Set((Array.isArray(body.indices)?body.indices:[]).map(Number).filter(i=>Number.isInteger(i)&&i>=0&&i<WORD_COUNT))];if(!day||!indices.length)return json({error:'Invalid questions'},400);if(record.date!==day)record={date:day,used:[]};const used=new Set(Array.isArray(record.used)?record.used:[]);if(indices.some(i=>used.has(i)))return json({error:'Question conflict'},409);for(const i of indices)used.add(i);record={date:day,used:[...used]};await this.ctx.storage.put('dailyQuestions',record);return json(record)}return json({error:'Method not allowed'},405)}if(request.method==='GET'){const progress=await this.ctx.storage.get('progress')||progressDefaults();return json(cleanProgress(progress))}if(request.method==='POST'){let body;try{body=await request.json()}catch{return json({error:'Invalid JSON'},400)}const progress=cleanProgress(body);await this.ctx.storage.put('progress',progress);return json(progress)}return json({error:'Method not allowed'},405)}
+}
+"""
+          s,n=re.subn(r"export class UserStore extends DurableObject\{.*?\n\}\n\nexport class Matchmaker",user_class+'\nexport class Matchmaker',s,count=1,flags=re.S)
+          if n!=1: raise SystemExit('UserStore replacement mismatch')
+
+          old="async fetch(request){if(request.headers.get('Upgrade')!=='websocket')return new Response('WebSocket required',{status:426});const pair=new WebSocketPair(),client=pair[0],server=pair[1];this.ctx.acceptWebSocket(server);server.serializeAttachment({id:crypto.randomUUID(),state:'new',profile:null,opponentId:null,matchId:null,fighter:null,hand:null,used:[],round:1,ready:null,questionUsed:[]});server.send(JSON.stringify({type:'connected'}));return new Response(null,{status:101,webSocket:client})}"
+          new="async fetch(request){if(request.headers.get('Upgrade')!=='websocket')return new Response('WebSocket required',{status:426});const questionKeys=await questionIdentityKeys(request,this.env),pair=new WebSocketPair(),client=pair[0],server=pair[1];this.ctx.acceptWebSocket(server);server.serializeAttachment({id:crypto.randomUUID(),state:'new',profile:null,opponentId:null,matchId:null,fighter:null,hand:null,used:[],round:1,ready:null,questionKeys,questionBatch:[]});server.send(JSON.stringify({type:'connected'}));return new Response(null,{status:101,webSocket:client})}"
+          if s.count(old)!=1: raise SystemExit('Matchmaker fetch mismatch')
+          s=s.replace(old,new,1)
+          old="webSocketMessage(ws,message){let data;try{data=JSON.parse(typeof message==='string'?message:new TextDecoder().decode(message))}catch{return}if(data.type==='join')this.join(ws,data.profile||{});if(data.type==='ready')this.ready(ws,data)}"
+          new="async webSocketMessage(ws,message){let data;try{data=JSON.parse(typeof message==='string'?message:new TextDecoder().decode(message))}catch{return}if(data.type==='join')await this.join(ws,data.profile||{});if(data.type==='ready')this.ready(ws,data)}"
+          if s.count(old)!=1: raise SystemExit('webSocketMessage mismatch')
+          s=s.replace(old,new,1)
+
+          join="""  async join(ws,p){let att=ws.deserializeAttachment()||{};const profile=this.profile(p),stats=progressionStats(profile.role,profile.pet,profile.level,profile.rpg).total;att={...att,state:'waiting',profile,fighter:makeFighter({...stats,role:profile.role,pet:profile.pet,rpg:profile.rpg}),hand:dealHand(9,profile.role,profile.level),used:[],round:1,ready:null,questionBatch:[]};ws.serializeAttachment(att);const other=this.ctx.getWebSockets().find(x=>x!==ws&&x.deserializeAttachment()?.state==='waiting');if(!other){this.send(ws,{type:'queued'});return}let oa=other.deserializeAttachment(),batch;try{batch=await reserveDailyQuestions(this.env,[...(att.questionKeys||[]),...(oa.questionKeys||[])],10)}catch(err){att.state='finished';oa.state='finished';ws.serializeAttachment(att);other.serializeAttachment(oa);this.send(ws,{type:'error',message:err?.message||'今日題庫已完成'});this.send(other,{type:'error',message:err?.message||'今日題庫已完成'});return}const matchId=crypto.randomUUID(),questions=batch.slice(0,5);att={...att,state:'matched',opponentId:oa.id,matchId,questionBatch:[...batch]};oa={...oa,state:'matched',opponentId:att.id,matchId,questionBatch:[...batch]};ws.serializeAttachment(att);other.serializeAttachment(oa);this.send(ws,{type:'matched',self:this.view(att),opponent:this.view(oa),hand:att.hand,questions});this.send(other,{type:'matched',self:this.view(oa),opponent:this.view(att),hand:oa.hand,questions})}
+  cleanReady"""
+          s,n=re.subn(r"  join\(ws,p\)\{.*?\n  cleanReady",join,s,count=1,flags=re.S)
+          if n!=1: raise SystemExit('join replacement mismatch')
+          s=s.replace("const correct=clamp(Math.round(Number(data.correct)||0),0,3),elapsedMs=clamp(Math.round(Number(data.elapsedMs)||30000),200,30000)","const correct=clamp(Math.round(Number(data.correct)||0),0,5),elapsedMs=clamp(Math.round(Number(data.elapsedMs)||50000),200,50000)",1)
+          old="const nextQuestions=!finished&&round<2?qset(a.questionUsed||[]):null;if(nextQuestions){a.questionUsed=[...(a.questionUsed||[]),...nextQuestions];b.questionUsed=[...(b.questionUsed||[]),...nextQuestions]}"
+          new="const nextQuestions=!finished&&round<2?(a.questionBatch||[]).slice(5,10):null;"
+          if s.count(old)!=1: raise SystemExit('next PK question batch mismatch')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+
+          # ---------- permanent word-bank test ----------
+          Path('tests/words.mjs').write_text("""import assert from 'node:assert/strict';\nimport {WORDS,makeQuestion} from '../src/words.js';\nimport {accuracyMultiplier} from '../src/cards.js';\nassert.equal(WORDS.length,1200);\nassert.equal(new Set(WORDS.map(x=>String(x.word).toLowerCase())).size,1200);\nfor(const i of [0,399,799,1199]){const q=makeQuestion(i);assert.ok(q.word&&q.answer&&Array.isArray(q.options)&&q.options.length>=2)}\nassert.equal(accuracyMultiplier(0),0);assert.ok(accuracyMultiplier(1)<accuracyMultiplier(2));assert.ok(accuracyMultiplier(2)<accuracyMultiplier(3));assert.ok(accuracyMultiplier(3)<accuracyMultiplier(4));assert.ok(accuracyMultiplier(4)<accuracyMultiplier(5));assert.equal(accuracyMultiplier(5),1.5);\nconsole.log('Words and 5-question scoring OK');\n""")
+          p=Path('package.json'); pkg=json.loads(p.read_text());pkg['scripts']['test']='node tests/rpg-systems.mjs && node tests/words.mjs';p.write_text(json.dumps(pkg,ensure_ascii=False,indent=2)+'\n')
+          PY
+      - name: Verify
+        shell: bash
+        run: |
+          set -e
+          for f in src/*.js worker/index.js tests/*.mjs; do node --check "$f"; done
+          npm test
+          node -e "import('./src/words.js').then(m=>{if(m.WORDS.length!==1200)process.exit(1);console.log('WORD_COUNT',m.WORDS.length)})"
+          grep -Fq 'const WORD_COUNT=1200;' worker/index.js
+          grep -Fq "url.pathname==='/api/questions'" worker/index.js
+          grep -Fq 'reserveDailyQuestions(this.env' worker/index.js
+          grep -Fq 'run.qIndex>=5' src/game.js
+          grep -Fq 'qIndex>=5' src/pk.js
+          grep -Fq 'run.stats.total+=5' src/game.js
+          grep -Fq 'dailyQuestionIndices' src/game.js
+          grep -Fq 'questionBatch' worker/index.js
+      - name: Commit source
+        shell: bash
+        run: |
+          git config user.name "openai-workflow"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/words.js src/cards.js src/game.js src/pk.js worker/index.js tests/words.mjs package.json
+          git diff --cached --quiet && exit 1
+          git commit -m "feat: 1200-word daily nonrepeating five-question rounds"
+          git push origin HEAD:main
