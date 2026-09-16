@@ -20,15 +20,7 @@ jobs:
           needle="      - name: Verify\n"
           if s.count(needle)!=1:
               raise SystemExit(f'Verify marker count: {s.count(needle)}')
-          insert="""      - name: Normalize generated test newlines
-        shell: bash
-        run: |
-          python3 - <<'PYFIX'
-          from pathlib import Path
-          p=Path('tests/rpg-systems.mjs')
-          p.write_text(p.read_text().replace('\\\\n','\\n'))
-          PYFIX
-"""
+          insert="      - name: Normalize generated test newlines\n        shell: bash\n        run: |\n          python3 -c \"from pathlib import Path; p=Path('tests/rpg-systems.mjs'); p.write_text(p.read_text().replace(r'\\\\n', chr(10)))\"\n"
           s=s.replace(needle,insert+needle,1)
           p.write_text(s)
           PY
