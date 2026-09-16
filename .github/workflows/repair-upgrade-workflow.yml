@@ -1,0 +1,44 @@
+name: Repair progression upgrade verification
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-upgrade-workflow.yml'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Insert test newline normalization
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/upgrade-progression-systems.yml')
+          s=p.read_text()
+          needle="      - name: Verify\n"
+          if s.count(needle)!=1:
+              raise SystemExit(f'Verify marker count: {s.count(needle)}')
+          insert="""      - name: Normalize generated test newlines
+        shell: bash
+        run: |
+          python3 - <<'PYFIX'
+          from pathlib import Path
+          p=Path('tests/rpg-systems.mjs')
+          p.write_text(p.read_text().replace('\\\\n','\\n'))
+          PYFIX
+"""
+          s=s.replace(needle,insert+needle,1)
+          p.write_text(s)
+          PY
+      - name: Commit repair and remove helper
+        shell: bash
+        run: |
+          set -e
+          git config user.name 'redfisharthur-beep'
+          git config user.email 'redfisharthur@gmail.com'
+          git add .github/workflows/upgrade-progression-systems.yml
+          git rm .github/workflows/repair-upgrade-workflow.yml
+          git commit -m 'chore: fix progression upgrade test generation'
+          git push
