@@ -1,4 +1,4 @@
-import {equipmentBonuses,petSkillEffects,petEnhanceLevel,equipmentResonance} from './rpg.js';
+import {equipmentBonuses,petSkillEffects,petEnhanceLevel,equipmentResonance,mythicEquipmentEffects} from './rpg.js';
 
 export const COLORS={green:'綠色',blue:'藍色',red:'紅色',yellow:'黃色',neutral:'輔助'};
 export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],regen:0,regenFresh:false,role:'warrior',pet:null,monsterId:null,rpg:null};
@@ -90,6 +90,7 @@ function hit(attacker,defender,mult,logs,label,canCrit=true){
   const atk=effectiveAtk(attacker);let raw=atk*mult,crit=false;
   if(canCrit&&attacker.critLock<=0&&Math.random()<attacker.crit){raw*=2;crit=true;}
   let dmg=Math.max(1,Math.round(raw*100/(100+effectiveDef(defender))));
+  const mythicGuard=mythicEquipmentEffects(defender?.rpg||{}).damageReduction;if(mythicGuard>0)dmg=Math.max(1,Math.round(dmg*(1-mythicGuard)));
   if(defender.shield>0){const block=Math.min(defender.shield,dmg);defender.shield-=block;dmg-=block;}
   defender.hp=Math.max(0,defender.hp-dmg);logs.push(`${label}${crit?'（爆擊）':''} ${dmg}`);return dmg;
 }
@@ -160,14 +161,14 @@ export function isOffensive(card){return !!card&&(card.exclusive?exclusiveOffens
 export function bondMultiplier(cards=[],card){if(!card||card.color==='neutral')return 1;return cards.filter(x=>x?.color===card.color).length>=2?1.5:1;}
 export function supportBoost(card,actor){if(!card||card.id!=='boost')return 1;const extra=actor?.role==='mage'?20:0;return 1+(card.boost+extra)/100;}
 export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offensiveIndex=0,cards=[],slotIndex=0,speedWin=false}={}){
-  const logs=[],acc=accuracyMultiplier(correct,actor),petFx=petSkillEffects(actor?.pet,actor?.rpg||{}),resonance=equipmentResonance(actor?.rpg||{});
+  const logs=[],acc=accuracyMultiplier(correct,actor),petFx=petSkillEffects(actor?.pet,actor?.rpg||{}),resonance=equipmentResonance(actor?.rpg||{}),mythic=mythicEquipmentEffects(actor?.rpg||{});
   if(acc<=0){logs.push('失敗..凍結中');return logs;}
   if(card?.id==='boost'){
     const shield=Math.max(1,Math.round(effectiveAtk(actor)*.30*acc));actor.shield+=shield;
     logs.push(`神功附體 +${card.boost+(actor.role==='mage'?20:0)}%`);logs.push(`護盾 +${shield}`);return logs;
   }
   if(!card){logs.push('沒有卡牌');return logs;}
-  let roleAmp=1,petAmp=1,resAmp=1;
+  let roleAmp=1,petAmp=1,resAmp=1,mythicAmp=1;
   if(actor.role==='warrior'&&card.color==='blue')roleAmp*=1.30;
   if(actor.role==='mage'&&card.color==='yellow')roleAmp*=1.25;
   if(actor.role==='archer'&&card.color==='red')roleAmp*=1.20;
@@ -181,7 +182,11 @@ export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offe
   if(slotIndex===0&&resonance.firstCardAmp>0){resAmp*=1+resonance.firstCardAmp;logs.push(`烈戰共鳴 +${Math.round(resonance.firstCardAmp*100)}%`);}
   if(card.color==='green'&&resonance.greenAmp>0){resAmp*=1+resonance.greenAmp;logs.push(`血靈共鳴 +${Math.round(resonance.greenAmp*100)}%`);}
   if(card.color==='blue'&&resonance.blueAmp>0){resAmp*=1+resonance.blueAmp;logs.push(`鐵壁共鳴 +${Math.round(resonance.blueAmp*100)}%`);}
-  applyCard(card,actor,target,acc*bond*boost*roleAmp*petAmp*resAmp,logs);
+  if(card.color==='red'&&mythic.redAmp>0){mythicAmp*=1+mythic.redAmp;logs.push(`神火共振 +${Math.round(mythic.redAmp*100)}%`);}
+  if(card.color==='yellow'&&mythic.yellowAmp>0){mythicAmp*=1+mythic.yellowAmp;logs.push(`天雷裁決 +${Math.round(mythic.yellowAmp*100)}%`);}
+  if(card.color==='green'&&mythic.greenAmp>0){mythicAmp*=1+mythic.greenAmp;logs.push(`血魂回生 +${Math.round(mythic.greenAmp*100)}%`);}
+  if(isOffensive(card)&&offensiveIndex===0&&mythic.firstOffensiveAmp>0){mythicAmp*=1+mythic.firstOffensiveAmp;logs.push(`破軍神威 +${Math.round(mythic.firstOffensiveAmp*100)}%`);}
+  applyCard(card,actor,target,acc*bond*boost*roleAmp*petAmp*resAmp*mythicAmp,logs);
   if(actor.role==='warrior'&&card.color==='blue'&&actor.hp>0){const v=Math.max(1,Math.round(effectiveDef(actor)*.14));actor.shield+=v;logs.push(`戰士護盾 +${v}`);}
   const redCount=cards.filter(x=>x?.color==='red').length;
   if(actor.pet==='fox'&&redCount>=2&&slotIndex===cards.length-1&&target.hp>0){hit(actor,target,(.40+petFx.chaseAmp)*acc,logs,'靈狐追擊');}

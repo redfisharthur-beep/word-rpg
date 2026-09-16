@@ -3,7 +3,8 @@ export const QUALITY={
   common:{name:'普通',rank:0},
   rare:{name:'稀有',rank:1},
   epic:{name:'史詩',rank:2},
-  legendary:{name:'傳說',rank:3}
+  legendary:{name:'傳說',rank:3},
+  mythic:{name:'神話',rank:4}
 };
 
 export const PET_TREES={
@@ -31,7 +32,7 @@ export const PET_TREES={
 };
 
 const PET_IDS=['fox','owl','dragon'];
-export const CRYSTAL_VALUE={common:1,rare:3,epic:8,legendary:20};
+export const CRYSTAL_VALUE={common:1,rare:3,epic:8,legendary:20,mythic:60};
 export const PET_ENHANCE_COST=[5,10,20,40];
 export const PET_AWAKENING={
   fox:{name:'九尾覺醒',desc:'先手第一張牌再 +15%，紅牌追擊再 +10%'},
@@ -47,10 +48,19 @@ const QVAL={
   common:{ruby:{atk:.03,def:.03},thunder:{hp:.04,crit:.01},guardian:{def:.08},bloodspirit:{hp:.08},warbreaker:{atk:.04,hp:.04},battlesoul:{def:.04,crit:.01}},
   rare:{ruby:{atk:.045,def:.045},thunder:{hp:.06,crit:.02},guardian:{def:.12},bloodspirit:{hp:.12},warbreaker:{atk:.06,hp:.06},battlesoul:{def:.06,crit:.02}},
   epic:{ruby:{atk:.065,def:.065},thunder:{hp:.09,crit:.03},guardian:{def:.18},bloodspirit:{hp:.18},warbreaker:{atk:.09,hp:.09},battlesoul:{def:.09,crit:.035}},
-  legendary:{ruby:{atk:.09,def:.09},thunder:{hp:.13,crit:.05},guardian:{def:.26},bloodspirit:{hp:.26},warbreaker:{atk:.13,hp:.13},battlesoul:{def:.13,crit:.05}}
+  legendary:{ruby:{atk:.09,def:.09},thunder:{hp:.13,crit:.05},guardian:{def:.26},bloodspirit:{hp:.26},warbreaker:{atk:.13,hp:.13},battlesoul:{def:.13,crit:.05}},
+  mythic:{ruby:{atk:.14,def:.14},thunder:{hp:.20,crit:.08},guardian:{def:.40},bloodspirit:{hp:.40},warbreaker:{atk:.20,hp:.20},battlesoul:{def:.20,crit:.08}}
 };
 
 const ITEM_NAME={ruby:'紅曜石',thunder:'雷光石',guardian:'守護甲',bloodspirit:'血靈甲',warbreaker:'破軍戒',battlesoul:'戰魂戒'};
+export const MYTHIC_ABILITIES={
+  ruby:{name:'神火共振',desc:'紅牌效果 +15%'},
+  thunder:{name:'天雷裁決',desc:'黃牌效果 +15%'},
+  guardian:{name:'不滅聖盾',desc:'每場戰鬥開始獲得最大生命 18% 護盾'},
+  bloodspirit:{name:'血魂回生',desc:'綠牌效果 +20%'},
+  warbreaker:{name:'破軍神威',desc:'每回合第一張攻擊牌效果 +25%'},
+  battlesoul:{name:'戰魂不滅',desc:'受到的傷害降低 12%'}
+};
 const LEGACY_MAP={
   gem:{ruby:'ruby',emerald:'thunder',sapphire:'ruby',topaz:'thunder',thunder:'thunder'},
   armor:{guardian:'guardian',fortress:'guardian',vital:'bloodspirit',bloodspirit:'bloodspirit'},
@@ -86,7 +96,7 @@ function normalizeItem(item){
 
 export function collectionKey(item){return item?.type&&item?.subtype&&item?.quality?`${item.type}:${item.subtype}:${item.quality}`:'';}
 function validCollectionKey(key){const [type,subtype,quality]=String(key||'').split(':');return !!(VALID_LOOT[type]?.has(subtype)&&QUALITY[quality]);}
-export function collectionEntries(){const defs={gem:['ruby','thunder'],armor:['guardian','bloodspirit'],ring:['warbreaker','battlesoul']},out=[];for(const [type,subs] of Object.entries(defs))for(const subtype of subs)for(const quality of QUALITY_ORDER){const item={type,subtype,quality,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:bonusesFor(type,subtype,quality)};out.push({...item,key:collectionKey(item),art:lootImage(item)})}return out;}
+export function collectionEntries(){const defs={gem:['ruby','thunder'],armor:['guardian','bloodspirit'],ring:['warbreaker','battlesoul']},qualities=[...QUALITY_ORDER,'mythic'],out=[];for(const [type,subs] of Object.entries(defs))for(const subtype of subs)for(const quality of qualities){const item={type,subtype,quality,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:bonusesFor(type,subtype,quality)};out.push({...item,key:collectionKey(item),art:lootImage(item)})}return out;}
 export function collectionProgress(rpg){const clean=cleanRpg(rpg),total=collectionEntries().length;return {owned:clean.collection.length,total};}
 
 export function emptyRpg(){return {inventory:[],equipped:{gems:[],armor:null,rings:[]},crystals:0,petEnhance:{fox:0,owl:0,dragon:0},petSkills:{fox:[],owl:[],dragon:[]},collection:[],towerBest:0};}
@@ -145,6 +155,13 @@ export function petSkillEffects(pet,rpg){
   return out;
 }
 
+export function mythicAbilityText(item){const a=item?.quality==='mythic'?MYTHIC_ABILITIES[item?.subtype]:null;return a?`${a.name}｜${a.desc}`:'';}
+export function mythicEquipmentEffects(rpg){
+  const clean=cleanRpg(rpg),byId=new Map(clean.inventory.map(x=>[x.id,x])),ids=[...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean),items=ids.map(id=>byId.get(id)).filter(x=>x?.quality==='mythic'),out={redAmp:0,yellowAmp:0,greenAmp:0,blueAmp:0,firstOffensiveAmp:0,startShieldPct:0,damageReduction:0,active:[]};
+  for(const item of items){const a=MYTHIC_ABILITIES[item.subtype];if(a)out.active.push({subtype:item.subtype,name:a.name,desc:a.desc});if(item.subtype==='ruby')out.redAmp=Math.max(out.redAmp,.15);if(item.subtype==='thunder')out.yellowAmp=Math.max(out.yellowAmp,.15);if(item.subtype==='guardian')out.startShieldPct=Math.max(out.startShieldPct,.18);if(item.subtype==='bloodspirit')out.greenAmp=Math.max(out.greenAmp,.20);if(item.subtype==='warbreaker')out.firstOffensiveAmp=Math.max(out.firstOffensiveAmp,.25);if(item.subtype==='battlesoul')out.damageReduction=Math.max(out.damageReduction,.12);}
+  return out;
+}
+
 export function equipmentResonance(rpg){
   const clean=cleanRpg(rpg),byId=new Map(clean.inventory.map(x=>[x.id,x])),ids=[...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean),items=ids.map(id=>byId.get(id)).filter(Boolean),count=sub=>items.filter(x=>x.subtype===sub).length;
   const recipes=[
@@ -178,7 +195,13 @@ export function rollLoot(stageIndex=0,level=1,r=Math.random){
   const chances=[.45,.55,.68,1],idx=clamp(Math.round(stageIndex)||0,0,3);if(r()>chances[idx])return null;const quality=weightedQuality(idx,r),typeRoll=r();let item=typeRoll<.55?makeGem(quality,r):typeRoll<.80?makeArmor(quality,r):makeRing(quality,r);return {...item,stage:idx+1,level:clamp(Math.round(Number(level)||1),1,50),foundAt:Date.now()};
 }
 
+export function rollMythicLoot({boss=false,towerFloor=0,level=1}={},r=Math.random){
+  const floor=clamp(Math.round(Number(towerFloor)||0),0,10),chance=boss?.03:floor>=10?.12:floor>=8?.04:0;if(chance<=0||r()>=chance)return null;
+  const pool=[['gem','ruby'],['gem','thunder'],['armor','guardian'],['armor','bloodspirit'],['ring','warbreaker'],['ring','battlesoul']],pair=pick(pool,r),item=makeItem(pair[0],pair[1],'mythic');
+  return {...item,source:boss?'boss':'tower',towerFloor:floor,level:clamp(Math.round(Number(level)||1),1,50),foundAt:Date.now()};
+}
+
 export function addLoot(rpg,item){const clean=cleanRpg(rpg),normalized=normalizeItem(item);if(!normalized)return clean;clean.inventory=[...clean.inventory,normalized];return cleanRpg(clean);}
 export function equipItem(rpg,itemId){const clean=cleanRpg(rpg),item=clean.inventory.find(x=>x.id===itemId);if(!item)return clean;if(item.type==='gem'){const gems=clean.equipped.gems.filter(id=>id!==itemId);if(gems.length>=3)return clean;clean.equipped.gems=[...gems,itemId];}else if(item.type==='armor')clean.equipped.armor=itemId;else if(item.type==='ring'){const rings=clean.equipped.rings.filter(id=>id!==itemId);if(rings.length>=2)return clean;clean.equipped.rings=[...rings,itemId];}return cleanRpg(clean);}
 export function unequipItem(rpg,itemId){const clean=cleanRpg(rpg);clean.equipped.gems=clean.equipped.gems.filter(id=>id!==itemId);if(clean.equipped.armor===itemId)clean.equipped.armor=null;clean.equipped.rings=clean.equipped.rings.filter(id=>id!==itemId);return cleanRpg(clean);}
-export function itemBonusText(item){const b=item?.bonuses||{},parts=[];if(b.hpPct)parts.push(`生命 +${Math.round(b.hpPct*100)}%`);if(b.atkPct)parts.push(`攻擊 +${Math.round(b.atkPct*100)}%`);if(b.defPct)parts.push(`防禦 +${Math.round(b.defPct*100)}%`);if(b.crit)parts.push(`爆擊 +${Math.round(b.crit*100)}%`);return parts.join(' · ');}
+export function itemBonusText(item){const b=item?.bonuses||{},parts=[];if(b.hpPct)parts.push(`生命 +${Math.round(b.hpPct*100)}%`);if(b.atkPct)parts.push(`攻擊 +${Math.round(b.atkPct*100)}%`);if(b.defPct)parts.push(`防禦 +${Math.round(b.defPct*100)}%`);if(b.crit)parts.push(`爆擊 +${Math.round(b.crit*100)}%`);const mythic=mythicAbilityText(item);if(mythic)parts.push(`✦ ${mythic}`);return parts.join(' · ');}
