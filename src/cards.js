@@ -14,25 +14,25 @@ export const TITLE_TIERS=[
 export function titleTier(level=1){const lv=clamp(Math.round(Number(level)||1),1,50);return TITLE_TIERS.find(x=>lv>=x.level)||TITLE_TIERS[TITLE_TIERS.length-1];}
 const ROLE_SKILLS={
   warrior:[
-    {level:10,id:'warrior-10',name:'震嶽斬',color:'red',text:'155%重擊',fx:{damage:1.55}},
-    {level:20,id:'warrior-20',name:'不屈戰魂',color:'green',text:'回血28%＋護盾10%',fx:{healMax:.28,shieldMax:.10}},
-    {level:30,id:'warrior-30',name:'王者壁壘',color:'blue',text:'護盾45%＋防禦+20%',fx:{shieldMax:.45,defBuff:.20}},
-    {level:40,id:'warrior-40',name:'守護反擊',color:'blue',text:'135%傷害＋護盾25%',fx:{damage:1.35,shieldMax:.25}},
-    {level:50,id:'warrior-50',name:'天崩地裂',color:'red',text:'260%終極傷害',fx:{damage:2.60}}
+    {level:10,id:'warrior-10',name:'震嶽斬',color:'red',text:'180%重擊',fx:{damage:1.80}},
+    {level:20,id:'warrior-20',name:'不屈戰魂',color:'green',text:'回血35%＋護盾15%',fx:{healMax:.35,shieldMax:.15}},
+    {level:30,id:'warrior-30',name:'王者壁壘',color:'blue',text:'護盾55%＋防禦+30%',fx:{shieldMax:.55,defBuff:.30}},
+    {level:40,id:'warrior-40',name:'守護反擊',color:'blue',text:'155%傷害＋護盾30%',fx:{damage:1.55,shieldMax:.30}},
+    {level:50,id:'warrior-50',name:'天崩地裂',color:'red',text:'320%終極傷害',fx:{damage:3.20}}
   ],
   mage:[
-    {level:10,id:'mage-10',name:'炎爆術',color:'yellow',text:'155%火焰傷害',fx:{damage:1.55}},
-    {level:20,id:'mage-20',name:'奧術回復',color:'green',text:'回血35%',fx:{healMax:.35}},
-    {level:30,id:'mage-30',name:'魔法障壁',color:'blue',text:'護盾50%',fx:{shieldMax:.50}},
-    {level:40,id:'mage-40',name:'星隕術',color:'yellow',text:'205%星隕傷害',fx:{damage:2.05}},
-    {level:50,id:'mage-50',name:'終焉魔導',color:'yellow',text:'285%終極傷害',fx:{damage:2.85}}
+    {level:10,id:'mage-10',name:'炎爆術',color:'yellow',text:'185%火焰傷害',fx:{damage:1.85}},
+    {level:20,id:'mage-20',name:'奧術回復',color:'green',text:'回血45%',fx:{healMax:.45}},
+    {level:30,id:'mage-30',name:'魔法障壁',color:'blue',text:'護盾65%',fx:{shieldMax:.65}},
+    {level:40,id:'mage-40',name:'星隕術',color:'yellow',text:'240%星隕傷害',fx:{damage:2.40}},
+    {level:50,id:'mage-50',name:'終焉魔導',color:'yellow',text:'340%終極傷害',fx:{damage:3.40}}
   ],
   archer:[
-    {level:10,id:'archer-10',name:'雙星連射',color:'red',text:'2連擊・每擊82%',fx:{hits:[.82,.82]}},
-    {level:20,id:'archer-20',name:'回風步',color:'green',text:'85%傷害＋回血20%',fx:{damage:.85,healMax:.20}},
-    {level:30,id:'archer-30',name:'暴雨箭陣',color:'red',text:'3連擊・每擊65%',fx:{hits:[.65,.65,.65]}},
-    {level:40,id:'archer-40',name:'風神護佑',color:'green',text:'回血28%＋護盾15%',fx:{healMax:.28,shieldMax:.15}},
-    {level:50,id:'archer-50',name:'天穹一箭',color:'red',text:'300%終極傷害',fx:{damage:3.00}}
+    {level:10,id:'archer-10',name:'雙星連射',color:'red',text:'2連擊・每擊95%',fx:{hits:[.95,.95]}},
+    {level:20,id:'archer-20',name:'回風步',color:'green',text:'105%傷害＋回血25%',fx:{damage:1.05,healMax:.25}},
+    {level:30,id:'archer-30',name:'暴雨箭陣',color:'red',text:'3連擊・每擊78%',fx:{hits:[.78,.78,.78]}},
+    {level:40,id:'archer-40',name:'風神護佑',color:'green',text:'回血35%＋護盾20%',fx:{healMax:.35,shieldMax:.20}},
+    {level:50,id:'archer-50',name:'天穹一箭',color:'red',text:'350%終極傷害',fx:{damage:3.50}}
   ]
 };
 export function unlockedRoleSkills(role='warrior',level=1){const lv=clamp(Math.round(Number(level)||1),1,50);return (ROLE_SKILLS[role]||[]).filter(x=>lv>=x.level);}
