@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "node tests/rpg-systems.mjs"
+    "test": "node tests/rpg-systems.mjs && node tests/words.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.102.0"
