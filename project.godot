@@ -23,7 +23,7 @@ window/stretch/mode="canvas_items"
 
 [word_rpg]
 
-cloudflare_base_url=""
+cloudflare_base_url="https://word-rpg.redfisharthur.workers.dev"
 
 [rendering]
 
