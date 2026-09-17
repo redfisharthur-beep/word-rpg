@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "test": "node tests/rpg-systems.mjs && node tests/words.mjs"
+    "sync:data": "node scripts/sync-game-data.mjs",
+    "dev": "npm run sync:data && wrangler dev",
+    "deploy": "npm run sync:data && wrangler deploy",
+    "test": "npm run sync:data && node tests/rpg-systems.mjs && node tests/words.mjs && node tests/v2-systems.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.102.0"
