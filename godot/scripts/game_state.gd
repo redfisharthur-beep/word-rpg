@@ -21,17 +21,19 @@ func _ready() -> void:
 	load_local()
 
 func load_local() -> void:
-	if not FileAccess.file_exists(SAVE_PATH): return
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
 	var text: String = FileAccess.get_file_as_string(SAVE_PATH)
 	var parsed: Variant = JSON.parse_string(text)
-	if not parsed is Dictionary: return
+	if not parsed is Dictionary:
+		return
 	var data: Dictionary = parsed
 	player_name = String(data.get("player_name", player_name)).left(16)
 	role = _safe_role(String(data.get("role", role)))
 	pet = _safe_pet(String(data.get("pet", pet)))
 	level = clampi(int(data.get("level", level)), 1, 50)
 	xp = 0 if level >= 50 else maxi(0, int(data.get("xp", xp)))
-	unlocked_stage = clampi(int(data.get("unlocked_stage", unlocked_stage)), 0, 3)
+	unlocked_stage = clampi(int(data.get("unlocked_stage", unlocked_stage)), 0, maxi(0, GameData.STAGES.size() - 1))
 	_copy_inventory(data.get("inventory", []))
 	var raw_rpg: Variant = data.get("rpg", {})
 	if raw_rpg is Dictionary:
@@ -41,17 +43,9 @@ func load_local() -> void:
 
 func save_local() -> void:
 	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file == null: return
-	file.store_string(JSON.stringify({
-		"player_name": player_name,
-		"role": role,
-		"pet": pet,
-		"level": level,
-		"xp": xp,
-		"unlocked_stage": unlocked_stage,
-		"inventory": inventory,
-		"rpg": rpg
-	}))
+	if file == null:
+		return
+	file.store_string(JSON.stringify({"player_name":player_name,"role":role,"pet":pet,"level":level,"xp":xp,"unlocked_stage":unlocked_stage,"inventory":inventory,"rpg":rpg}))
 
 func select_role(value: String) -> void:
 	role = _safe_role(value)
@@ -62,6 +56,22 @@ func select_pet(value: String) -> void:
 	pet = _safe_pet(value)
 	save_local()
 	state_changed.emit()
+
+func pet_enhance_level(pet_id: String) -> int:
+	var raw: Variant = rpg.get("petEnhance", {})
+	if not raw is Dictionary:
+		return 0
+	return clampi(int((raw as Dictionary).get(pet_id, 0)), 0, 4)
+
+func pet_is_awakened(pet_id: String) -> bool:
+	return pet_enhance_level(pet_id) >= 4
+
+func collection_count() -> int:
+	var raw: Variant = rpg.get("collection", [])
+	return raw.size() if raw is Array else 0
+
+func tower_best() -> int:
+	return clampi(int(rpg.get("towerBest", 0)), 0, 20)
 
 func add_xp(amount: int) -> Dictionary:
 	var gained: int = maxi(0, amount)
@@ -78,17 +88,19 @@ func add_xp(amount: int) -> Dictionary:
 		xp = 0
 	save_local()
 	state_changed.emit()
-	return {"amount": gained, "old_level": old_level, "new_level": level, "levels": levels}
+	return {"amount":gained,"old_level":old_level,"new_level":level,"levels":levels}
 
 func unlock_next_stage(cleared_stage: int) -> void:
-	unlocked_stage = maxi(unlocked_stage, mini(3, cleared_stage + 1))
+	unlocked_stage = maxi(unlocked_stage, mini(maxi(0, GameData.STAGES.size() - 1), cleared_stage + 1))
 	save_local()
 	state_changed.emit()
 
 func add_loot(item: Dictionary) -> void:
-	if item.is_empty(): return
+	if item.is_empty():
+		return
 	inventory.append(item.duplicate(true))
-	if inventory.size() > 60: inventory.pop_front()
+	if inventory.size() > 60:
+		inventory.pop_front()
 	save_local()
 	state_changed.emit()
 
@@ -120,21 +132,23 @@ func refresh_cloudflare_session() -> bool:
 	return authenticated
 
 func sync_cloudflare_progress() -> bool:
-	if not authenticated: return false
+	if not authenticated:
+		return false
 	var next_rpg: Dictionary = rpg.duplicate(true)
 	next_rpg["inventory"] = inventory.duplicate(true)
-	var result: Dictionary = await CloudflareClient.save_progress({"role": role, "pet": pet, "level": level, "xp": xp, "rpg": next_rpg})
+	var result: Dictionary = await CloudflareClient.save_progress({"role":role,"pet":pet,"level":level,"xp":xp,"rpg":next_rpg})
 	return bool(result.get("ok", false))
 
 func _copy_inventory(raw_value: Variant) -> void:
 	inventory.clear()
-	if not raw_value is Array: return
+	if not raw_value is Array:
+		return
 	for value: Variant in raw_value:
 		if value is Dictionary:
 			inventory.append(value.duplicate(true))
 
 func _safe_role(value: String) -> String:
-	return value if ["warrior", "mage", "archer"].has(value) else "warrior"
+	return value if ["warrior","mage","archer"].has(value) else "warrior"
 
 func _safe_pet(value: String) -> String:
-	return value if ["fox", "owl", "dragon"].has(value) else "fox"
+	return value if ["fox","owl","dragon"].has(value) else "fox"
