@@ -180,15 +180,7 @@ func _toggle_equipment(item_id: String) -> void:
 
 func _synthesize_equipment(item_id: String) -> void:
 	var result := InventoryRuntime.synthesize(GameState.inventory, GameState.equipped_ids(), item_id)
-	if not bool(result.get("ok", false)):
-		show_inventory()
-		return
-	var remaining: Variant = result.get("remaining", [])
-	if remaining is Array:
-		GameState._copy_inventory(remaining)
-	var made: Variant = result.get("item", {})
-	if made is Dictionary:
-		GameState.add_loot(made)
+	GameState.apply_synthesis(result)
 	show_inventory()
 
 func _dismantle_equipment(item_id: String) -> void:
