@@ -9,6 +9,10 @@ config_version=5
 config/name="Word RPG"
 run/main_scene="res://godot/scenes/battle_demo.tscn"
 
+[autoload]
+
+CloudflareClient="*res://godot/scripts/cloudflare_client.gd"
+
 [display]
 
 window/size/viewport_width=720
@@ -16,6 +20,10 @@ window/size/viewport_height=1280
 window/size/window_width_override=360
 window/size/window_height_override=640
 window/stretch/mode="canvas_items"
+
+[word_rpg]
+
+cloudflare_base_url=""
 
 [rendering]
 
