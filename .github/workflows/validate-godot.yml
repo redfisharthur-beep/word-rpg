@@ -54,6 +54,14 @@ jobs:
             echo "::error::Godot Web index.pck exceeds the 70 MiB budget. Review newly added large textures before merging."
             exit 1
           fi
+      - name: Upload tested Web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: word-rpg-godot-web-${{ github.sha }}
+          path: build/web
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
       - name: Launch main scene smoke test
         run: godot --headless --path . --quit-after 3
       - name: Launch native PK scene smoke test
