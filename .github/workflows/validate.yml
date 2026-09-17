@@ -20,4 +20,6 @@ jobs:
       - run: node --check src/progression-v2.js
       - run: node --check src/pk.js
       - run: node --check worker/index.js
+      - run: node --check worker/progress-revision.js
+      - run: node --check worker/entry.js
       - run: npm test
