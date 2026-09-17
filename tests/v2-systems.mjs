@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import {GAME_ROLES,GAME_PETS,GAME_STAGES,TOWER_RULES,COLLECTION_REWARDS,SEASON_TIERS,EQUIPMENT_VALUES} from '../src/generated/game-data.js';
+import {progressionStats,dealHand} from '../src/cards.js';
+import {emptyRpg,cleanRpg,collectionEntries} from '../src/rpg.js';
+
+assert.deepEqual(Object.keys(GAME_ROLES).sort(),['archer','mage','warrior']);
+assert.deepEqual(Object.keys(GAME_PETS).sort(),['dragon','fox','owl']);
+assert.equal(GAME_STAGES.length,5,'Adventure must contain 5 stages');
+assert.equal(GAME_STAGES[2].id,'bubble','Bubble monster must be stage 3');
+assert.equal(GAME_STAGES[4].id,'shadow','Shadow King must be the final boss');
+
+for(const id of ['warrior','mage','archer']){
+  const u=GAME_ROLES[id].ultimate;
+  assert.ok(u?.name,`${id} ultimate name missing`);
+  assert.ok(Number(u?.mult)>0||Array.isArray(u?.hits),`${id} ultimate power missing`);
+}
+for(const id of ['fox','owl','dragon'])assert.ok(GAME_PETS[id]?.awakening?.name,`${id} awakening missing`);
+
+for(const floor of ['5','10','15','20'])assert.ok(TOWER_RULES[floor],`Tower milestone ${floor} missing`);
+assert.deepEqual(COLLECTION_REWARDS.map(x=>x.count),[10,20,30]);
+assert.deepEqual(SEASON_TIERS.map(x=>x.id),['legend','gold','silver','bronze']);
+assert.ok(EQUIPMENT_VALUES.mythic.warbreaker.atk>0);
+
+const rpg=cleanRpg(emptyRpg());
+const stats=progressionStats('warrior','fox',1,rpg).total;
+assert.ok(stats.maxHp>0&&stats.atk>0&&stats.def>0);
+const hand=dealHand(9,'warrior',50);
+assert.equal(hand.length,9);
+assert.ok(hand.filter(x=>x.exclusive).length>=1);
+assert.equal(collectionEntries().length,30,'Collection should contain 30 equipment discoveries');
+
+console.log('v2 systems ok');
