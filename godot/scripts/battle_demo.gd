@@ -12,6 +12,7 @@ var camera: Camera2D
 var fx: Node
 var fight_button: Button
 var cloudflare_status: Label
+var cloudflare_test_button: Button
 var busy: bool = false
 
 func _ready() -> void:
@@ -61,24 +62,40 @@ func _build_scene() -> void:
 
 	var title: Label = Label.new()
 	title.text = "WORD RPG · GODOT FX"
-	title.position = Vector2(36, 48)
+	title.position = Vector2(36, 42)
 	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", Color("e9e2d6"))
 	hud.add_child(title)
 
 	var subtitle: Label = Label.new()
 	subtitle.text = "單張 PNG + 動態戰鬥演出"
-	subtitle.position = Vector2(38, 90)
+	subtitle.position = Vector2(38, 82)
 	subtitle.add_theme_font_size_override("font_size", 18)
 	subtitle.add_theme_color_override("font_color", Color("c7beb2"))
 	hud.add_child(subtitle)
 
+	var status_panel: ColorRect = ColorRect.new()
+	status_panel.position = Vector2(32, 122)
+	status_panel.size = Vector2(656, 104)
+	status_panel.color = Color(0.08, 0.09, 0.10, 0.86)
+	hud.add_child(status_panel)
+
 	cloudflare_status = Label.new()
-	cloudflare_status.text = "Cloudflare：連線測試中…"
-	cloudflare_status.position = Vector2(38, 124)
-	cloudflare_status.add_theme_font_size_override("font_size", 17)
-	cloudflare_status.add_theme_color_override("font_color", Color("d8d1c6"))
+	cloudflare_status.text = "CLOUDFLARE API · 連線測試中…"
+	cloudflare_status.position = Vector2(48, 137)
+	cloudflare_status.size = Vector2(624, 36)
+	cloudflare_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cloudflare_status.add_theme_font_size_override("font_size", 20)
+	cloudflare_status.add_theme_color_override("font_color", Color("f0d68c"))
 	hud.add_child(cloudflare_status)
+
+	cloudflare_test_button = Button.new()
+	cloudflare_test_button.text = "TEST CLOUDFLARE"
+	cloudflare_test_button.position = Vector2(220, 177)
+	cloudflare_test_button.size = Vector2(280, 40)
+	cloudflare_test_button.add_theme_font_size_override("font_size", 16)
+	cloudflare_test_button.pressed.connect(_on_cloudflare_test_pressed)
+	hud.add_child(cloudflare_test_button)
 
 	fight_button = Button.new()
 	fight_button.text = "FIGHT"
@@ -88,16 +105,27 @@ func _build_scene() -> void:
 	fight_button.pressed.connect(_on_fight_pressed)
 	hud.add_child(fight_button)
 
+func _on_cloudflare_test_pressed() -> void:
+	await _test_cloudflare()
+
 func _test_cloudflare() -> void:
+	cloudflare_test_button.disabled = true
+	cloudflare_status.text = "CLOUDFLARE API · 測試中…"
+	cloudflare_status.add_theme_color_override("font_color", Color("f0d68c"))
+
 	var result: Dictionary = await CloudflareClient.test_connection()
 	if bool(result.get("ok", false)):
 		var data: Dictionary = result.get("data", {})
 		var indices: Array = data.get("indices", [])
-		cloudflare_status.text = "Cloudflare：題庫連線成功（%d 題）" % indices.size()
-		cloudflare_status.add_theme_color_override("font_color", Color("b9d6b2"))
+		cloudflare_status.text = "CLOUDFLARE API · CONNECTED · 題庫 %d 題" % indices.size()
+		cloudflare_status.add_theme_color_override("font_color", Color("9ee2a4"))
+		print("Cloudflare connected: ", CloudflareClient.base_url, " / questions=", indices)
 	else:
-		cloudflare_status.text = "Cloudflare：連線失敗 · %s" % String(result.get("error", "未知錯誤"))
-		cloudflare_status.add_theme_color_override("font_color", Color("e6aaa1"))
+		cloudflare_status.text = "CLOUDFLARE API · FAILED · %s" % String(result.get("error", "未知錯誤"))
+		cloudflare_status.add_theme_color_override("font_color", Color("f1a39c"))
+		print("Cloudflare failed: ", result)
+
+	cloudflare_test_button.disabled = false
 
 func _fit_sprite(sprite: Sprite2D, max_size: Vector2, cover: bool = false) -> void:
 	var texture_size: Vector2 = sprite.texture.get_size()
