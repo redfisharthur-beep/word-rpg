@@ -1,40 +1,13 @@
 import {equipmentBonuses,petSkillEffects,petEnhanceLevel,equipmentResonance,mythicEquipmentEffects} from './rpg.js';
+import {GAME_ROLES,GAME_PETS,TITLE_TIERS as SHARED_TITLE_TIERS,CARD_POOL,CARD_DEFS,ROLE_SKILLS as SHARED_ROLE_SKILLS} from './generated/game-data.js';
 
 export const COLORS={green:'綠色',blue:'藍色',red:'紅色',yellow:'黃色',neutral:'輔助'};
 export const BASE={maxHp:500,hp:500,atk:100,def:50,crit:.10,shield:0,poison:[],armorBreak:[],atkDown:[],critLock:0,defBoost:[],healBlock:[],stun:0,regen:0,regenFresh:false,role:'warrior',pet:null,monsterId:null,rpg:null};
-const ROLE_BASE={warrior:{hp:540,atk:96,def:62},mage:{hp:470,atk:112,def:45},archer:{hp:500,atk:106,def:50}};
-const PET_BASE={fox:{hp:20,atk:8,def:2},owl:{hp:35,atk:2,def:6},dragon:{hp:25,atk:6,def:4}};
-export const TITLE_TIERS=[
-  {level:30,name:'傳說勇者',hp:.12,atk:.12,def:.12,crit:.05,label:'生命/攻擊/防禦 +12% · 爆擊 +5%'},
-  {level:20,name:'菁英勇者',hp:.08,atk:.08,def:.08,crit:.03,label:'生命/攻擊/防禦 +8% · 爆擊 +3%'},
-  {level:10,name:'覺醒勇者',hp:.05,atk:.06,def:.05,crit:.02,label:'生命 +5% · 攻擊 +6% · 防禦 +5% · 爆擊 +2%'},
-  {level:5,name:'冒險者',hp:.03,atk:.03,def:.03,crit:.01,label:'生命/攻擊/防禦 +3% · 爆擊 +1%'},
-  {level:1,name:'初行者',hp:0,atk:0,def:0,crit:0,label:'基礎能力'}
-];
+const ROLE_BASE=Object.fromEntries(Object.entries(GAME_ROLES).map(([id,x])=>[id,{hp:x.base.hp,atk:x.base.atk,def:x.base.def}]));
+const PET_BASE=Object.fromEntries(Object.entries(GAME_PETS).map(([id,x])=>[id,{hp:x.base.hp,atk:x.base.atk,def:x.base.def}]));
+export const TITLE_TIERS=SHARED_TITLE_TIERS;
+const ROLE_SKILLS=SHARED_ROLE_SKILLS;
 export function titleTier(level=1){const lv=clamp(Math.round(Number(level)||1),1,50);return TITLE_TIERS.find(x=>lv>=x.level)||TITLE_TIERS[TITLE_TIERS.length-1];}
-const ROLE_SKILLS={
-  warrior:[
-    {level:10,id:'warrior-10',name:'震嶽斬',color:'red',text:'180%重擊',fx:{damage:1.80}},
-    {level:20,id:'warrior-20',name:'不屈戰魂',color:'green',text:'回血35%＋護盾15%',fx:{healMax:.35,shieldMax:.15}},
-    {level:30,id:'warrior-30',name:'王者壁壘',color:'blue',text:'護盾55%＋防禦+30%',fx:{shieldMax:.55,defBuff:.30}},
-    {level:40,id:'warrior-40',name:'守護反擊',color:'blue',text:'155%傷害＋護盾30%',fx:{damage:1.55,shieldMax:.30}},
-    {level:50,id:'warrior-50',name:'天崩地裂',color:'red',text:'320%終極傷害',fx:{damage:3.20}}
-  ],
-  mage:[
-    {level:10,id:'mage-10',name:'炎爆術',color:'yellow',text:'185%火焰傷害',fx:{damage:1.85}},
-    {level:20,id:'mage-20',name:'奧術回復',color:'green',text:'回血45%',fx:{healMax:.45}},
-    {level:30,id:'mage-30',name:'魔法障壁',color:'blue',text:'護盾65%',fx:{shieldMax:.65}},
-    {level:40,id:'mage-40',name:'星隕術',color:'yellow',text:'240%星隕傷害',fx:{damage:2.40}},
-    {level:50,id:'mage-50',name:'終焉魔導',color:'yellow',text:'340%終極傷害',fx:{damage:3.40}}
-  ],
-  archer:[
-    {level:10,id:'archer-10',name:'雙星連射',color:'red',text:'2連擊・每擊95%',fx:{hits:[.95,.95]}},
-    {level:20,id:'archer-20',name:'回風步',color:'green',text:'105%傷害＋回血25%',fx:{damage:1.05,healMax:.25}},
-    {level:30,id:'archer-30',name:'暴雨箭陣',color:'red',text:'3連擊・每擊78%',fx:{hits:[.78,.78,.78]}},
-    {level:40,id:'archer-40',name:'風神護佑',color:'green',text:'回血35%＋護盾20%',fx:{healMax:.35,shieldMax:.20}},
-    {level:50,id:'archer-50',name:'天穹一箭',color:'red',text:'350%終極傷害',fx:{damage:3.50}}
-  ]
-};
 export function unlockedRoleSkills(role='warrior',level=1){const lv=clamp(Math.round(Number(level)||1),1,50);return (ROLE_SKILLS[role]||[]).filter(x=>lv>=x.level);}
 const clone=x=>JSON.parse(JSON.stringify(x));
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
@@ -50,29 +23,14 @@ export function progressionStats(role='warrior',pet='fox',level=1,rpg=null){
 export function makeFighter(extra={}){return {...clone(BASE),...extra};}
 export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(actor?.pet==='owl'){const fx=petSkillEffects(actor.pet,actor.rpg||{}),highBonus=n>=3?(fx?.highAccuracy||0):0;if(n===5)return 1.7+highBonus;if(n===4)return 1.5+highBonus;if(n===3)return 1.32+highBonus;if(n===2)return 1.15;if(n===1)return .9;return .65;}if(n===5)return 1.5;if(n===4)return 1.32;if(n===3)return 1.15;if(n===2)return .9;if(n===1)return .65;return 0;}
 export function randomCard(){
-  const pool=['stat','stat','stat','combo','desperate','poison','break','sun','preempt','regen','sacrifice','restore','diamond','aegis','boost'];
-  const id=pool[rnd(0,pool.length-1)];
+  const id=CARD_POOL[rnd(0,CARD_POOL.length-1)];
   if(id==='stat'){
     const keys=[['hp','氣血充盈','green'],['def','罡氣護體','blue'],['atk','戰意沸騰','red'],['crit','破綻洞悉','yellow']];
     const [stat,name,color]=keys[rnd(0,keys.length-1)],pct=stat==='crit'?rnd(1,3)*10:rnd(2,6)*10;
     return {uid:crypto.randomUUID(),id:`stat-${stat}`,kind:'stat',stat,name,text:stat==='crit'?`爆擊率提升 ${pct}%`:`增加 ${pct}%`,pct,color};
   }
-  const defs={
-    combo:['瞬步連擊','red','連續攻擊 3 次，每次 50% 攻擊力'],
-    desperate:['破釜沉舟','blue','造成 200% 傷害，自身防禦下降 50%'],
-    poison:['淬毒之刃','yellow','70% 傷害，附加 30% 攻擊力毒素 3 回合'],
-    break:['破甲一擊','red','70% 傷害，對手防禦降低 30% 2 回合'],
-    sun:['熾陽閃','yellow','80% 火焰傷害，對手 2 回合無法爆擊'],
-    preempt:['制敵機先','red','90% 傷害，對手攻擊降低 30% 2 回合'],
-    regen:['生生不息','green','先回血，再於之後每次行動持續回血'],
-    sacrifice:['玉石俱焚','yellow','300% 傷害，自身失去目前 80% 生命'],
-    restore:['返本歸元','green','恢復最大生命 80%，溢出轉護盾'],
-    diamond:['金剛不壞','blue','防禦增加 200%，持續 2 回合'],
-    aegis:['混元護體','blue','增加 100% 攻擊力護盾直到戰鬥結束'],
-    boost:['神功附體','neutral','強化下一張卡，並立即獲得護盾']
-  };
-  const [name,color,text]=defs[id];
-  return {uid:crypto.randomUUID(),id,kind:id==='boost'?'support':'skill',name,text,color,boost:id==='boost'?rnd(3,8)*10:0};
+  const def=CARD_DEFS[id]||{name:id,color:'neutral',text:''};
+  return {uid:crypto.randomUUID(),id,kind:id==='boost'?'support':'skill',name:def.name,text:def.text,color:def.color,boost:id==='boost'?rnd(3,8)*10:0};
 }
 export function dealHand(n=9,role=null,level=1){
   const lv=clamp(Math.round(Number(level)||1),1,50),skills=role?unlockedRoleSkills(role,lv):[];
@@ -217,5 +175,12 @@ function basicAttack(actor,target,mult,logs,label){
 }
 export function resolveBasic(actor,target,correct){const logs=[];if(consumeStun(actor,logs))return logs;const power=accuracyMultiplier(correct,actor);if(power<=0){logs.push('失敗..凍結中');return logs;}basicAttack(actor,target,power,logs,'基本攻擊');return logs;}
 export function resolveAutoBasic(actor,target){const logs=[];if(consumeStun(actor,logs))return logs;basicAttack(actor,target,1,logs,'普通攻擊');return logs;}
+export function resolveUltimate(actor,target,role=actor?.role){
+  const logs=[];if(consumeStun(actor,logs))return logs;
+  const ultimate=GAME_ROLES[role]?.ultimate||GAME_ROLES.warrior.ultimate;
+  if(Array.isArray(ultimate.hits)){for(const mult of ultimate.hits){if(target.hp<=0)break;hit(actor,target,mult,logs,ultimate.name,true);}}
+  else hit(actor,target,Number(ultimate.mult)||2.8,logs,ultimate.name,true);
+  return logs;
+}
 export function cardSummary(card){if(!card)return '';if(card.kind==='stat')return `${card.name} ${card.pct}%`;if(card.id==='boost')return `${card.name} ${card.boost}%`;return card.name;}
 export function cloneFighter(f){return clone(f);}
