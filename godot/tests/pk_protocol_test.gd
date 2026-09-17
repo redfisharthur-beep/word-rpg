@@ -1,10 +1,10 @@
-extends SceneTree
+extends Node
 
 const Harness = preload("res://godot/tests/pk_protocol_harness.gd")
 
 var failures: Array[String] = []
 
-func _init() -> void:
+func _ready() -> void:
 	_run()
 
 func _check(condition: bool, message: String) -> void:
@@ -13,7 +13,7 @@ func _check(condition: bool, message: String) -> void:
 
 func _fatal(message: String) -> void:
 	push_error(message)
-	quit(1)
+	get_tree().quit(1)
 
 func _fighter(name: String, role: String, hp: int = 500) -> Dictionary:
 	return {
@@ -33,11 +33,17 @@ func _hand() -> Array:
 	return out
 
 func _run() -> void:
+	print("PKTEST: autoloads ready = %s / %s" % [get_node_or_null("/root/CloudflareClient") != null, get_node_or_null("/root/GameState") != null])
+	if get_node_or_null("/root/CloudflareClient") == null or get_node_or_null("/root/GameState") == null:
+		_fatal("PK protocol scene requires project autoloads")
+		return
+
 	print("PKTEST: create harness")
 	var pk = Harness.new()
 	if pk == null or not pk.has_method("_handle_message"):
 		_fatal("PK harness could not instantiate native handler")
 		return
+	add_child(pk)
 	var bank: Variant = pk.get("word_bank")
 	if bank == null or not bank.has_method("load_from_web_source"):
 		_fatal("PK harness word bank unavailable")
@@ -118,12 +124,12 @@ func _run() -> void:
 	_check(String(pk.get("status")) == "closed", "error should close PK state")
 	_check(String(pk.get("last_status_text")) == "fixture error", "server error message should be shown")
 
-	pk.free()
+	pk.queue_free()
 	if failures.is_empty():
 		print("Godot PK protocol tests: PASS")
-		quit(0)
+		get_tree().quit(0)
 	else:
 		for message: String in failures:
 			push_error(message)
 		print("Godot PK protocol tests: FAIL (%d)" % failures.size())
-		quit(1)
+		get_tree().quit(1)
