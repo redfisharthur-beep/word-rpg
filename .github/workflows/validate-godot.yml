@@ -11,6 +11,10 @@ on:
       - 'images/**'
       - 'data/game-data.json'
 
+concurrency:
+  group: validate-godot-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   godot-check:
     runs-on: ubuntu-latest
