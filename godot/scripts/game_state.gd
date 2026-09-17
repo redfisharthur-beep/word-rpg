@@ -27,6 +27,13 @@ func _ensure_rpg() -> void:
 		rpg = {}
 	if not rpg.has("petEnhance") or not rpg["petEnhance"] is Dictionary:
 		rpg["petEnhance"] = {"fox":0,"owl":0,"dragon":0}
+	if not rpg.has("petSkills") or not rpg["petSkills"] is Dictionary:
+		rpg["petSkills"] = {"fox":[],"owl":[],"dragon":[]}
+	var pet_skills: Dictionary = rpg["petSkills"]
+	for pet_id: String in ["fox","owl","dragon"]:
+		if not pet_skills.has(pet_id) or not pet_skills[pet_id] is Array:
+			pet_skills[pet_id] = []
+	rpg["petSkills"] = pet_skills
 	if not rpg.has("collection") or not rpg["collection"] is Array:
 		rpg["collection"] = []
 	if not rpg.has("weakWords") or not rpg["weakWords"] is Dictionary:
@@ -92,6 +99,15 @@ func select_pet(value: String) -> void:
 func crystals() -> int:
 	_ensure_rpg()
 	return maxi(0, int(rpg.get("crystals", 0)))
+
+func grant_crystals(amount: int, persist: bool = true) -> int:
+	var gained := maxi(0, amount)
+	if gained <= 0:
+		return 0
+	rpg["crystals"] = crystals() + gained
+	if persist:
+		_persist_and_sync()
+	return gained
 
 func pet_enhance_level(pet_id: String) -> int:
 	_ensure_rpg()
@@ -223,6 +239,18 @@ func crystallize_item(item_id: String) -> int:
 	_persist_and_sync()
 	return gain
 
+func apply_synthesis(result: Dictionary) -> bool:
+	if not bool(result.get("ok", false)):
+		return false
+	var remaining: Variant = result.get("remaining", [])
+	var made: Variant = result.get("item", {})
+	if not remaining is Array or not made is Dictionary or (made as Dictionary).is_empty():
+		return false
+	_copy_inventory(remaining)
+	_register_loot(made as Dictionary)
+	_persist_and_sync()
+	return true
+
 func equipment_bonuses() -> Dictionary:
 	var hp_pct := 0.0
 	var atk_pct := 0.0
@@ -322,7 +350,7 @@ func unlock_next_stage(cleared_stage: int) -> void:
 	unlocked_stage = maxi(unlocked_stage, mini(maxi(0, GameData.STAGES.size() - 1), cleared_stage + 1))
 	_persist_and_sync()
 
-func add_loot(item: Dictionary) -> void:
+func _register_loot(item: Dictionary) -> void:
 	if item.is_empty():
 		return
 	_ensure_rpg()
@@ -338,6 +366,9 @@ func add_loot(item: Dictionary) -> void:
 		if not collection.has(key):
 			collection.append(key)
 		rpg["collection"] = collection
+
+func add_loot(item: Dictionary) -> void:
+	_register_loot(item)
 	_persist_and_sync()
 
 func refresh_cloudflare_session() -> bool:
