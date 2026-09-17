@@ -20,12 +20,26 @@ var line_profile: Dictionary = {}
 func _ready() -> void:
 	load_local()
 
+func _ensure_rpg() -> void:
+	if not rpg is Dictionary:
+		rpg = {}
+	if not rpg.has("petEnhance") or not rpg["petEnhance"] is Dictionary:
+		rpg["petEnhance"] = {"fox":0,"owl":0,"dragon":0}
+	if not rpg.has("collection") or not rpg["collection"] is Array:
+		rpg["collection"] = []
+	if not rpg.has("weakWords") or not rpg["weakWords"] is Dictionary:
+		rpg["weakWords"] = {}
+	if not rpg.has("towerBest"):
+		rpg["towerBest"] = 0
+
 func load_local() -> void:
 	if not FileAccess.file_exists(SAVE_PATH):
+		_ensure_rpg()
 		return
 	var text: String = FileAccess.get_file_as_string(SAVE_PATH)
 	var parsed: Variant = JSON.parse_string(text)
 	if not parsed is Dictionary:
+		_ensure_rpg()
 		return
 	var data: Dictionary = parsed
 	player_name = String(data.get("player_name", player_name)).left(16)
@@ -36,12 +50,11 @@ func load_local() -> void:
 	unlocked_stage = clampi(int(data.get("unlocked_stage", unlocked_stage)), 0, maxi(0, GameData.STAGES.size() - 1))
 	_copy_inventory(data.get("inventory", []))
 	var raw_rpg: Variant = data.get("rpg", {})
-	if raw_rpg is Dictionary:
-		rpg = raw_rpg.duplicate(true)
-	else:
-		rpg = {}
+	rpg = raw_rpg.duplicate(true) if raw_rpg is Dictionary else {}
+	_ensure_rpg()
 
 func save_local() -> void:
+	_ensure_rpg()
 	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		return
@@ -58,20 +71,88 @@ func select_pet(value: String) -> void:
 	state_changed.emit()
 
 func pet_enhance_level(pet_id: String) -> int:
-	var raw: Variant = rpg.get("petEnhance", {})
-	if not raw is Dictionary:
-		return 0
-	return clampi(int((raw as Dictionary).get(pet_id, 0)), 0, 4)
+	_ensure_rpg()
+	return clampi(int((rpg["petEnhance"] as Dictionary).get(pet_id, 0)), 0, 4)
 
 func pet_is_awakened(pet_id: String) -> bool:
 	return pet_enhance_level(pet_id) >= 4
 
+func pet_display_data(pet_id: String) -> Dictionary:
+	var base: Dictionary = (GameData.PETS.get(pet_id, GameData.PETS["fox"]) as Dictionary).duplicate(true)
+	if not pet_is_awakened(pet_id):
+		return base
+	var awakening: Dictionary = base.get("awakening", {})
+	if not awakening.is_empty():
+		base["name"] = String(awakening.get("name", base.get("name", pet_id)))
+		var art := String(awakening.get("art", ""))
+		if not art.is_empty() and ResourceLoader.exists(art):
+			base["art"] = art
+	base["awakened"] = true
+	return base
+
 func collection_count() -> int:
-	var raw: Variant = rpg.get("collection", [])
-	return raw.size() if raw is Array else 0
+	_ensure_rpg()
+	return (rpg["collection"] as Array).size()
+
+func collection_unlocks() -> Dictionary:
+	var owned := collection_count()
+	return {"frame":owned >= 10,"background":owned >= 20,"title":owned >= 30}
 
 func tower_best() -> int:
+	_ensure_rpg()
 	return clampi(int(rpg.get("towerBest", 0)), 0, 20)
+
+func record_tower_floor(floor: int) -> void:
+	_ensure_rpg()
+	var best := maxi(tower_best(), clampi(floor, 0, 20))
+	if best == tower_best():
+		return
+	rpg["towerBest"] = best
+	save_local()
+	state_changed.emit()
+	if authenticated:
+		void sync_cloudflare_progress()
+
+func weak_words() -> Array[Dictionary]:
+	_ensure_rpg()
+	var out: Array[Dictionary] = []
+	var raw: Dictionary = rpg["weakWords"]
+	for key: Variant in raw.keys():
+		var value: Variant = raw[key]
+		if value is Dictionary:
+			var item: Dictionary = (value as Dictionary).duplicate(true)
+			item["index"] = int(item.get("index", int(String(key))))
+			out.append(item)
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var am := int(a.get("misses", 0))
+		var bm := int(b.get("misses", 0))
+		if am == bm:
+			return int(a.get("lastWrong", 0)) > int(b.get("lastWrong", 0))
+		return am > bm
+	)
+	return out
+
+func record_word_result(question: Dictionary, correct: bool) -> void:
+	_ensure_rpg()
+	var index := int(question.get("index", -1))
+	if index < 0:
+		return
+	var key := str(index)
+	var store: Dictionary = rpg["weakWords"]
+	var old: Dictionary = (store.get(key, {}) as Dictionary).duplicate(true)
+	if correct:
+		if old.is_empty():
+			return
+		var streak := int(old.get("streak", 0)) + 1
+		if streak >= 3:
+			store.erase(key)
+		else:
+			old["streak"] = streak
+			store[key] = old
+	else:
+		store[key] = {"index":index,"word":String(question.get("word", "")),"answer":String(question.get("answer", "")),"streak":0,"misses":int(old.get("misses", 0)) + 1,"lastWrong":Time.get_unix_time_from_system()}
+	rpg["weakWords"] = store
+	save_local()
 
 func add_xp(amount: int) -> Dictionary:
 	var gained: int = maxi(0, amount)
@@ -126,6 +207,7 @@ func refresh_cloudflare_session() -> bool:
 		if server_rpg is Dictionary:
 			rpg = server_rpg.duplicate(true)
 			_copy_inventory(rpg.get("inventory", []))
+		_ensure_rpg()
 		save_local()
 		state_changed.emit()
 	cloud_sync_changed.emit(authenticated)
@@ -134,6 +216,7 @@ func refresh_cloudflare_session() -> bool:
 func sync_cloudflare_progress() -> bool:
 	if not authenticated:
 		return false
+	_ensure_rpg()
 	var next_rpg: Dictionary = rpg.duplicate(true)
 	next_rpg["inventory"] = inventory.duplicate(true)
 	var result: Dictionary = await CloudflareClient.save_progress({"role":role,"pet":pet,"level":level,"xp":xp,"rpg":next_rpg})
