@@ -17,6 +17,17 @@ func configure(url: String) -> void:
 func has_base_url() -> bool:
 	return not base_url.is_empty()
 
+func is_web_runtime() -> bool:
+	return OS.has_feature("web")
+
+func begin_line_login() -> bool:
+	# LINE OAuth must happen in the browser so the session cookie is written on
+	# the same Cloudflare origin that serves the Godot Web export.
+	if not is_web_runtime():
+		return false
+	JavaScriptBridge.eval("window.location.assign('/auth/line')", true)
+	return true
+
 func get_session() -> Dictionary:
 	return await _request_json("/api/session", HTTPClient.METHOD_GET)
 
