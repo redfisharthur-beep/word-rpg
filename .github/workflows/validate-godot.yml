@@ -30,7 +30,7 @@ jobs:
       - name: Run Godot RPG parity tests
         run: godot --headless --path . --script res://godot/tests/rpg_parity_test.gd
       - name: Run native PK protocol tests
-        run: timeout 20s godot --headless --path . --script res://godot/tests/pk_protocol_test.gd
+        run: timeout 20s godot --headless --path . res://godot/tests/pk_protocol_test.tscn
       - name: Export production Web build
         run: |
           mkdir -p build/web
