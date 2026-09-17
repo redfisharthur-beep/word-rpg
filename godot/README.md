@@ -1,10 +1,10 @@
 # Word RPG — Godot + Cloudflare
 
-這個目錄是 `word-rpg` 的 Godot 正式遊戲層。Web 版仍保留做正式站與相容層，Godot 負責主要遊戲畫面、戰鬥演出與原生互動；Cloudflare Worker / Durable Objects 繼續負責 LINE 帳號、題庫、跨裝置資料與多人 PK。
+這個目錄是 `word-rpg` 的 Godot 正式遊戲層。Web 版目前仍保留做正式站與相容層，Godot 負責主要遊戲畫面、戰鬥演出與原生互動；Cloudflare Worker / Durable Objects 負責 LINE 帳號、題庫、跨裝置資料與多人 PK。
 
 ## 正式架構
 
-- `project.godot`：Godot 專案入口。
+- `project.godot`：Godot 專案入口；正式 `GameState` 使用 revision-aware 雲端同步層。
 - `godot/scenes/game.tscn`：正式主場景。
 - `godot/scripts/game_runtime.gd`：正式玩家 UI（六功能首頁、寵物、裝備）。
 - `godot/scripts/game_v3.gd`：冒險、試煉、圖鑑、掉寶與戰鬥流程 UI。
@@ -15,10 +15,14 @@
 - `godot/scripts/inventory_runtime.gd`：裝備三合一合成規則。
 - `godot/scripts/reward_runtime.gd`：冒險／試煉 EXP、結晶、一般與神話掉寶規則。
 - `godot/scripts/battle_fx.gd`：act1/act2、受擊、Hit-stop、擊退、震動與戰鬥特效。
-- `godot/scripts/game_state.gd`：本機存檔、裝備、結晶、寵物強化、弱點字、LINE/Cloudflare 同步。
-- `godot/scripts/cloudflare_client.gd`：Cloudflare HTTP API。
+- `godot/scripts/game_state.gd`：本機角色／裝備／結晶／寵物／弱點字存檔核心。
+- `godot/scripts/game_state_revision.gd`：雲端 revision、409 衝突保護與重啟後持續保護。
+- `godot/scripts/cloud_sync_notice.gd`：雲端衝突時的持續提示層。
+- `godot/scripts/cloudflare_client.gd`：Cloudflare HTTP API 與 Godot Web LINE Login 導向。
 - `godot/scenes/pk.tscn` + `godot/scripts/pk_native.gd`：Godot 原生 WebSocket PK。
 - `godot/tests/rpg_parity_test.gd`：Web ↔ Godot RPG 固定數值 parity 測試。
+- `godot/tests/pk_protocol_test.tscn`：正式 PK Server message 狀態機 fixture。
+- `worker/entry.js` + `worker/progress-revision.js`：revision-aware `/api/session`、`/api/progress` 與 Durable Object 進度版本控制。
 - `data/game-data.json`：Web / Worker / Godot 共用遊戲資料來源。
 - `images/`、`audio/`：直接共用既有素材，不複製第二套。
 
@@ -46,20 +50,30 @@
 - 寵物結晶強化 Lv.0～4，Lv.4 覺醒；專屬覺醒圖缺少時使用原圖＋光環 fallback。
 - 每隻寵物 5 節點技能樹，技能點與效果會實際進戰鬥。
 - 圖鑑收藏與 10／20／30 件收藏外觀獎勵。
-- 本機持久化存檔與 LINE/Cloudflare `/api/session`、`/api/progress` 同步。
-- Godot 原生 PK：WebSocket `/match` 配對、9 選 3、60 秒選牌、5 題×10 秒、伺服器驗證答案／時間、Server steps 播放、勝負與賽季分數。
+- LINE Login Web 流程：Godot Web 按 LINE → `/auth/line` → callback → `/api/session` 自動恢復登入。
+- Godot 原生 PK：WebSocket `/match` 配對、9 選 3、60 秒選牌、5 題×10 秒、Server 驗證答案／時間、Server steps 播放、勝負與賽季分數。
+- PK protocol fixture：queued、matched、quiz-started、waiting、battle-result、finished、opponent-left、error。
 - RPG parity 自動測試：寵物技能／覺醒、三套共鳴、神話能力、三合一合成、冒險與試煉獎勵固定值。
+- 雲端進度 revision：Server 與 Godot client 使用 `baseRevision`；版本衝突回 409，本機進度保留且停止自動同步。
+- 雲端衝突狀態會寫入 `user://word_rpg_cloud_meta.json`，重啟後仍不會被 Server 舊／不同版本自動覆蓋。
+- Godot Web 紋理匯入使用 Lossy 0.85、最大 2048；不修改原始 PNG。
+- Web Export `index.pck` 已由約 186 MB 降至約 53 MB；CI 設 70 MiB 上限避免未來素材膨脹。
+- 每次成功 Godot CI 會產生 7 天有效的 `word-rpg-godot-web-<sha>` Web build artifact。
+- `main → godot-migration` 自動同步遇到 conflict 會停止，不會再偏向 `main` 自動覆蓋 Godot 專屬檔。
 
 ## 驗證
 
-GitHub Actions `Validate Godot` 會執行：
+GitHub Actions `Validate Godot` 目前會依序執行：
 
 1. Godot 4.7 Headless 匯入全部腳本／圖片／JSON。
-2. 執行 `godot/tests/rpg_parity_test.gd`，檢查 Web ↔ Godot RPG 固定規則。
-3. 啟動正式 `game.tscn` 主場景 smoke test。
-4. 啟動原生 `pk.tscn` PK 場景 smoke test。
+2. 執行 RPG parity 測試。
+3. 執行原生 PK protocol fixture。
+4. 真正輸出 production Web build，檢查 `index.html`、`index.wasm`、`index.pck`，並要求 PCK ≤ 70 MiB。
+5. 上傳 7 天有效的測試 Web build artifact。
+6. 啟動正式 `game.tscn` 主場景 smoke test。
+7. 啟動原生 `pk.tscn` PK 場景 smoke test。
 
-`Validate Word RPG` 另外會驗證共用資料同步、Web/Worker 語法、PK、題庫與既有 RPG 測試。
+`Validate Word RPG` 另外會驗證共用資料同步、Web/Worker 語法、revision conflict 規則、PK、題庫與既有 RPG 測試。
 
 ## 開啟方式
 
@@ -71,8 +85,8 @@ GitHub Actions `Validate Godot` 會執行：
 
 ## 後續仍要完成
 
-- LINE Login 在 Godot Web Export 的完整登入／callback 體驗。
-- Godot Web Export + Cloudflare 正式部署流程。
-- 原生 PK protocol parser 與雙 client 自動整合測試。
-- 雲端／本機進度版本化與衝突合併，避免較舊 Server 進度覆蓋較新的本機進度。
+- 正式 Web client `game-core.js` 也改成 strict `baseRevision` writer；目前 Server 對舊 Web client 保留向後相容寫入。
+- 原生 PK 雙 client／真 WebSocket 自動整合測試；目前已完成單 client protocol fixture 與 PK scene smoke test。
+- Godot Web build 的 Cloudflare 預覽／正式切換流程；目前正式 `/` 仍由既有 Web 版提供，不會直接覆蓋。
+- 雲端進度衝突的人工解決介面（選擇使用本機或 Server）；目前安全策略是保留本機並暫停同步，不自動決定。
 - 覺醒寵物專屬圖片：`pet-fox-awakened.png`、`pet-owl-awakened.png`、`pet-dragon-awakened.png`（補圖後程式會自動替換）。
