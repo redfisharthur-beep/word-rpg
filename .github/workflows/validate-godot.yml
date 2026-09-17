@@ -7,6 +7,7 @@ on:
     paths:
       - 'godot/**'
       - 'project.godot'
+      - 'export_presets.cfg'
       - 'images/**'
       - 'data/game-data.json'
 
@@ -19,13 +20,20 @@ jobs:
         with:
           version: '4.7.0'
           use-dotnet: false
-          include-templates: false
+          include-templates: true
       - name: Import project and validate scripts
         run: godot --headless --path . --editor --quit
       - name: Run Godot RPG parity tests
         run: godot --headless --path . --script res://godot/tests/rpg_parity_test.gd
       - name: Run native PK protocol tests
         run: godot --headless --path . --script res://godot/tests/pk_protocol_test.gd
+      - name: Export production Web build
+        run: |
+          mkdir -p build/web
+          godot --headless --path . --export-release Web build/web/index.html
+          test -s build/web/index.html
+          test -s build/web/index.wasm
+          test -s build/web/index.pck
       - name: Launch main scene smoke test
         run: godot --headless --path . --quit-after 3
       - name: Launch native PK scene smoke test
