@@ -1,14 +1,19 @@
 import {COLLECTION_REWARDS,SEASON_TIERS,TOWER_RULES} from './generated/game-data.js';
 
 const WEAKNESS_KEY='word-rpg-weakness-v1';
+const WEAKNESS_RECENT_KEY='word-rpg-weakness-recent-v1';
+const WEAKNESS_RECENT_MS=24*60*60*1000;
 const SEASON_KEY='word-rpg-season-v1';
 const dayKey=()=>new Date(Date.now()+8*60*60*1000).toISOString().slice(0,10);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function load(key,fallback){try{return {...fallback,...JSON.parse(localStorage.getItem(key)||'{}')}}catch{return {...fallback}}}
 function save(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{}}
+function recentWeaknessState(){const now=Date.now(),raw=load(WEAKNESS_RECENT_KEY,{items:{}}),items=raw.items&&typeof raw.items==='object'?raw.items:{};for(const [key,item] of Object.entries(items)){const at=Number(item?.at)||0;if(!at||now-at>WEAKNESS_RECENT_MS)delete items[key]}save(WEAKNESS_RECENT_KEY,{items});return {items}}
+function rememberRecentWeakness(question){if(!question||!Number.isInteger(question.wordIndex))return;const state=recentWeaknessState(),key=String(question.wordIndex);state.items[key]={index:question.wordIndex,word:question.word||'',answer:question.answer||'',at:Date.now()};save(WEAKNESS_RECENT_KEY,state)}
+export function recentWeaknessSummary(limit=24){return Object.values(recentWeaknessState().items).sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0)).slice(0,Math.max(0,limit))}
 
 export function weaknessState(){const raw=load(WEAKNESS_KEY,{items:{}}),items=raw.items&&typeof raw.items==='object'?raw.items:{};return {items};}
-export function recordQuestionResult(question,correct){if(!question||!Number.isInteger(question.wordIndex))return;const state=weaknessState(),key=String(question.wordIndex),old=state.items[key]||{index:question.wordIndex,word:question.word||'',answer:question.answer||'',wrong:0,streak:0,lastWrong:'',lastSeen:''};old.word=question.word||old.word;old.answer=question.answer||old.answer;old.lastSeen=dayKey();if(correct){old.streak=(old.streak||0)+1;if(old.streak>=3)delete state.items[key];else state.items[key]=old}else{old.wrong=(old.wrong||0)+1;old.streak=0;old.lastWrong=dayKey();state.items[key]=old}save(WEAKNESS_KEY,state)}
+export function recordQuestionResult(question,correct){if(!question||!Number.isInteger(question.wordIndex))return;const state=weaknessState(),key=String(question.wordIndex),old=state.items[key]||{index:question.wordIndex,word:question.word||'',answer:question.answer||'',wrong:0,streak:0,lastWrong:'',lastSeen:''};old.word=question.word||old.word;old.answer=question.answer||old.answer;old.lastSeen=dayKey();if(correct){old.streak=(old.streak||0)+1;if(old.streak>=3)delete state.items[key];else state.items[key]=old}else{old.wrong=(old.wrong||0)+1;old.streak=0;old.lastWrong=dayKey();state.items[key]=old;rememberRecentWeakness(question)}save(WEAKNESS_KEY,state)}
 export function weaknessCandidates(limit=2){const today=dayKey(),items=Object.values(weaknessState().items).filter(x=>x.lastWrong&&x.lastWrong<today);items.sort((a,b)=>(b.wrong-a.wrong)||String(a.lastSeen).localeCompare(String(b.lastSeen)));return items.slice(0,Math.max(0,limit)).map(x=>x.index).filter(Number.isInteger)}
 export function weaknessSummary(limit=8){return Object.values(weaknessState().items).sort((a,b)=>(b.wrong-a.wrong)||(a.streak-b.streak)).slice(0,limit)}
 

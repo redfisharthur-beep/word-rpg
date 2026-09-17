@@ -43,7 +43,8 @@ function effect(target,kind='slash'){
 function targetOffset(actor,target){
   const a=actor?.getBoundingClientRect(),t=target?.getBoundingClientRect();
   if(!a||!t)return 0;
-  return Math.round((t.left+t.width/2)-(a.left+a.width/2));
+  const ac=a.left+a.width/2,tc=t.left+t.width/2,overlap=Math.min(26,Math.max(14,t.width*.08));
+  return tc>=ac?Math.round(t.left-a.right+overlap):Math.round(t.right-a.left-overlap);
 }
 function clearAttackPose(actor){
   if(!actor)return;
@@ -63,27 +64,30 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
   const logs=step.logs||[],critical=logs.some(x=>String(x).includes('爆擊')),supportive=logs.some(x=>/回血|護盾|回復|防禦|治療/.test(String(x)))&&!logs.some(x=>/攻擊|傷害|重擊|連擊/.test(String(x)));
   const delta=impactValue(step,previous),frames=step.who==='player'?roleFrames(role):null,original=actorImg?.getAttribute('src')||'';
   const framedAttack=!supportive&&actorImg&&frames?.[0]&&frames?.[1];
+  const warriorRush=framedAttack&&step.who==='player'&&role==='warrior';
 
   if(framedAttack){
     clearAttackPose(actor);
     addClass(actor,'fx-windup');
-    await sleep(Math.min(180,duration*.12));if(token!==seq)return;
+    await sleep(160);if(token!==seq)return;
     removeClass(actor,'fx-windup');
 
-    actor.style.setProperty('--fx-target-x',`${targetOffset(actor,target)}px`);
-    addClass(actor,'fx-approach');
-    await sleep(Math.min(240,duration*.16));if(token!==seq)return;
+    if(warriorRush){
+      actor.style.setProperty('--fx-target-x',`${targetOffset(actor,target)}px`);
+      addClass(actor,'fx-approach');
+      await sleep(240);if(token!==seq)return;
+    }
 
     actorImg.src=frames[0];
     addClass(actor,'fx-strike-1');
     playSfx('swing');
-    await sleep(Math.min(240,duration*.16));if(token!==seq)return;
+    await sleep(800);if(token!==seq)return;
 
     removeClass(actor,'fx-strike-1');
     actorImg.src=frames[1];
     addClass(actor,'fx-strike-2');
     playSfx('swing');
-    await sleep(Math.min(240,duration*.16));if(token!==seq)return;
+    await sleep(800);if(token!==seq)return;
 
     effect(target,critical?'crit':'slash');
     flash(target,critical);
@@ -94,11 +98,15 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
     playSfx(critical?'crit':'hit');
     if(delta.damage)popNumber(target,`-${delta.damage}`,critical);
 
-    await sleep(Math.max(120,duration-1040));if(token!==seq)return;
+    await sleep(120);if(token!==seq)return;
     removeClass(actor,'fx-strike-2');
-    removeClass(actor,'fx-approach');
-    addClass(actor,'fx-return');
-    await sleep(Math.min(240,duration*.16));if(token!==seq)return;
+
+    if(warriorRush){
+      removeClass(actor,'fx-approach');
+      addClass(actor,'fx-return');
+      await sleep(240);if(token!==seq)return;
+    }
+
     clearAttackPose(actor);
     if(actorImg&&original)actorImg.src=original;
     return;
