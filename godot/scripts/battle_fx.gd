@@ -28,6 +28,23 @@ func _stop_idle(sprite: Sprite2D) -> void:
 		tween.kill()
 	_idle_tweens.erase(sprite)
 
+func _role_id(sprite: Sprite2D) -> String:
+	if sprite == null or sprite.texture == null:
+		return ""
+	var path := String(sprite.texture.resource_path).to_lower()
+	for id: String in ["warrior", "mage", "archer"]:
+		if path.contains("/%s.png" % id) or path.contains("/%s-act" % id):
+			return id
+	return ""
+
+func _action_texture(role_id: String, frame: int) -> Texture2D:
+	if role_id.is_empty():
+		return null
+	var path := "res://images/%s-act%d.png" % [role_id, frame]
+	if not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D
+
 func play_card(attacker: Sprite2D, defender: Sprite2D, camera: Camera2D, card: Dictionary, damage: int) -> void:
 	if not is_instance_valid(attacker) or not is_instance_valid(defender):
 		return
@@ -35,6 +52,7 @@ func play_card(attacker: Sprite2D, defender: Sprite2D, camera: Camera2D, card: D
 	var color_name: String = String(card.get("color", "neutral"))
 	var supportive: bool = damage <= 0 or ["regen", "restore", "diamond", "aegis", "boost"].has(id) or id.begins_with("stat-")
 	if supportive:
+		_sfx("support")
 		var heal_like: bool = color_name == "green" or id == "regen" or id == "restore" or id == "stat-hp"
 		await _support_sequence(attacker, HEAL_TEXTURE if heal_like else GUARD_TEXTURE, color_name)
 		return
@@ -42,8 +60,8 @@ func play_card(attacker: Sprite2D, defender: Sprite2D, camera: Camera2D, card: D
 	if id == "combo": hits = 3
 	if id.begins_with("archer-10"): hits = 2
 	if id.begins_with("archer-30"): hits = 3
-	var heavy: bool = id == "sacrifice" or id.ends_with("-50") or damage >= 300
-	await _offensive_sequence(attacker, defender, camera, hits, maxi(1, damage), color_name, heavy)
+	var critical: bool = bool(card.get("critical", false)) or id == "sacrifice" or id.ends_with("-50") or damage >= 300
+	await _offensive_sequence(attacker, defender, camera, hits, maxi(1, damage), color_name, critical)
 
 func play_enemy_attack(attacker: Sprite2D, defender: Sprite2D, camera: Camera2D) -> void:
 	if not is_instance_valid(attacker) or not is_instance_valid(defender):
@@ -52,21 +70,23 @@ func play_enemy_attack(attacker: Sprite2D, defender: Sprite2D, camera: Camera2D)
 	var defender_origin: Vector2 = defender.position
 	var direction: float = 1.0 if defender_origin.x > attacker_origin.x else -1.0
 	_stop_idle(attacker)
+	_sfx("swing")
 	var windup: Tween = create_tween()
 	windup.set_trans(Tween.TRANS_QUAD)
 	windup.set_ease(Tween.EASE_OUT)
-	windup.tween_property(attacker, "position", attacker_origin + Vector2(-20.0 * direction, 5.0), 0.08)
+	windup.tween_property(attacker, "position", attacker_origin + Vector2(-20.0 * direction, 5.0), 0.10)
 	await windup.finished
 	_spawn_afterimage(attacker, attacker.position, 0.26, Color(0.72, 0.82, 1.0, 1.0))
 	var dash: Tween = create_tween()
 	dash.set_trans(Tween.TRANS_EXPO)
 	dash.set_ease(Tween.EASE_OUT)
-	dash.tween_property(attacker, "position", defender_origin + Vector2(-130.0 * direction, 24.0), 0.14)
+	dash.tween_property(attacker, "position", defender_origin + Vector2(-130.0 * direction, 24.0), 0.16)
 	await dash.finished
+	_sfx("hit")
 	_spawn_effect(SLASH_TEXTURE, defender_origin, Color(0.72, 0.82, 1.0, 1.0), -0.28 * direction, 230.0)
 	_spawn_damage(defender_origin, "HIT", false, Color(0.88, 0.94, 1.0))
 	await _hit_reaction(defender, defender_origin, 22.0 * direction)
-	await _shake_camera(camera, 7.0, 0.11)
+	await _shake_camera(camera, 7.0, 0.12)
 	var recover: Tween = create_tween()
 	recover.set_trans(Tween.TRANS_QUAD)
 	recover.set_ease(Tween.EASE_OUT)
@@ -74,59 +94,74 @@ func play_enemy_attack(attacker: Sprite2D, defender: Sprite2D, camera: Camera2D)
 	await recover.finished
 	start_idle(attacker, 0.84)
 
-func play_combo(player: Sprite2D, enemy: Sprite2D, camera: Camera2D) -> void:
-	await _offensive_sequence(player, enemy, camera, 3, 312, "red", true)
+func play_ultimate(attacker: Sprite2D, defender: Sprite2D, camera: Camera2D, role_id: String, damage: int) -> void:
+	_sfx("ultimate")
+	var card := {"id": "%s-ultimate" % role_id, "color": "yellow", "critical": true}
+	await play_card(attacker, defender, camera, card, maxi(1, damage))
 
-func _offensive_sequence(attacker: Sprite2D, defender: Sprite2D, camera: Camera2D, hits: int, total_damage: int, color_name: String, heavy: bool) -> void:
+func _offensive_sequence(attacker: Sprite2D, defender: Sprite2D, camera: Camera2D, hits: int, total_damage: int, color_name: String, critical: bool) -> void:
 	var attacker_origin: Vector2 = attacker.position
 	var defender_origin: Vector2 = defender.position
 	var direction: float = 1.0 if defender_origin.x > attacker_origin.x else -1.0
 	var skill_color: Color = _skill_color(color_name)
+	var original_texture: Texture2D = attacker.texture
+	var role_id := _role_id(attacker)
+	var act1 := _action_texture(role_id, 1)
+	var act2 := _action_texture(role_id, 2)
 	_stop_idle(attacker)
+	_sfx("swing")
+	if act1 != null:
+		attacker.texture = act1
 
 	var base_scale: Vector2 = attacker.scale
 	var charge: Tween = create_tween()
 	charge.set_parallel(true)
 	charge.set_trans(Tween.TRANS_QUAD)
 	charge.set_ease(Tween.EASE_OUT)
-	charge.tween_property(attacker, "position", attacker_origin + Vector2(-22.0 * direction, 7.0), 0.09)
-	charge.tween_property(attacker, "scale", base_scale * Vector2(0.965, 1.035), 0.09)
+	charge.tween_property(attacker, "position", attacker_origin + Vector2(-22.0 * direction, 7.0), 0.14)
+	charge.tween_property(attacker, "scale", base_scale * Vector2(0.965, 1.035), 0.14)
 	await charge.finished
+	await get_tree().create_timer(0.16).timeout
+	if act2 != null:
+		attacker.texture = act2
 
 	_spawn_afterimage(attacker, attacker.position, 0.34, skill_color)
 	var dash: Tween = create_tween()
 	dash.set_trans(Tween.TRANS_EXPO)
 	dash.set_ease(Tween.EASE_OUT)
-	dash.tween_property(attacker, "position", defender_origin + Vector2(-135.0 * direction, 28.0), 0.13)
-	await get_tree().create_timer(0.03).timeout
-	_spawn_afterimage(attacker, attacker_origin.lerp(defender_origin, 0.38), 0.26, skill_color)
-	await get_tree().create_timer(0.03).timeout
-	_spawn_afterimage(attacker, attacker_origin.lerp(defender_origin, 0.67), 0.18, skill_color)
+	dash.tween_property(attacker, "position", defender_origin + Vector2(-135.0 * direction, 28.0), 0.16)
 	await dash.finished
 
 	var safe_hits: int = maxi(1, hits)
 	var each_damage: int = maxi(1, roundi(float(total_damage) / float(safe_hits)))
 	for i: int in range(safe_hits):
 		var final_hit: bool = i == safe_hits - 1
-		var critical: bool = heavy and final_hit
-		var effect_texture: Texture2D = CRIT_TEXTURE if critical else SLASH_TEXTURE
+		var crit_hit: bool = critical and final_hit
+		if crit_hit:
+			await get_tree().create_timer(0.075).timeout
+			_sfx("crit")
+		else:
+			_sfx("hit")
+		var effect_texture: Texture2D = CRIT_TEXTURE if crit_hit else SLASH_TEXTURE
 		var angle: float = [-0.55, 0.43, -0.08][i % 3] * direction
-		var target_size: float = 285.0 if critical else 235.0
+		var target_size: float = 300.0 if crit_hit else 235.0
 		_spawn_effect(effect_texture, defender_origin, skill_color, angle, target_size)
-		_spawn_damage(defender_origin, str(each_damage), critical, Color("ffd177") if critical else Color.WHITE)
-		await _hit_reaction(defender, defender_origin, (16.0 + float(i) * 5.0) * direction)
-		await _shake_camera(camera, (9.5 if critical else 5.5) + float(i) * 1.2, 0.11 if critical else 0.065)
-		await get_tree().create_timer(0.035).timeout
+		_spawn_damage(defender_origin, str(each_damage), crit_hit, Color("ffd177") if crit_hit else Color.WHITE)
+		await _hit_reaction(defender, defender_origin, (20.0 + float(i) * 6.0) * direction)
+		await _shake_camera(camera, (12.0 if crit_hit else 6.0) + float(i) * 1.2, 0.15 if crit_hit else 0.075)
+		await get_tree().create_timer(0.045).timeout
 
 	var recover: Tween = create_tween()
 	recover.set_parallel(true)
 	recover.set_trans(Tween.TRANS_QUAD)
 	recover.set_ease(Tween.EASE_OUT)
-	recover.tween_property(attacker, "position", attacker_origin, 0.21)
+	recover.tween_property(attacker, "position", attacker_origin, 0.22)
 	recover.tween_property(attacker, "scale", base_scale, 0.20)
 	recover.tween_property(defender, "position", defender_origin, 0.18)
 	recover.tween_property(defender, "modulate", Color.WHITE, 0.12)
 	await recover.finished
+	if original_texture != null:
+		attacker.texture = original_texture
 	start_idle(attacker, 0.92)
 
 func _support_sequence(sprite: Sprite2D, texture: Texture2D, color_name: String) -> void:
@@ -153,28 +188,28 @@ func _support_sequence(sprite: Sprite2D, texture: Texture2D, color_name: String)
 func _spawn_effect(texture: Texture2D, at_position: Vector2, tint: Color, rotation_value: float, target_size: float) -> void:
 	if texture == null:
 		return
-	var effect: Sprite2D = Sprite2D.new()
+	var effect := Sprite2D.new()
 	effect.texture = texture
 	effect.position = at_position
 	effect.rotation = rotation_value
 	effect.modulate = Color(tint.r, tint.g, tint.b, 0.98)
 	effect.z_index = 40
 	effect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	var source_size: Vector2 = texture.get_size()
-	var base_factor: float = target_size / maxf(1.0, maxf(source_size.x, source_size.y))
-	effect.scale = Vector2.ONE * base_factor * 0.45
+	var source_size := texture.get_size()
+	var factor := target_size / maxf(1.0, maxf(source_size.x, source_size.y))
+	effect.scale = Vector2.ONE * factor * 0.45
 	add_child(effect)
-	var tween: Tween = create_tween()
+	var tween := create_tween()
 	tween.set_parallel(true)
 	tween.set_trans(Tween.TRANS_EXPO)
 	tween.set_ease(Tween.EASE_OUT)
-	tween.tween_property(effect, "scale", Vector2.ONE * base_factor * 1.15, 0.14)
+	tween.tween_property(effect, "scale", Vector2.ONE * factor * 1.15, 0.14)
 	tween.tween_property(effect, "modulate:a", 0.0, 0.30).set_delay(0.06)
 	tween.tween_property(effect, "rotation", rotation_value + 0.08, 0.22)
 	tween.chain().tween_callback(effect.queue_free)
 
 func _spawn_afterimage(source: Sprite2D, at_position: Vector2, alpha: float, tint: Color) -> void:
-	var ghost: Sprite2D = Sprite2D.new()
+	var ghost := Sprite2D.new()
 	ghost.texture = source.texture
 	ghost.texture_filter = source.texture_filter
 	ghost.position = at_position
@@ -184,7 +219,7 @@ func _spawn_afterimage(source: Sprite2D, at_position: Vector2, alpha: float, tin
 	ghost.z_index = source.z_index - 1
 	ghost.modulate = Color(tint.r, tint.g, tint.b, alpha)
 	source.get_parent().add_child(ghost)
-	var fade: Tween = create_tween()
+	var fade := create_tween()
 	fade.set_parallel(true)
 	fade.set_trans(Tween.TRANS_QUAD)
 	fade.set_ease(Tween.EASE_OUT)
@@ -193,7 +228,7 @@ func _spawn_afterimage(source: Sprite2D, at_position: Vector2, alpha: float, tin
 	fade.chain().tween_callback(ghost.queue_free)
 
 func _spawn_damage(at_position: Vector2, text: String, critical: bool, color: Color) -> void:
-	var label: Label = Label.new()
+	var label := Label.new()
 	label.text = text
 	label.position = at_position + Vector2(-95, -150)
 	label.size = Vector2(190, 58)
@@ -205,7 +240,7 @@ func _spawn_damage(at_position: Vector2, text: String, critical: bool, color: Co
 	label.add_theme_color_override("font_outline_color", Color(0.08, 0.08, 0.08, 0.78))
 	label.add_theme_constant_override("outline_size", 5 if critical else 3)
 	add_child(label)
-	var pop: Tween = create_tween()
+	var pop := create_tween()
 	pop.set_parallel(true)
 	pop.set_trans(Tween.TRANS_BACK)
 	pop.set_ease(Tween.EASE_OUT)
@@ -215,19 +250,19 @@ func _spawn_damage(at_position: Vector2, text: String, critical: bool, color: Co
 	pop.chain().tween_callback(label.queue_free)
 
 func _hit_reaction(target: Sprite2D, origin: Vector2, power: float) -> void:
-	var hit: Tween = create_tween()
+	var hit := create_tween()
 	hit.set_parallel(true)
 	hit.set_trans(Tween.TRANS_QUAD)
 	hit.set_ease(Tween.EASE_OUT)
-	hit.tween_property(target, "position", origin + Vector2(power, -4), 0.045)
-	hit.tween_property(target, "modulate", Color(1.0, 0.62, 0.58, 1.0), 0.035)
+	hit.tween_property(target, "position", origin + Vector2(power, -4), 0.05)
+	hit.tween_property(target, "modulate", Color(1.0, 0.58, 0.54, 1.0), 0.04)
 	await hit.finished
-	var rebound: Tween = create_tween()
+	var rebound := create_tween()
 	rebound.set_parallel(true)
 	rebound.set_trans(Tween.TRANS_BACK)
 	rebound.set_ease(Tween.EASE_OUT)
-	rebound.tween_property(target, "position", origin, 0.075)
-	rebound.tween_property(target, "modulate", Color.WHITE, 0.075)
+	rebound.tween_property(target, "position", origin, 0.085)
+	rebound.tween_property(target, "modulate", Color.WHITE, 0.08)
 	await rebound.finished
 
 func _shake_camera(target_camera: Camera2D, strength: float, duration: float) -> void:
@@ -236,6 +271,36 @@ func _shake_camera(target_camera: Camera2D, strength: float, duration: float) ->
 		target_camera.offset = Vector2(randf_range(-strength, strength), randf_range(-strength, strength))
 		await get_tree().create_timer(duration / float(steps)).timeout
 	target_camera.offset = Vector2.ZERO
+
+func _sfx(kind: String) -> void:
+	var frequency := 180.0
+	var duration := 0.08
+	var volume := 0.10
+	if kind == "swing":
+		frequency = 420.0; duration = 0.08; volume = 0.055
+	elif kind == "crit":
+		frequency = 85.0; duration = 0.18; volume = 0.13
+	elif kind == "ultimate":
+		frequency = 130.0; duration = 0.30; volume = 0.11
+	elif kind == "support":
+		frequency = 620.0; duration = 0.12; volume = 0.045
+	var generator := AudioStreamGenerator.new()
+	generator.mix_rate = 22050.0
+	generator.buffer_length = maxf(0.2, duration + 0.05)
+	var player := AudioStreamPlayer.new()
+	player.stream = generator
+	player.volume_db = linear_to_db(volume)
+	add_child(player)
+	player.play()
+	var playback := player.get_stream_playback() as AudioStreamGeneratorPlayback
+	if playback != null:
+		var frames := int(generator.mix_rate * duration)
+		for i: int in range(frames):
+			var t := float(i) / generator.mix_rate
+			var env := 1.0 - float(i) / float(maxi(1, frames))
+			var sample := sin(TAU * frequency * t) * env * 0.75
+			playback.push_frame(Vector2(sample, sample))
+	get_tree().create_timer(duration + 0.08).timeout.connect(player.queue_free)
 
 func _skill_color(color_name: String) -> Color:
 	match color_name:
