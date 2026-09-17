@@ -1,0 +1,53 @@
+name: Validate Godot
+
+on:
+  push:
+    branches: [godot-migration]
+  pull_request:
+    paths:
+      - 'godot/**'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - 'images/**'
+      - 'data/game-data.json'
+
+concurrency:
+  group: validate-godot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  godot-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: '4.7.0'
+          use-dotnet: false
+          include-templates: true
+      - name: Import project and validate scripts
+        run: godot --headless --path . --editor --quit
+      - name: Run Godot RPG parity tests
+        run: godot --headless --path . --script res://godot/tests/rpg_parity_test.gd
+      - name: Run native PK protocol tests
+        run: timeout 20s godot --headless --path . res://godot/tests/pk_protocol_test.tscn
+      - name: Verify Web export templates
+        run: |
+          echo "Godot version: $(godot --version)"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.7.stable"
+          echo "Template dir: $TEMPLATE_DIR"
+          ls -lah "$TEMPLATE_DIR" || true
+          find "$TEMPLATE_DIR" -maxdepth 1 -type f -printf '%f %s bytes\n' 2>/dev/null | sort || true
+          test -s "$TEMPLATE_DIR/web_release.zip"
+      - name: Export production Web build
+        run: |
+          mkdir -p build/web
+          godot --verbose --headless --path . --export-release Web build/web/index.html
+          test -s build/web/index.html
+          test -s build/web/index.wasm
+          test -s build/web/index.pck
+          du -h build/web/*
+      - name: Launch main scene smoke test
+        run: godot --headless --path . --quit-after 3
+      - name: Launch native PK scene smoke test
+        run: godot --headless --path . res://godot/scenes/pk.tscn --quit-after 3
