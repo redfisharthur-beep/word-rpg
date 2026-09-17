@@ -17,8 +17,9 @@ CloudflareClient="*res://godot/scripts/cloudflare_client.gd"
 
 window/size/viewport_width=720
 window/size/viewport_height=1280
-window/size/window_width_override=360
-window/size/window_height_override=640
+window/size/window_width_override=450
+window/size/window_height_override=800
+window/size/resizable=true
 window/stretch/mode="canvas_items"
 
 [word_rpg]
