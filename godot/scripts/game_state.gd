@@ -5,6 +5,8 @@ signal cloud_sync_changed(authenticated: bool)
 
 const GameData = preload("res://godot/scripts/game_data.gd")
 const SAVE_PATH: String = "user://word_rpg_save.json"
+const CRYSTAL_VALUE := {"common":1,"rare":3,"epic":8,"legendary":20,"mythic":60}
+const PET_ENHANCE_COST: Array[int] = [5, 10, 20, 40]
 
 var player_name: String = "勇者"
 var role: String = "warrior"
@@ -31,6 +33,18 @@ func _ensure_rpg() -> void:
 		rpg["weakWords"] = {}
 	if not rpg.has("towerBest"):
 		rpg["towerBest"] = 0
+	if not rpg.has("crystals"):
+		rpg["crystals"] = 0
+	if not rpg.has("equipped") or not rpg["equipped"] is Dictionary:
+		rpg["equipped"] = {"gems":[],"armor":null,"rings":[]}
+	var equipped: Dictionary = rpg["equipped"]
+	if not equipped.has("gems") or not equipped["gems"] is Array:
+		equipped["gems"] = []
+	if not equipped.has("rings") or not equipped["rings"] is Array:
+		equipped["rings"] = []
+	if not equipped.has("armor"):
+		equipped["armor"] = null
+	rpg["equipped"] = equipped
 
 func load_local() -> void:
 	if not FileAccess.file_exists(SAVE_PATH):
@@ -55,24 +69,54 @@ func load_local() -> void:
 
 func save_local() -> void:
 	_ensure_rpg()
+	rpg["inventory"] = inventory.duplicate(true)
 	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file == null:
 		return
 	file.store_string(JSON.stringify({"player_name":player_name,"role":role,"pet":pet,"level":level,"xp":xp,"unlocked_stage":unlocked_stage,"inventory":inventory,"rpg":rpg}))
 
-func select_role(value: String) -> void:
-	role = _safe_role(value)
+func _persist_and_sync() -> void:
 	save_local()
 	state_changed.emit()
+	if authenticated:
+		sync_cloudflare_progress()
+
+func select_role(value: String) -> void:
+	role = _safe_role(value)
+	_persist_and_sync()
 
 func select_pet(value: String) -> void:
 	pet = _safe_pet(value)
-	save_local()
-	state_changed.emit()
+	_persist_and_sync()
+
+func crystals() -> int:
+	_ensure_rpg()
+	return maxi(0, int(rpg.get("crystals", 0)))
 
 func pet_enhance_level(pet_id: String) -> int:
 	_ensure_rpg()
 	return clampi(int((rpg["petEnhance"] as Dictionary).get(pet_id, 0)), 0, 4)
+
+func pet_enhance_cost(pet_id: String) -> int:
+	var current := pet_enhance_level(pet_id)
+	if current >= 4:
+		return 0
+	return PET_ENHANCE_COST[current]
+
+func can_enhance_pet(pet_id: String) -> bool:
+	var cost := pet_enhance_cost(pet_id)
+	return cost > 0 and crystals() >= cost
+
+func enhance_pet(pet_id: String) -> bool:
+	if not can_enhance_pet(pet_id):
+		return false
+	var cost := pet_enhance_cost(pet_id)
+	var enhance: Dictionary = rpg["petEnhance"]
+	enhance[pet_id] = pet_enhance_level(pet_id) + 1
+	rpg["petEnhance"] = enhance
+	rpg["crystals"] = crystals() - cost
+	_persist_and_sync()
+	return true
 
 func pet_is_awakened(pet_id: String) -> bool:
 	return pet_enhance_level(pet_id) >= 4
@@ -89,6 +133,113 @@ func pet_display_data(pet_id: String) -> Dictionary:
 			base["art"] = art
 	base["awakened"] = true
 	return base
+
+func equipped_ids() -> Array[String]:
+	_ensure_rpg()
+	var out: Array[String] = []
+	var equipped: Dictionary = rpg["equipped"]
+	for value: Variant in equipped.get("gems", []):
+		out.append(String(value))
+	var armor_value: Variant = equipped.get("armor", null)
+	if armor_value != null and not String(armor_value).is_empty():
+		out.append(String(armor_value))
+	for value: Variant in equipped.get("rings", []):
+		out.append(String(value))
+	return out
+
+func is_equipped(item_id: String) -> bool:
+	return equipped_ids().has(item_id)
+
+func _item_by_id(item_id: String) -> Dictionary:
+	for item: Dictionary in inventory:
+		if String(item.get("id", "")) == item_id:
+			return item
+	return {}
+
+func equip_item(item_id: String) -> bool:
+	var item := _item_by_id(item_id)
+	if item.is_empty():
+		return false
+	_ensure_rpg()
+	var equipped: Dictionary = rpg["equipped"]
+	var type := String(item.get("type", ""))
+	if type == "gem":
+		var gems: Array = equipped.get("gems", [])
+		gems.erase(item_id)
+		gems.append(item_id)
+		while gems.size() > 3:
+			gems.pop_front()
+		equipped["gems"] = gems
+	elif type == "armor":
+		equipped["armor"] = item_id
+	elif type == "ring":
+		var rings: Array = equipped.get("rings", [])
+		rings.erase(item_id)
+		rings.append(item_id)
+		while rings.size() > 2:
+			rings.pop_front()
+		equipped["rings"] = rings
+	else:
+		return false
+	rpg["equipped"] = equipped
+	_persist_and_sync()
+	return true
+
+func unequip_item(item_id: String) -> bool:
+	_ensure_rpg()
+	var equipped: Dictionary = rpg["equipped"]
+	var changed := false
+	var gems: Array = equipped.get("gems", [])
+	if gems.has(item_id):
+		gems.erase(item_id)
+		equipped["gems"] = gems
+		changed = true
+	var rings: Array = equipped.get("rings", [])
+	if rings.has(item_id):
+		rings.erase(item_id)
+		equipped["rings"] = rings
+		changed = true
+	if String(equipped.get("armor", "")) == item_id:
+		equipped["armor"] = null
+		changed = true
+	if changed:
+		rpg["equipped"] = equipped
+		_persist_and_sync()
+	return changed
+
+func crystallize_item(item_id: String) -> int:
+	if is_equipped(item_id):
+		return 0
+	var item := _item_by_id(item_id)
+	if item.is_empty():
+		return 0
+	var quality := String(item.get("quality", "common"))
+	var gain := int(CRYSTAL_VALUE.get(quality, 1))
+	for i in range(inventory.size() - 1, -1, -1):
+		if String(inventory[i].get("id", "")) == item_id:
+			inventory.remove_at(i)
+			break
+	rpg["crystals"] = crystals() + gain
+	_persist_and_sync()
+	return gain
+
+func equipment_bonuses() -> Dictionary:
+	var hp_pct := 0.0
+	var atk_pct := 0.0
+	var def_pct := 0.0
+	var crit := 0.0
+	for item_id: String in equipped_ids():
+		var item := _item_by_id(item_id)
+		if item.is_empty():
+			continue
+		var bonuses: Dictionary = item.get("bonuses", {})
+		if bonuses.is_empty():
+			bonuses = GameData.item_bonuses(String(item.get("type", "")), String(item.get("subtype", "")), String(item.get("quality", "common")))
+		hp_pct += float(bonuses.get("hpPct", 0.0))
+		atk_pct += float(bonuses.get("atkPct", 0.0))
+		def_pct += float(bonuses.get("defPct", 0.0))
+		crit += float(bonuses.get("crit", 0.0))
+	return {"hpPct":hp_pct,"atkPct":atk_pct,"defPct":def_pct,"crit":crit}
 
 func collection_count() -> int:
 	_ensure_rpg()
@@ -108,10 +259,7 @@ func record_tower_floor(floor: int) -> void:
 	if best == tower_best():
 		return
 	rpg["towerBest"] = best
-	save_local()
-	state_changed.emit()
-	if authenticated:
-		sync_cloudflare_progress()
+	_persist_and_sync()
 
 func weak_words() -> Array[Dictionary]:
 	_ensure_rpg()
@@ -167,14 +315,12 @@ func add_xp(amount: int) -> Dictionary:
 	if level >= 50:
 		level = 50
 		xp = 0
-	save_local()
-	state_changed.emit()
+	_persist_and_sync()
 	return {"amount":gained,"old_level":old_level,"new_level":level,"levels":levels}
 
 func unlock_next_stage(cleared_stage: int) -> void:
 	unlocked_stage = maxi(unlocked_stage, mini(maxi(0, GameData.STAGES.size() - 1), cleared_stage + 1))
-	save_local()
-	state_changed.emit()
+	_persist_and_sync()
 
 func add_loot(item: Dictionary) -> void:
 	if item.is_empty():
@@ -192,9 +338,7 @@ func add_loot(item: Dictionary) -> void:
 		if not collection.has(key):
 			collection.append(key)
 		rpg["collection"] = collection
-	rpg["inventory"] = inventory.duplicate(true)
-	save_local()
-	state_changed.emit()
+	_persist_and_sync()
 
 func refresh_cloudflare_session() -> bool:
 	var result: Dictionary = await CloudflareClient.get_session()
