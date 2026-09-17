@@ -13,6 +13,7 @@ run/main_scene="res://godot/scenes/game.tscn"
 
 CloudflareClient="*res://godot/scripts/cloudflare_client.gd"
 GameState="*res://godot/scripts/game_state_revision.gd"
+CloudSyncNotice="*res://godot/scripts/cloud_sync_notice.gd"
 
 [display]
 
