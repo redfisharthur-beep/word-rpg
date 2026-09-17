@@ -1,0 +1,24 @@
+name: Validate Word RPG
+
+on:
+  push:
+    branches: [main, godot-migration]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run sync:data
+      - run: node --check src/game-core.js
+      - run: node --check src/battle-fx.js
+      - run: node --check src/progression-v2.js
+      - run: node --check src/pk.js
+      - run: node --check worker/index.js
+      - run: npm test
