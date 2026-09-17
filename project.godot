@@ -1,5 +1,5 @@
 ; Engine configuration file.
-; Word RPG - Godot migration prototype
+; Word RPG - Godot + Cloudflare
 ; Target engine: Godot 4.7.x
 
 config_version=5
@@ -7,11 +7,12 @@ config_version=5
 [application]
 
 config/name="Word RPG"
-run/main_scene="res://godot/scenes/battle_demo.tscn"
+run/main_scene="res://godot/scenes/game_main.tscn"
 
 [autoload]
 
 CloudflareClient="*res://godot/scripts/cloudflare_client.gd"
+GameState="*res://godot/scripts/game_state.gd"
 
 [display]
 
@@ -30,4 +31,5 @@ cloudflare_base_url="https://word-rpg.redfisharthur.workers.dev"
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
 environment/defaults/default_clear_color=Color(0.105, 0.102, 0.11, 1)
