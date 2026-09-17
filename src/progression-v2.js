@@ -23,8 +23,11 @@ export function recordSeasonResult(input){
   const result=typeof input==='string'?input:String(input?.result||'draw'),s=seasonState();if(result==='win'){s.wins++;s.points+=18}else if(result==='loss'){s.losses++;s.points=Math.max(0,s.points-8)}else{s.draws++;s.points+=4}save(SEASON_KEY,s);return {...s,tier:seasonTier(s.points)}
 }
 export function seasonView(){const s=seasonState();return {...s,tier:seasonTier(s.points)}}
+export async function hydrateSeasonFromServer(){try{const r=await fetch('/api/season',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return null;const data=await r.json(),raw=data?.season;if(!raw)return null;const s={season:String(raw.season||currentSeasonId()),points:Math.max(0,Math.round(raw.points||0)),wins:Math.max(0,Math.round(raw.wins||0)),losses:Math.max(0,Math.round(raw.losses||0)),draws:Math.max(0,Math.round(raw.draws||0))};save(SEASON_KEY,s);return {...s,tier:seasonTier(s.points)}}catch{return null}}
 
 export function towerRule(floor=1){return TOWER_RULES?.[String(floor)]||null}
 export function applyTowerRuleAtStart(player,enemy,floor=1){const rule=towerRule(floor);if(!rule)return null;if(rule.critBonus){player.crit=clamp((player.crit||0)+rule.critBonus,0,.9);enemy.crit=clamp((enemy.crit||0)+rule.critBonus,0,.9)}if(rule.enemyAtkAmp)enemy.atk*=1+rule.enemyAtkAmp;if(rule.enemyCritBonus)enemy.crit=clamp((enemy.crit||0)+rule.enemyCritBonus,0,.9);if(rule.enemyShieldPct)enemy.shield=Math.round((enemy.shield||0)+(enemy.maxHp||0)*rule.enemyShieldPct);return rule}
 export function towerHealMultiplier(floor=1){const rule=towerRule(floor);return 1-(rule?.healPenalty||0)}
 export function towerFirstCardMultiplier(floor=1){const rule=towerRule(floor);return 1+(rule?.firstCardAmp||0)}
+
+if(typeof window!=='undefined')queueMicrotask(()=>{void hydrateSeasonFromServer()});
