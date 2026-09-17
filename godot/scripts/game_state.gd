@@ -1,0 +1,134 @@
+extends Node
+
+signal state_changed
+signal cloud_sync_changed(authenticated: bool)
+
+const SAVE_PATH: String = "user://word_rpg_save.json"
+
+var player_name: String = "勇者"
+var role: String = "warrior"
+var pet: String = "fox"
+var level: int = 1
+var xp: int = 0
+var unlocked_stage: int = 0
+var inventory: Array[Dictionary] = []
+var rpg: Dictionary = {}
+var authenticated: bool = false
+var line_profile: Dictionary = {}
+
+func _ready() -> void:
+	load_local()
+
+func load_local() -> void:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
+	var text: String = FileAccess.get_file_as_string(SAVE_PATH)
+	var parsed: Variant = JSON.parse_string(text)
+	if not parsed is Dictionary:
+		return
+	var data: Dictionary = parsed
+	player_name = String(data.get("player_name", player_name)).left(16)
+	role = _safe_role(String(data.get("role", role)))
+	pet = _safe_pet(String(data.get("pet", pet)))
+	level = clampi(int(data.get("level", level)), 1, 50)
+	xp = 0 if level >= 50 else maxi(0, int(data.get("xp", xp)))
+	unlocked_stage = clampi(int(data.get("unlocked_stage", unlocked_stage)), 0, 3)
+	var raw_inventory: Variant = data.get("inventory", [])
+	inventory.clear()
+	if raw_inventory is Array:
+		for value: Variant in raw_inventory:
+			if value is Dictionary: inventory.append((value as Dictionary).duplicate(true))
+	var raw_rpg: Variant = data.get("rpg", {})
+	rpg = (raw_rpg as Dictionary).duplicate(true) if raw_rpg is Dictionary else {}
+
+func save_local() -> void:
+	var file: FileAccess = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file == null: return
+	file.store_string(JSON.stringify({
+		"player_name": player_name,
+		"role": role,
+		"pet": pet,
+		"level": level,
+		"xp": xp,
+		"unlocked_stage": unlocked_stage,
+		"inventory": inventory,
+		"rpg": rpg
+	}))
+
+func select_role(value: String) -> void:
+	role = _safe_role(value)
+	save_local(); state_changed.emit()
+
+func select_pet(value: String) -> void:
+	pet = _safe_pet(value)
+	save_local(); state_changed.emit()
+
+func add_xp(amount: int) -> Dictionary:
+	var gained: int = maxi(0, amount)
+	var old_level: int = level
+	var levels: Array[int] = []
+	if level < 50:
+		xp += gained
+		while level < 50 and xp >= WordRpgGameData.xp_need(level):
+			xp -= WordRpgGameData.xp_need(level)
+			level += 1
+			levels.append(level)
+	if level >= 50:
+		level = 50
+		xp = 0
+	save_local(); state_changed.emit()
+	return {"amount": gained, "old_level": old_level, "new_level": level, "levels": levels}
+
+func unlock_next_stage(cleared_stage: int) -> void:
+	if cleared_stage < 3:
+		unlocked_stage = maxi(unlocked_stage, cleared_stage + 1)
+	else:
+		unlocked_stage = 3
+	save_local(); state_changed.emit()
+
+func add_loot(item: Dictionary) -> void:
+	if item.is_empty(): return
+	inventory.append(item.duplicate(true))
+	if inventory.size() > 60: inventory.pop_front()
+	save_local(); state_changed.emit()
+
+func refresh_cloudflare_session() -> bool:
+	var result: Dictionary = await CloudflareClient.get_session()
+	if not bool(result.get("ok", false)):
+		authenticated = false
+		cloud_sync_changed.emit(false)
+		return false
+	var data: Dictionary = result.get("data", {})
+	authenticated = bool(data.get("authenticated", false))
+	if authenticated:
+		line_profile = (data.get("profile", {}) as Dictionary).duplicate(true)
+		var progress: Dictionary = data.get("progress", {})
+		player_name = String(line_profile.get("name", player_name)).left(16)
+		role = _safe_role(String(progress.get("role", role)))
+		pet = _safe_pet(String(progress.get("pet", pet)))
+		level = clampi(int(progress.get("level", level)), 1, 50)
+		xp = 0 if level >= 50 else maxi(0, int(progress.get("xp", xp)))
+		var server_rpg: Variant = progress.get("rpg", {})
+		if server_rpg is Dictionary:
+			rpg = (server_rpg as Dictionary).duplicate(true)
+			var raw_inventory: Variant = rpg.get("inventory", [])
+			if raw_inventory is Array:
+				inventory.clear()
+				for value: Variant in raw_inventory:
+					if value is Dictionary: inventory.append((value as Dictionary).duplicate(true))
+		save_local(); state_changed.emit()
+	cloud_sync_changed.emit(authenticated)
+	return authenticated
+
+func sync_cloudflare_progress() -> bool:
+	if not authenticated: return false
+	var next_rpg: Dictionary = rpg.duplicate(true)
+	next_rpg["inventory"] = inventory.duplicate(true)
+	var result: Dictionary = await CloudflareClient.save_progress({"role": role, "pet": pet, "level": level, "xp": xp, "rpg": next_rpg})
+	return bool(result.get("ok", false))
+
+func _safe_role(value: String) -> String:
+	return value if ["warrior", "mage", "archer"].has(value) else "warrior"
+
+func _safe_pet(value: String) -> String:
+	return value if ["fox", "owl", "dragon"].has(value) else "fox"
