@@ -11,7 +11,7 @@ var enemy: Sprite2D
 var camera: Camera2D
 var fx: Node
 var fight_button: Button
-var busy := false
+var busy: bool = false
 
 func _ready() -> void:
 	_build_scene()
@@ -26,7 +26,7 @@ func _build_scene() -> void:
 	add_child(camera)
 	camera.make_current()
 
-	var bg := Sprite2D.new()
+	var bg: Sprite2D = Sprite2D.new()
 	bg.texture = BG_TEXTURE
 	bg.position = Vector2(360, 640)
 	bg.z_index = -20
@@ -47,24 +47,24 @@ func _build_scene() -> void:
 	_fit_sprite(enemy, Vector2(285, 390))
 	add_child(enemy)
 
-	var versus := Sprite2D.new()
+	var versus: Sprite2D = Sprite2D.new()
 	versus.texture = VS_TEXTURE
 	versus.position = Vector2(365, 525)
 	versus.modulate.a = 0.86
 	_fit_sprite(versus, Vector2(145, 145))
 	add_child(versus)
 
-	var hud := CanvasLayer.new()
+	var hud: CanvasLayer = CanvasLayer.new()
 	add_child(hud)
 
-	var title := Label.new()
+	var title: Label = Label.new()
 	title.text = "WORD RPG · GODOT FX"
 	title.position = Vector2(36, 48)
 	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", Color("e9e2d6"))
 	hud.add_child(title)
 
-	var subtitle := Label.new()
+	var subtitle: Label = Label.new()
 	subtitle.text = "單張 PNG + 動態戰鬥演出"
 	subtitle.position = Vector2(38, 90)
 	subtitle.add_theme_font_size_override("font_size", 18)
@@ -79,13 +79,13 @@ func _build_scene() -> void:
 	fight_button.pressed.connect(_on_fight_pressed)
 	hud.add_child(fight_button)
 
-func _fit_sprite(sprite: Sprite2D, max_size: Vector2, cover := false) -> void:
-	var texture_size := sprite.texture.get_size()
+func _fit_sprite(sprite: Sprite2D, max_size: Vector2, cover: bool = false) -> void:
+	var texture_size: Vector2 = sprite.texture.get_size()
 	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
 		return
-	var scale_x := max_size.x / texture_size.x
-	var scale_y := max_size.y / texture_size.y
-	var factor := max(scale_x, scale_y) if cover else min(scale_x, scale_y)
+	var scale_x: float = max_size.x / texture_size.x
+	var scale_y: float = max_size.y / texture_size.y
+	var factor: float = maxf(scale_x, scale_y) if cover else minf(scale_x, scale_y)
 	sprite.scale = Vector2.ONE * factor
 
 func _on_fight_pressed() -> void:
