@@ -26,7 +26,7 @@ jobs:
       - name: Run Godot RPG parity tests
         run: godot --headless --path . --script res://godot/tests/rpg_parity_test.gd
       - name: Run native PK protocol tests
-        run: godot --headless --path . --script res://godot/tests/pk_protocol_test.gd
+        run: timeout 20s godot --headless --path . --script res://godot/tests/pk_protocol_test.gd
       - name: Export production Web build
         run: |
           mkdir -p build/web
@@ -34,6 +34,7 @@ jobs:
           test -s build/web/index.html
           test -s build/web/index.wasm
           test -s build/web/index.pck
+          du -h build/web/*
       - name: Launch main scene smoke test
         run: godot --headless --path . --quit-after 3
       - name: Launch native PK scene smoke test
