@@ -1,0 +1,45 @@
+name: Sync main to godot-migration
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-main-to-godot-migration
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge main into godot-migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main godot-migration
+          git checkout -B godot-migration origin/godot-migration
+
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "godot-migration already contains main"
+            exit 0
+          fi
+
+          if ! git merge --no-ff --no-edit -X theirs origin/main; then
+            echo "::error::Automatic sync hit an unresolved merge conflict. No changes were pushed."
+            git merge --abort || true
+            exit 1
+          fi
+
+          git push origin HEAD:godot-migration
