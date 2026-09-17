@@ -166,7 +166,7 @@ func _stage_button(stage: Dictionary, index: int, unlocked: bool, at: Vector2) -
 	if texture != null:
 		button.icon = texture
 		button.expand_icon = true
-		button.icon_max_width = 125
+		button.add_theme_constant_override("icon_max_width", 125)
 	button.add_theme_stylebox_override("normal", _box(Color(0.12, 0.13, 0.14, 0.88), 20, Color(0.50, 0.52, 0.50, 0.45), 2))
 	button.add_theme_stylebox_override("disabled", _box(Color(0.10, 0.10, 0.11, 0.60), 20, Color(0.25, 0.25, 0.25, 0.3), 1))
 	hud.add_child(button)
@@ -227,7 +227,7 @@ func _card_button(card: Dictionary, selected: bool) -> Button:
 	if texture != null:
 		button.icon = texture
 		button.expand_icon = true
-		button.icon_max_width = 78
+		button.add_theme_constant_override("icon_max_width", 78)
 	var fill: Color = Color(0.25, 0.31, 0.28, 0.96) if selected else Color(0.11, 0.12, 0.13, 0.93)
 	var border: Color = Color(0.86, 0.74, 0.45, 0.95) if selected else Color(0.50, 0.50, 0.49, 0.45)
 	button.add_theme_stylebox_override("normal", _box(fill, 16, border, 3 if selected else 1))
@@ -459,7 +459,9 @@ func _render_inventory() -> void:
 			row.add_theme_font_size_override("font_size", 19)
 			var tex: Texture2D = _load_texture(String(item.get("art", "")))
 			if tex != null:
-				row.icon = tex; row.expand_icon = true; row.icon_max_width = 82
+				row.icon = tex
+				row.expand_icon = true
+				row.add_theme_constant_override("icon_max_width", 82)
 			row.add_theme_stylebox_override("normal", _box(Color(0.12, 0.13, 0.14, 0.9), 15, Color(0.52, 0.53, 0.52, 0.4), 1))
 			list.add_child(row)
 	var back: Button = _make_button("返回", Vector2(245, 1080), Vector2(230, 72), 22)
@@ -588,7 +590,7 @@ func _image_choice_button(path: String, title: String, at: Vector2, size_value: 
 	if texture != null:
 		button.icon = texture
 		button.expand_icon = true
-		button.icon_max_width = int(size_value.x - 30.0)
+		button.add_theme_constant_override("icon_max_width", int(size_value.x - 30.0))
 	var fill: Color = Color(0.25, 0.31, 0.27, 0.96) if selected else Color(0.10, 0.11, 0.12, 0.90)
 	var edge: Color = Color(0.84, 0.70, 0.42, 1.0) if selected else Color(0.48, 0.49, 0.47, 0.45)
 	button.add_theme_stylebox_override("normal", _box(fill, 18, edge, 3 if selected else 1))
