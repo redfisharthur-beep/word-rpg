@@ -23,6 +23,12 @@ window/size/window_height_override=800
 window/size/resizable=true
 window/stretch/mode="canvas_items"
 
+[importer_defaults]
+
+texture={
+"process/size_limit": 2048
+}
+
 [word_rpg]
 
 cloudflare_base_url="https://word-rpg.redfisharthur.workers.dev"
