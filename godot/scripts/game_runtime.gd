@@ -7,6 +7,27 @@ const InventoryRuntime = preload("res://godot/scripts/inventory_runtime.gd")
 ## Combat/progression logic remains in game_v3.gd; this file owns interactive
 ## pet/equipment surfaces so those systems stay out of the battle controller.
 
+func show_home() -> void:
+	mode = "home"
+	selection_deadline = 0
+	question_deadline = 0
+	_reset_scene()
+	_add_background(BG_LOGIN, 1.0)
+	var line_btn := _image_button("res://images/line.png", Rect2(318, 555, 84, 84))
+	line_btn.pressed.connect(_begin_line_login)
+	var fight_btn := _transparent_button(Rect2(205, 1080, 310, 105))
+	fight_btn.pressed.connect(show_setup)
+	var initial_status := "LINE CONNECTED" if GameState.authenticated else "LOCAL · CLOUDFLARE READY"
+	status_label = _hud_label(initial_status, Rect2(150, 1195, 420, 30), 13, HORIZONTAL_ALIGNMENT_CENTER, Color(0.27, 0.31, 0.29, 0.78))
+
+func _begin_line_login() -> void:
+	if CloudflareClient.begin_line_login():
+		if is_instance_valid(status_label):
+			status_label.text = "OPENING LINE…"
+		return
+	if is_instance_valid(status_label):
+		status_label.text = "LOCAL MODE · LINE LOGIN ON WEB"
+
 func show_setup() -> void:
 	mode = "setup"
 	_reset_scene()
