@@ -6,6 +6,7 @@ const CLOUD_META_PATH: String = "user://word_rpg_cloud_meta.json"
 
 var cloud_revision: int = 0
 var cloud_conflicted: bool = false
+var last_server_conflict: Dictionary = {}
 
 func _ready() -> void:
 	super._ready()
@@ -45,10 +46,15 @@ func refresh_cloudflare_session() -> bool:
 		var profile_value: Variant = data.get("profile", {})
 		line_profile = profile_value.duplicate(true) if profile_value is Dictionary else {}
 		var progress_value: Variant = data.get("progress", {})
-		var progress: Dictionary = progress_value if progress_value is Dictionary else {}
-		cloud_revision = maxi(0, int(progress.get("revision", 0)))
-		cloud_conflicted = false
+		var progress: Dictionary = progress_value.duplicate(true) if progress_value is Dictionary else {}
 		player_name = String(line_profile.get("name", player_name)).left(16)
+		if cloud_conflicted:
+			last_server_conflict = progress.duplicate(true)
+			cloud_sync_changed.emit(true)
+			cloud_conflict.emit(last_server_conflict)
+			return true
+		cloud_revision = maxi(0, int(progress.get("revision", 0)))
+		last_server_conflict.clear()
 		role = _safe_role(String(progress.get("role", role)))
 		pet = _safe_pet(String(progress.get("pet", pet)))
 		level = clampi(int(progress.get("level", level)), 1, 50)
@@ -82,10 +88,10 @@ func sync_cloudflare_progress() -> bool:
 	var data: Dictionary = result.get("data", {})
 	if status == 409:
 		cloud_conflicted = true
-		_save_cloud_meta()
 		var server_value: Variant = data.get("progress", {})
-		var server_progress: Dictionary = server_value.duplicate(true) if server_value is Dictionary else {}
-		cloud_conflict.emit(server_progress)
+		last_server_conflict = server_value.duplicate(true) if server_value is Dictionary else {}
+		_save_cloud_meta()
+		cloud_conflict.emit(last_server_conflict)
 		return false
 	if not bool(result.get("ok", false)):
 		return false
@@ -93,5 +99,6 @@ func sync_cloudflare_progress() -> bool:
 	if saved_value is Dictionary:
 		cloud_revision = maxi(cloud_revision, int((saved_value as Dictionary).get("revision", cloud_revision)))
 	cloud_conflicted = false
+	last_server_conflict.clear()
 	_save_cloud_meta()
 	return true
