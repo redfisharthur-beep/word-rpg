@@ -2,6 +2,7 @@ extends SceneTree
 
 const RpgRuntime = preload("res://godot/scripts/rpg_runtime.gd")
 const InventoryRuntime = preload("res://godot/scripts/inventory_runtime.gd")
+const RewardRuntime = preload("res://godot/scripts/reward_runtime.gd")
 
 var failures: Array[String] = []
 
@@ -10,6 +11,7 @@ func _init() -> void:
 	_test_resonance()
 	_test_mythic_effects()
 	_test_synthesis()
+	_test_rewards()
 	if failures.is_empty():
 		print("Godot RPG parity tests: PASS")
 		quit(0)
@@ -130,3 +132,23 @@ func _test_synthesis() -> void:
 	var max_info := InventoryRuntime.synthesis_info(legendary, equipped, "l1")
 	_check(not bool(max_info["can"]), "legendary cannot synthesize to mythic")
 	_check(String(max_info["next_quality"]).is_empty(), "legendary has no synthesis next quality")
+
+func _test_rewards() -> void:
+	_check(RewardRuntime.adventure_xp(0) == 80, "stage 1 EXP parity")
+	_check(RewardRuntime.adventure_xp(4) == 180, "boss EXP parity")
+	_check(RewardRuntime.tower_xp(1) == 115, "tower 1F EXP parity")
+	_check(RewardRuntime.tower_xp(20) == 400, "tower 20F EXP parity")
+	_check(RewardRuntime.tower_crystals(1) == 1, "tower normal crystal reward")
+	_check(RewardRuntime.tower_crystals(5) == 5, "tower 5F crystal reward")
+	_check(RewardRuntime.tower_crystals(10) == 8, "tower 10F crystal reward")
+	_check(RewardRuntime.tower_crystals(15) == 12, "tower 15F crystal reward")
+	_check(RewardRuntime.tower_crystals(20) == 20, "tower 20F crystal reward")
+	_close(RewardRuntime.mythic_drop_chance(true, 0), 0.03, "boss mythic chance")
+	_close(RewardRuntime.mythic_drop_chance(false, 7), 0.0, "tower 7F mythic chance")
+	_close(RewardRuntime.mythic_drop_chance(false, 8), 0.04, "tower 8F mythic chance")
+	_close(RewardRuntime.mythic_drop_chance(false, 10), 0.12, "tower 10F mythic chance")
+	_close(RewardRuntime.mythic_drop_chance(false, 15), 0.18, "tower 15F mythic chance")
+	_close(RewardRuntime.mythic_drop_chance(false, 20), 0.30, "tower 20F mythic chance")
+	_check(RewardRuntime.tower_regular_loot_stage(1) == 0, "tower 1F loot stage")
+	_check(RewardRuntime.tower_regular_loot_stage(5) == 3, "tower 5F boss loot stage")
+	_check(RewardRuntime.tower_regular_loot_stage(10) == 3, "tower 10F boss loot stage")
