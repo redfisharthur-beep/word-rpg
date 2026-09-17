@@ -5,7 +5,7 @@ const Harness = preload("res://godot/tests/pk_protocol_harness.gd")
 var failures: Array[String] = []
 
 func _init() -> void:
-	call_deferred("_run")
+	_run()
 
 func _check(condition: bool, message: String) -> void:
 	if not condition:
@@ -30,8 +30,8 @@ func _hand() -> Array:
 
 func _run() -> void:
 	var pk = Harness.new()
-	root.add_child(pk)
-	await process_frame
+	var bank: Variant = pk.get("word_bank")
+	bank.load_from_web_source()
 
 	pk.call("_handle_message", {"type":"queued"})
 	_check(String(pk.get("status")) == "queue", "queued should enter queue state")
@@ -69,7 +69,6 @@ func _run() -> void:
 		"steps":[],
 		"finished":false
 	})
-	await process_frame
 	_check(String(pk.get("status")) == "cards", "unfinished battle should return to card selection")
 	_check(int(pk.get("round_no")) == 2, "unfinished battle should advance to round 2")
 	_check((pk.get("selected") as Array).is_empty(), "next round should clear selection")
@@ -86,7 +85,6 @@ func _run() -> void:
 		"winner":"self",
 		"season":{"season":"2026-09","points":118,"wins":3,"losses":1,"draws":0}
 	})
-	await process_frame
 	_check(String(pk.get("status")) == "finished", "finished battle should enter finished state")
 	_check(String(pk.get("last_end_title")) == "勝利", "self winner should render victory")
 	_check(bool(pk.get("last_end_win")), "self winner should be marked as win")
@@ -100,8 +98,7 @@ func _run() -> void:
 	_check(String(pk.get("status")) == "closed", "error should close PK state")
 	_check(String(pk.get("last_status_text")) == "fixture error", "server error message should be shown")
 
-	pk.queue_free()
-	await process_frame
+	pk.free()
 	if failures.is_empty():
 		print("Godot PK protocol tests: PASS")
 		quit(0)
