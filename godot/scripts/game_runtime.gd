@@ -43,7 +43,7 @@ func show_setup() -> void:
 	var fight_btn := _image_button("res://images/fight.png", Rect2(x_positions[0], top_y, button_size.x, button_size.y))
 	fight_btn.pressed.connect(start_adventure)
 	var pk_btn := _image_button("res://images/PK.png", Rect2(x_positions[1], top_y, button_size.x, button_size.y))
-	pk_btn.pressed.connect(func() -> void: _notice("PK", "Godot 原生配對正在接 Cloudflare /match；正式 Web 版 PK 可正常使用"))
+	pk_btn.pressed.connect(start_native_pk)
 	var tower_btn := _image_button("res://images/Test.png", Rect2(x_positions[2], top_y, button_size.x, button_size.y))
 	tower_btn.pressed.connect(start_tower)
 	var pet_btn := _image_button("res://images/pet.png", Rect2(x_positions[0], bottom_y, button_size.x, button_size.y))
@@ -55,6 +55,9 @@ func show_setup() -> void:
 	_hud_label("冒險   ·   PK   ·   試煉\n寵物   ·   裝備   ·   圖鑑", Rect2(80, 1082, 560, 58), 14, HORIZONTAL_ALIGNMENT_CENTER, Color(0.29, 0.34, 0.31, 0.72))
 	var back_btn := _image_button("res://images/return.png", Rect2(280, 1160, 160, 66))
 	back_btn.pressed.connect(show_home)
+
+func start_native_pk() -> void:
+	get_tree().change_scene_to_file("res://godot/scenes/pk.tscn")
 
 func show_pet_progression() -> void:
 	mode = "pet-progression"
