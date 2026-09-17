@@ -1,0 +1,24 @@
+name: Validate Godot
+
+on:
+  push:
+    branches: [godot-migration]
+  pull_request:
+    paths:
+      - 'godot/**'
+      - 'project.godot'
+      - 'images/**'
+      - 'data/game-data.json'
+
+jobs:
+  godot-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: '4.7.0'
+          use-dotnet: false
+          include-templates: false
+      - name: Import project and validate scripts
+        run: godot --headless --path . --editor --quit
