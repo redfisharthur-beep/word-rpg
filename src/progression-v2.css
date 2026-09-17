@@ -1,0 +1,12 @@
+/* Progression visuals unlocked by collection, tower and pet growth */
+.collection-frame{border-radius:24px;padding:8px;box-shadow:inset 0 0 0 2px rgba(215,184,101,.72),0 0 18px rgba(215,184,101,.22)}
+.collection-frame:before{content:"";position:absolute;inset:0;border-radius:24px;pointer-events:none;background:linear-gradient(135deg,rgba(255,236,169,.18),transparent 45%,rgba(123,166,145,.15));z-index:-1}
+.collection-bg-unlocked{background:radial-gradient(circle at 50% 25%,rgba(224,236,224,.96),rgba(219,211,198,.92) 52%,rgba(184,179,168,.90))!important}
+.collection-stars:after{content:"✦  ·  ✧  ·  ✦";position:absolute;top:18px;left:50%;transform:translateX(-50%);color:rgba(203,163,68,.65);letter-spacing:13px;font-size:19px;animation:collection-stars 2.4s ease-in-out infinite;pointer-events:none}
+@keyframes collection-stars{50%{opacity:.42;transform:translateX(-50%) scale(1.08)}}
+.pet-tree-visual{width:150px;min-height:115px;margin:0 auto 10px;display:grid;place-items:center}.pet-tree-visual img{width:140px;height:110px;object-fit:contain}.pet-tree-visual .pet-evolution-badge{position:relative;z-index:4;margin-top:-10px}
+.season-badge{grid-column:1/-1;justify-self:center}.season-reward-note{grid-column:1/-1;text-align:center;display:block;margin-top:-10px}
+.loot-chest{width:92px;height:64px;border-radius:9px 9px 15px 15px;background:linear-gradient(#8d6a32 0 40%,#5f431f 41% 100%);border:4px solid #d1a850;color:transparent;position:relative;z-index:3}.loot-chest:before{content:"";position:absolute;left:-4px;right:-4px;top:23px;height:7px;background:#d1a850}.loot-chest:after{content:"";position:absolute;left:50%;top:28px;transform:translateX(-50%);width:18px;height:22px;border-radius:4px;background:#f0ce72;box-shadow:0 0 10px rgba(244,204,101,.42)}
+.loot-reveal-stage.mythic .loot-chest{background:linear-gradient(#171717 0 40%,#070707 41% 100%);border-color:#dbad3c;box-shadow:0 0 24px rgba(219,173,60,.48)}
+.weakness-summary>span:first-of-type{font-size:14px;color:#627069}.tower-rule-banner+ .combat-stage{margin-top:0}
+@media(max-width:700px){.collection-frame{padding:5px}.collection-stars:after{font-size:14px;letter-spacing:8px}.pet-tree-visual{width:120px}.pet-tree-visual img{width:112px;height:92px}}
