@@ -31,6 +31,7 @@ func _build_scene() -> void:
 
 	var bg: Sprite2D = Sprite2D.new()
 	bg.texture = BG_TEXTURE
+	bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	bg.position = Vector2(360, 640)
 	bg.z_index = -20
 	_fit_sprite(bg, Vector2(720, 1280), true)
@@ -39,6 +40,7 @@ func _build_scene() -> void:
 	player = Sprite2D.new()
 	player.name = "Player"
 	player.texture = PLAYER_TEXTURE
+	player.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	player.position = Vector2(185, 770)
 	_fit_sprite(player, Vector2(285, 430))
 	add_child(player)
@@ -46,12 +48,14 @@ func _build_scene() -> void:
 	enemy = Sprite2D.new()
 	enemy.name = "Enemy"
 	enemy.texture = ENEMY_TEXTURE
+	enemy.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	enemy.position = Vector2(545, 685)
 	_fit_sprite(enemy, Vector2(285, 390))
 	add_child(enemy)
 
 	var versus: Sprite2D = Sprite2D.new()
 	versus.texture = VS_TEXTURE
+	versus.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	versus.position = Vector2(365, 525)
 	versus.modulate.a = 0.86
 	_fit_sprite(versus, Vector2(145, 145))
