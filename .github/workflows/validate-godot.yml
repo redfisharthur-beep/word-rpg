@@ -24,3 +24,5 @@ jobs:
         run: godot --headless --path . --editor --quit
       - name: Launch main scene smoke test
         run: godot --headless --path . --quit-after 3
+      - name: Launch native PK scene smoke test
+        run: godot --headless --path . res://godot/scenes/pk.tscn --quit-after 3
