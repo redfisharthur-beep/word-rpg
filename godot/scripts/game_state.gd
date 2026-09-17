@@ -179,9 +179,20 @@ func unlock_next_stage(cleared_stage: int) -> void:
 func add_loot(item: Dictionary) -> void:
 	if item.is_empty():
 		return
+	_ensure_rpg()
 	inventory.append(item.duplicate(true))
 	if inventory.size() > 60:
 		inventory.pop_front()
+	var type := String(item.get("type", ""))
+	var subtype := String(item.get("subtype", ""))
+	var quality := String(item.get("quality", ""))
+	if not type.is_empty() and not subtype.is_empty() and not quality.is_empty():
+		var key := "%s:%s:%s" % [type, subtype, quality]
+		var collection: Array = rpg["collection"]
+		if not collection.has(key):
+			collection.append(key)
+		rpg["collection"] = collection
+	rpg["inventory"] = inventory.duplicate(true)
 	save_local()
 	state_changed.emit()
 
