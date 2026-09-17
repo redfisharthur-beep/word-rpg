@@ -22,7 +22,44 @@ func get_session() -> Dictionary:
 
 func get_questions(count: int = 10) -> Dictionary:
 	var safe_count: int = clampi(count, 1, 20)
-	return await _request_json("/api/questions?count=%d" % safe_count, HTTPClient.METHOD_GET)
+	var result: Dictionary = await _request_json("/api/questions?count=%d" % safe_count, HTTPClient.METHOD_GET)
+	if not bool(result.get("ok", false)):
+		return result
+	var data_value: Variant = result.get("data", {})
+	if not data_value is Dictionary:
+		return result
+	var data: Dictionary = data_value
+	var indices_value: Variant = data.get("indices", [])
+	if not indices_value is Array:
+		return result
+	var indices: Array = (indices_value as Array).duplicate()
+	if indices.is_empty():
+		return result
+
+	# Reinsert up to two local weak words into every batch. They remain part of the
+	# normal 10-question set, so adventure, tower and future modes share one loop.
+	var state: Node = get_node_or_null("/root/GameState")
+	if state != null and state.has_method("weak_words"):
+		var weak_value: Variant = state.call("weak_words")
+		if weak_value is Array:
+			var preferred: Array[int] = []
+			for raw: Variant in weak_value:
+				if not raw is Dictionary:
+					continue
+				var index: int = int((raw as Dictionary).get("index", -1))
+				if index >= 0 and not preferred.has(index):
+					preferred.append(index)
+				if preferred.size() >= mini(2, safe_count):
+					break
+			for i: int in range(preferred.size() - 1, -1, -1):
+				var index: int = preferred[i]
+				indices.erase(index)
+				indices.push_front(index)
+			while indices.size() > safe_count:
+				indices.pop_back()
+	data["indices"] = indices
+	result["data"] = data
+	return result
 
 func save_progress(progress: Dictionary) -> Dictionary:
 	return await _request_json("/api/progress", HTTPClient.METHOD_POST, progress)
