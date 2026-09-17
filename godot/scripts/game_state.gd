@@ -111,7 +111,7 @@ func record_tower_floor(floor: int) -> void:
 	save_local()
 	state_changed.emit()
 	if authenticated:
-		void sync_cloudflare_progress()
+		sync_cloudflare_progress()
 
 func weak_words() -> Array[Dictionary]:
 	_ensure_rpg()
