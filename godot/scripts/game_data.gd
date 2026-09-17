@@ -2,6 +2,7 @@ extends RefCounted
 class_name WordRpgGameData
 
 const Shared = preload("res://godot/generated/game_data.gd")
+const RpgRuntime = preload("res://godot/scripts/rpg_runtime.gd")
 
 static var ROLES: Dictionary = _build_roles()
 static var PETS: Dictionary = _build_pets()
@@ -36,8 +37,7 @@ static func _build_stages() -> Array[Dictionary]:
 	for raw_value: Variant in Shared.STAGES:
 		var raw: Dictionary = (raw_value as Dictionary).duplicate(true)
 		var asset := String(raw.get("asset", raw.get("id", "")))
-		if asset == "shadowKing":
-			asset = "shadow-king"
+		if asset == "shadowKing": asset = "shadow-king"
 		raw["art"] = "res://images/%s.png" % asset
 		out.append(raw)
 	return out
@@ -79,16 +79,14 @@ static func title_name(level: int) -> String:
 	var lv := clampi(level, 1, 50)
 	for raw_value: Variant in Shared.TITLES:
 		var raw: Dictionary = raw_value
-		if lv >= int(raw.get("level", 1)):
-			return String(raw.get("name", "初行者"))
+		if lv >= int(raw.get("level", 1)): return String(raw.get("name", "初行者"))
 	return "初行者"
 
 static func _title(level: int) -> Dictionary:
 	var lv := clampi(level, 1, 50)
 	for raw_value: Variant in Shared.TITLES:
 		var raw: Dictionary = raw_value
-		if lv >= int(raw.get("level", 1)):
-			return raw
+		if lv >= int(raw.get("level", 1)): return raw
 	return {"hp":0.0,"atk":0.0,"def":0.0,"crit":0.0}
 
 static func progression_stats(role_id: String, pet_id: String, level: int) -> Dictionary:
@@ -97,15 +95,20 @@ static func progression_stats(role_id: String, pet_id: String, level: int) -> Di
 	var pet: Dictionary = PETS.get(pet_id, PETS["fox"])
 	var tier := _title(safe_level)
 	var state := _runtime_state()
+	var rpg: Dictionary = {}
+	var inventory: Array = []
 	var pet_enhance := 0
 	var equipment := {"hpPct":0.0,"atkPct":0.0,"defPct":0.0,"crit":0.0}
 	if state != null:
-		if state.has_method("pet_enhance_level"):
-			pet_enhance = int(state.call("pet_enhance_level", pet_id))
+		rpg = state.get("rpg") if state.get("rpg") is Dictionary else {}
+		inventory = state.get("inventory") if state.get("inventory") is Array else []
+		if state.has_method("pet_enhance_level"): pet_enhance = int(state.call("pet_enhance_level", pet_id))
 		if state.has_method("equipment_bonuses"):
 			var raw_equipment: Variant = state.call("equipment_bonuses")
-			if raw_equipment is Dictionary:
-				equipment = raw_equipment
+			if raw_equipment is Dictionary: equipment = raw_equipment
+	var pet_fx := RpgRuntime.pet_skill_effects(pet_id, rpg)
+	var resonance := RpgRuntime.equipment_resonance(rpg, inventory)
+	var mythic_fx := RpgRuntime.mythic_equipment_effects(rpg, inventory)
 	var role_hp := float(role["hp"]) * (1.0 + float(safe_level - 1) * 0.035) * (1.0 + float(tier.get("hp", 0.0)))
 	var role_atk := float(role["atk"]) * (1.0 + float(safe_level - 1) * 0.025) * (1.0 + float(tier.get("atk", 0.0)))
 	var role_def := float(role["def"]) * (1.0 + float(safe_level - 1) * 0.025) * (1.0 + float(tier.get("def", 0.0)))
@@ -113,11 +116,11 @@ static func progression_stats(role_id: String, pet_id: String, level: int) -> Di
 	var pet_hp := float(pet["hp"]) * (1.0 + float(safe_level - 1) * 0.03) * pet_scale
 	var pet_atk := float(pet["atk"]) * (1.0 + float(safe_level - 1) * 0.03) * pet_scale
 	var pet_def := float(pet["def"]) * (1.0 + float(safe_level - 1) * 0.03) * pet_scale
-	var total_hp := roundi((role_hp + pet_hp) * (1.0 + float(equipment.get("hpPct", 0.0))))
-	var total_atk := roundi((role_atk + pet_atk) * (1.0 + float(equipment.get("atkPct", 0.0))))
-	var total_def := roundi((role_def + pet_def) * (1.0 + float(equipment.get("defPct", 0.0))))
-	var total_crit := minf(0.85, 0.10 + float(tier.get("crit", 0.0)) + float(equipment.get("crit", 0.0)))
-	return {"max_hp":total_hp,"hp":total_hp,"atk":total_atk,"def":total_def,"crit":total_crit,"shield":0,"poison":[],"armor_break":[],"atk_down":[],"def_boost":[],"heal_block":[],"crit_lock":0,"stun":0,"regen":0,"regen_fresh":false,"role":role_id,"pet":pet_id}
+	var total_hp := roundi((role_hp + pet_hp) * (1.0 + float(equipment.get("hpPct", 0.0)) + float(pet_fx.get("hpPct", 0.0))))
+	var total_atk := roundi((role_atk + pet_atk) * (1.0 + float(equipment.get("atkPct", 0.0)) + float(pet_fx.get("atkPct", 0.0))))
+	var total_def := roundi((role_def + pet_def) * (1.0 + float(equipment.get("defPct", 0.0)) + float(pet_fx.get("defPct", 0.0))))
+	var total_crit := minf(0.85, 0.10 + float(tier.get("crit", 0.0)) + float(equipment.get("crit", 0.0)) + float(pet_fx.get("crit", 0.0)))
+	return {"max_hp":total_hp,"hp":total_hp,"atk":total_atk,"def":total_def,"crit":total_crit,"shield":0,"poison":[],"armor_break":[],"atk_down":[],"def_boost":[],"heal_block":[],"crit_lock":0,"stun":0,"regen":0,"regen_fresh":false,"role":role_id,"pet":pet_id,"pet_fx":pet_fx,"resonance":resonance,"mythic_fx":mythic_fx}
 
 static func apply_equipment_bonuses(stats: Dictionary, bonuses: Dictionary) -> Dictionary:
 	var out: Dictionary = stats.duplicate(true)
@@ -131,8 +134,7 @@ static func apply_equipment_bonuses(stats: Dictionary, bonuses: Dictionary) -> D
 static func item_bonuses(item_type: String, subtype: String, quality: String) -> Dictionary:
 	var quality_table: Dictionary = Shared.EQUIPMENT_VALUES.get(quality, {})
 	var value: Dictionary = quality_table.get(subtype, {})
-	if value.is_empty():
-		return {}
+	if value.is_empty(): return {}
 	if item_type == "gem" and subtype == "ruby": return {"atkPct":float(value.get("atk",0.0)),"defPct":float(value.get("def",0.0))}
 	if item_type == "gem" and subtype == "thunder": return {"hpPct":float(value.get("hp",0.0)),"crit":float(value.get("crit",0.0))}
 	if item_type == "armor" and subtype == "guardian": return {"defPct":float(value.get("def",0.0))}
@@ -141,12 +143,15 @@ static func item_bonuses(item_type: String, subtype: String, quality: String) ->
 	if item_type == "ring" and subtype == "battlesoul": return {"defPct":float(value.get("def",0.0)),"crit":float(value.get("crit",0.0))}
 	return {}
 
-static func bonus_text(bonuses: Dictionary) -> String:
+static func bonus_text(bonuses: Dictionary, item: Dictionary = {}) -> String:
 	var parts: Array[String] = []
 	if float(bonuses.get("hpPct",0.0)) > 0.0: parts.append("HP +%d%%" % roundi(float(bonuses["hpPct"]) * 100.0))
 	if float(bonuses.get("atkPct",0.0)) > 0.0: parts.append("ATK +%d%%" % roundi(float(bonuses["atkPct"]) * 100.0))
 	if float(bonuses.get("defPct",0.0)) > 0.0: parts.append("DEF +%d%%" % roundi(float(bonuses["defPct"]) * 100.0))
 	if float(bonuses.get("crit",0.0)) > 0.0: parts.append("爆擊 +%d%%" % roundi(float(bonuses["crit"]) * 100.0))
+	if String(item.get("quality", "")) == "mythic":
+		var power := String(item.get("mythicPower", RpgRuntime.MYTHIC_DEFAULT_BY_SUBTYPE.get(String(item.get("subtype", "")), "")))
+		if not power.is_empty(): parts.append("✦ %s" % RpgRuntime.mythic_name(power))
 	return " · ".join(parts)
 
 static func stage_stats(stage_index: int, level: int) -> Dictionary:
@@ -164,7 +169,7 @@ static func stage_stats(stage_index: int, level: int) -> Dictionary:
 	base["shield"] = 0
 	base["poison"] = []; base["armor_break"] = []; base["atk_down"] = []; base["def_boost"] = []; base["heal_block"] = []
 	base["crit_lock"] = 0; base["stun"] = 0; base["regen"] = 0; base["regen_fresh"] = false
-	base["role"] = "monster"; base["pet"] = ""
+	base["role"] = "monster"; base["pet"] = ""; base["pet_fx"] = {}; base["resonance"] = {}; base["mythic_fx"] = {}
 	return base
 
 static func ultimate(role_id: String) -> Dictionary:
@@ -198,4 +203,6 @@ static func roll_loot(stage_index: int, level: int) -> Dictionary:
 	else: subtype = ["warbreaker","battlesoul"][randi_range(0,1)]
 	var quality_name := String(Shared.QUALITIES.get(quality, {}).get("name", quality))
 	var names := {"ruby":"紅曜石","thunder":"雷光石","guardian":"守護甲","bloodspirit":"血靈甲","warbreaker":"破軍戒","battlesoul":"戰魂戒"}
-	return {"id":"%d-%d" % [Time.get_unix_time_from_system(), randi()],"type":item_type,"subtype":subtype,"quality":quality,"name":"%s%s" % [quality_name,String(names[subtype])],"level":level,"bonuses":item_bonuses(item_type,subtype,quality),"art":"res://images/loot-%s-%s-%s.png" % [item_type,subtype,quality]}
+	var item := {"id":"%d-%d" % [Time.get_unix_time_from_system(), randi()],"type":item_type,"subtype":subtype,"quality":quality,"name":"%s%s" % [quality_name,String(names[subtype])],"level":level,"bonuses":item_bonuses(item_type,subtype,quality),"art":"res://images/loot-%s-%s-%s.png" % [item_type,subtype,quality]}
+	if quality == "mythic": item["mythicPower"] = RpgRuntime.random_mythic_power(item_type)
+	return item
