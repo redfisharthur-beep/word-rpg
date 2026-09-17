@@ -11,6 +11,7 @@ var enemy: Sprite2D
 var camera: Camera2D
 var fx: Node
 var fight_button: Button
+var cloudflare_status: Label
 var busy: bool = false
 
 func _ready() -> void:
@@ -19,6 +20,7 @@ func _ready() -> void:
 	add_child(fx)
 	fx.start_idle(player)
 	fx.start_idle(enemy, 0.92)
+	await _test_cloudflare()
 
 func _build_scene() -> void:
 	camera = Camera2D.new()
@@ -71,6 +73,13 @@ func _build_scene() -> void:
 	subtitle.add_theme_color_override("font_color", Color("c7beb2"))
 	hud.add_child(subtitle)
 
+	cloudflare_status = Label.new()
+	cloudflare_status.text = "Cloudflare：連線測試中…"
+	cloudflare_status.position = Vector2(38, 124)
+	cloudflare_status.add_theme_font_size_override("font_size", 17)
+	cloudflare_status.add_theme_color_override("font_color", Color("d8d1c6"))
+	hud.add_child(cloudflare_status)
+
 	fight_button = Button.new()
 	fight_button.text = "FIGHT"
 	fight_button.position = Vector2(210, 1110)
@@ -78,6 +87,17 @@ func _build_scene() -> void:
 	fight_button.add_theme_font_size_override("font_size", 30)
 	fight_button.pressed.connect(_on_fight_pressed)
 	hud.add_child(fight_button)
+
+func _test_cloudflare() -> void:
+	var result: Dictionary = await CloudflareClient.test_connection()
+	if bool(result.get("ok", false)):
+		var data: Dictionary = result.get("data", {})
+		var indices: Array = data.get("indices", [])
+		cloudflare_status.text = "Cloudflare：題庫連線成功（%d 題）" % indices.size()
+		cloudflare_status.add_theme_color_override("font_color", Color("b9d6b2"))
+	else:
+		cloudflare_status.text = "Cloudflare：連線失敗 · %s" % String(result.get("error", "未知錯誤"))
+		cloudflare_status.add_theme_color_override("font_color", Color("e6aaa1"))
 
 func _fit_sprite(sprite: Sprite2D, max_size: Vector2, cover: bool = false) -> void:
 	var texture_size: Vector2 = sprite.texture.get_size()
