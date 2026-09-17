@@ -12,7 +12,7 @@ run/main_scene="res://godot/scenes/game.tscn"
 [autoload]
 
 CloudflareClient="*res://godot/scripts/cloudflare_client.gd"
-GameState="*res://godot/scripts/game_state.gd"
+GameState="*res://godot/scripts/game_state_revision.gd"
 
 [display]
 
