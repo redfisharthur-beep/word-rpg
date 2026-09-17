@@ -22,6 +22,8 @@ jobs:
           include-templates: false
       - name: Import project and validate scripts
         run: godot --headless --path . --editor --quit
+      - name: Run Godot RPG parity tests
+        run: godot --headless --path . --script res://godot/tests/rpg_parity_test.gd
       - name: Launch main scene smoke test
         run: godot --headless --path . --quit-after 3
       - name: Launch native PK scene smoke test
