@@ -1,7 +1,10 @@
 extends "res://godot/scripts/game.gd"
 
+const RewardRuntime = preload("res://godot/scripts/reward_runtime.gd")
+
 var _ultimate_waiting: bool = false
 var _ultimate_choice: bool = false
+var last_crystals: int = 0
 
 func show_setup() -> void:
 	mode = "setup"
@@ -63,6 +66,7 @@ func start_tower() -> void:
 	question_batch.clear()
 	last_loot.clear()
 	last_reward.clear()
+	last_crystals = 0
 	selection_deadline = 0
 	show_cards()
 
@@ -172,16 +176,17 @@ func _run_semi_auto_battle() -> void:
 func finish_stage() -> void:
 	var outcome := run.outcome()
 	if outcome == "win":
-		var reward_amount := 80 + run.stage_index * 25
+		last_crystals = 0
+		var reward_amount := RewardRuntime.adventure_xp(run.stage_index)
 		if run.mode == "tower":
-			reward_amount = 45 + run.tower_floor * 8
+			reward_amount = RewardRuntime.tower_xp(run.tower_floor)
+			last_crystals = RewardRuntime.tower_crystals(run.tower_floor)
+			GameState.rpg["crystals"] = GameState.crystals() + last_crystals
 			GameState.record_tower_floor(run.tower_floor)
 		last_reward = GameState.add_xp(reward_amount)
-		last_loot = GameData.roll_loot(run.stage_index, GameState.level)
+		last_loot = RewardRuntime.roll_battle_loot(run.mode, run.stage_index, run.tower_floor, GameState.level, GameData.STAGES.size())
 		if not last_loot.is_empty():
 			GameState.add_loot(last_loot)
-		if GameState.authenticated:
-			GameState.sync_cloudflare_progress()
 		show_stage_clear()
 	elif outcome == "draw":
 		show_loss(true)
@@ -201,13 +206,15 @@ func show_stage_clear() -> void:
 	hud.add_child(foe)
 	var reward_panel := _panel(Rect2(85, 690, 550, 290), CREAM, 28, Color(1, 1, 1, 0.65), 1)
 	hud.add_child(reward_panel)
-	reward_panel.add_child(_label("EXP +%d" % int(last_reward.get("amount", 0)), Rect2(35, 20, 480, 50), 28, HORIZONTAL_ALIGNMENT_CENTER, INK))
+	reward_panel.add_child(_label("EXP +%d" % int(last_reward.get("amount", 0)), Rect2(35, 16, 480, 46), 27, HORIZONTAL_ALIGNMENT_CENTER, INK))
+	if run.mode == "tower" and last_crystals > 0:
+		reward_panel.add_child(_label("結晶 +%d" % last_crystals, Rect2(35, 62, 480, 34), 18, HORIZONTAL_ALIGNMENT_CENTER, Color("8a6b2c")))
 	if not last_loot.is_empty():
-		reward_panel.add_child(_texture(String(last_loot.get("art", "")), Rect2(55, 92, 150, 150)))
-		reward_panel.add_child(_label(String(last_loot.get("name", "裝備")), Rect2(220, 110, 280, 55), 23, HORIZONTAL_ALIGNMENT_LEFT, INK))
-		reward_panel.add_child(_label("收藏 %d" % GameState.collection_count(), Rect2(220, 165, 260, 34), 16, HORIZONTAL_ALIGNMENT_LEFT, MUTED))
+		reward_panel.add_child(_texture(String(last_loot.get("art", "")), Rect2(55, 102, 150, 150)))
+		reward_panel.add_child(_label(String(last_loot.get("name", "裝備")), Rect2(220, 112, 280, 55), 23, HORIZONTAL_ALIGNMENT_LEFT, INK))
+		reward_panel.add_child(_label("收藏 %d" % GameState.collection_count(), Rect2(220, 167, 260, 34), 16, HORIZONTAL_ALIGNMENT_LEFT, MUTED))
 	else:
-		reward_panel.add_child(_label("本關沒有掉落裝備", Rect2(70, 115, 410, 55), 20, HORIZONTAL_ALIGNMENT_CENTER, MUTED))
+		reward_panel.add_child(_label("本關沒有掉落裝備", Rect2(70, 120, 410, 55), 20, HORIZONTAL_ALIGNMENT_CENTER, MUTED))
 	var has_next := run.tower_floor < 20 if run.mode == "tower" else run.stage_index < GameData.STAGES.size() - 1
 	if has_next:
 		var next_text := "NEXT FLOOR" if run.mode == "tower" else "NEXT"
