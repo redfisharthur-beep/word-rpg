@@ -1,6 +1,7 @@
 extends "res://godot/scripts/game_v3.gd"
 
 const RpgRuntime = preload("res://godot/scripts/rpg_runtime.gd")
+const InventoryRuntime = preload("res://godot/scripts/inventory_runtime.gd")
 
 ## Final production-facing Godot UI layer.
 ## Combat/progression logic remains in game_v3.gd; this file owns interactive
@@ -146,22 +147,48 @@ func _equipment_row(item: Dictionary) -> Control:
 	var item_id := String(item.get("id", ""))
 	var equipped := GameState.is_equipped(item_id)
 	var row := _panel(Rect2(), Color(0.91, 0.89, 0.84, 0.96), 18, Color(0.64, 0.61, 0.55, 0.34), 1)
-	row.custom_minimum_size = Vector2(565, 154)
-	row.add_child(_texture(String(item.get("art", "")), Rect2(10, 12, 112, 112)))
+	row.custom_minimum_size = Vector2(565, 184)
+	row.add_child(_texture(String(item.get("art", "")), Rect2(10, 18, 112, 112)))
 	var name_color := Color("8b6925") if String(item.get("quality", "")) == "mythic" else INK
-	row.add_child(_label(String(item.get("name", "裝備")), Rect2(132, 10, 270, 32), 19, HORIZONTAL_ALIGNMENT_LEFT, name_color))
+	row.add_child(_label(String(item.get("name", "裝備")), Rect2(132, 10, 250, 32), 19, HORIZONTAL_ALIGNMENT_LEFT, name_color))
 	var bonuses: Dictionary = item.get("bonuses", {})
 	if bonuses.is_empty(): bonuses = GameData.item_bonuses(String(item.get("type", "")), String(item.get("subtype", "")), String(item.get("quality", "common")))
-	row.add_child(_label(GameData.bonus_text(bonuses, item), Rect2(132, 43, 300, 50), 13, HORIZONTAL_ALIGNMENT_LEFT, MUTED))
-	row.add_child(_label("已裝備" if equipped else "未裝備", Rect2(132, 100, 100, 26), 14, HORIZONTAL_ALIGNMENT_LEFT, Color("55745f") if equipped else MUTED))
-	var equip_btn := _text_button("卸下" if equipped else "裝上", Rect2(390, 24, 145, 46), 16, Color("61776a"), Color.WHITE); row.add_child(equip_btn); equip_btn.pressed.connect(_toggle_equipment.bind(item_id))
+	row.add_child(_label(GameData.bonus_text(bonuses, item), Rect2(132, 43, 245, 54), 13, HORIZONTAL_ALIGNMENT_LEFT, MUTED))
+	row.add_child(_label("已裝備" if equipped else "未裝備", Rect2(132, 102, 100, 26), 14, HORIZONTAL_ALIGNMENT_LEFT, Color("55745f") if equipped else MUTED))
+	var synth_info := InventoryRuntime.synthesis_info(GameState.inventory, GameState.equipped_ids(), item_id)
+	var synth_count := int(synth_info.get("count", 0))
+	var synth_label := "已最高階" if String(synth_info.get("next_quality", "")).is_empty() else "合成 %d/3" % mini(3, synth_count)
+	var equip_btn := _text_button("卸下" if equipped else "裝上", Rect2(390, 12, 145, 42), 15, Color("61776a"), Color.WHITE)
+	row.add_child(equip_btn)
+	equip_btn.pressed.connect(_toggle_equipment.bind(item_id))
+	var synth_can := bool(synth_info.get("can", false))
+	var synth_btn := _text_button(synth_label, Rect2(390, 66, 145, 42), 14, Color("8b7438") if synth_can else Color("b5afa4"), Color.WHITE)
+	synth_btn.disabled = not synth_can
+	row.add_child(synth_btn)
+	if synth_can: synth_btn.pressed.connect(_synthesize_equipment.bind(item_id))
 	var gain := int(GameState.CRYSTAL_VALUE.get(String(item.get("quality", "common")), 1))
-	var dismantle_btn := _text_button("分解 +%d" % gain, Rect2(390, 86, 145, 42), 14, Color("9b8a78") if not equipped else Color("b8b2aa"), Color.WHITE); dismantle_btn.disabled = equipped; row.add_child(dismantle_btn); dismantle_btn.pressed.connect(_dismantle_equipment.bind(item_id))
+	var dismantle_btn := _text_button("分解 +%d" % gain, Rect2(390, 120, 145, 42), 14, Color("9b8a78") if not equipped else Color("b8b2aa"), Color.WHITE)
+	dismantle_btn.disabled = equipped
+	row.add_child(dismantle_btn)
+	dismantle_btn.pressed.connect(_dismantle_equipment.bind(item_id))
 	return row
 
 func _toggle_equipment(item_id: String) -> void:
 	if GameState.is_equipped(item_id): GameState.unequip_item(item_id)
 	else: GameState.equip_item(item_id)
+	show_inventory()
+
+func _synthesize_equipment(item_id: String) -> void:
+	var result := InventoryRuntime.synthesize(GameState.inventory, GameState.equipped_ids(), item_id)
+	if not bool(result.get("ok", false)):
+		show_inventory()
+		return
+	var remaining: Variant = result.get("remaining", [])
+	if remaining is Array:
+		GameState._copy_inventory(remaining)
+	var made: Variant = result.get("item", {})
+	if made is Dictionary:
+		GameState.add_loot(made)
 	show_inventory()
 
 func _dismantle_equipment(item_id: String) -> void:
