@@ -85,6 +85,32 @@ export function cleanRpg(raw={}){
   const collection=[...collectionSet],towerBest=clamp(Math.round(Number(src.towerBest)||0),0,20),weakWords=cleanWeakWords(src.weakWords);
   return {...base,inventory,equipped:{gems,armor,rings},crystals,petEnhance,petSkills,collection,towerBest,weakWords};
 }
+export function maxedPkRpg(){
+  const rawItems=[
+    {id:'pk-gem-ruby-1',type:'gem',subtype:'ruby',quality:'mythic',mythicPower:'lifesteal'},
+    {id:'pk-gem-thunder',type:'gem',subtype:'thunder',quality:'mythic',mythicPower:'sunder'},
+    {id:'pk-gem-ruby-2',type:'gem',subtype:'ruby',quality:'mythic',mythicPower:'stun'},
+    {id:'pk-armor-guardian',type:'armor',subtype:'guardian',quality:'mythic',mythicPower:'ward'},
+    {id:'pk-ring-warbreaker',type:'ring',subtype:'warbreaker',quality:'mythic',mythicPower:'critburst'},
+    {id:'pk-ring-battlesoul',type:'ring',subtype:'battlesoul',quality:'mythic',mythicPower:'truehit'}
+  ];
+  const inventory=rawItems.map(item=>normalizeItem(item)).filter(Boolean);
+  return cleanRpg({
+    inventory,
+    equipped:{
+      gems:['pk-gem-ruby-1','pk-gem-thunder','pk-gem-ruby-2'],
+      armor:'pk-armor-guardian',
+      rings:['pk-ring-warbreaker','pk-ring-battlesoul']
+    },
+    crystals:999999,
+    petEnhance:{fox:4,owl:4,dragon:4},
+    petSkills:Object.fromEntries(PET_IDS.map(id=>[id,PET_TREES[id].map(node=>node.id)])),
+    collection:collectionEntries().map(item=>item.key),
+    towerBest:20,
+    weakWords:{}
+  });
+}
+
 export function recordWordResult(rpg,index,correct){const clean=cleanRpg(rpg),i=clamp(Math.round(Number(index)),-1,1199);if(i<0)return clean;const key=String(i),old=clean.weakWords[key];if(correct){if(old){const streak=(old.streak||0)+1;if(streak>=3)delete clean.weakWords[key];else clean.weakWords[key]={...old,streak};}}else clean.weakWords[key]={index:i,streak:0,misses:Math.min(999,(old?.misses||0)+1),lastWrong:Date.now()};return cleanRpg(clean);}
 export function weakQuestionIndices(rpg,limit=20){const clean=cleanRpg(rpg);return Object.values(clean.weakWords).sort((a,b)=>(b.misses-a.misses)||(b.lastWrong-a.lastWrong)).slice(0,clamp(Math.round(Number(limit)||20),1,60)).map(x=>x.index);}
 export function weakWordProgress(rpg){const clean=cleanRpg(rpg),items=Object.values(clean.weakWords);return {count:items.length,mastering:items.filter(x=>x.streak>0).length};}
