@@ -217,7 +217,7 @@ func _test_adventure() -> void:
 	var stage_run = AdventureRun.new()
 	stage_run.start("warrior", "fox", 20)
 	stage_run.player["hp"] = maxi(1, int(stage_run.player["max_hp"]) / 2)
-	var old_stage := stage_run.stage_index
+	var old_stage: int = int(stage_run.stage_index)
 	_check(stage_run.advance_stage(), "adventure should advance from the first stage")
 	_check(stage_run.stage_index == old_stage + 1, "adventure stage index should advance")
 
