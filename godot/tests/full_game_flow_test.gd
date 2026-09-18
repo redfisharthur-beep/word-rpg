@@ -82,7 +82,7 @@ func _test_ui_font() -> void:
 			if codepoint < 128 or seen.has(codepoint):
 				continue
 			seen[codepoint] = true
-			_check(font.has_char(codepoint), "bundled UI font missing glyph codepoint %d" % codepoint)
+			_check(UiFont.supports_char(codepoint), "bundled UI font missing glyph codepoint %d" % codepoint)
 	_check(seen.size() >= 1000, "font coverage test should inspect the full Traditional Chinese vocabulary")
 
 func _test_assets() -> void:
