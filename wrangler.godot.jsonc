@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "word-rpg",
+  "main": "worker/entry.js",
+  "compatibility_date": "2026-09-13",
+  "keep_vars": true,
+  "secrets": {
+    "required": ["LINE_CHANNEL_SECRET"]
+  },
+  "assets": {
+    "directory": "build/web",
+    "binding": "ASSETS",
+    "run_worker_first": ["/match", "/auth/*", "/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MATCHMAKER",
+        "class_name": "Matchmaker"
+      },
+      {
+        "name": "USER_STORE",
+        "class_name": "UserStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["Matchmaker"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["UserStore"]
+    }
+  ]
+}
