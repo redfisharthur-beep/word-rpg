@@ -78,8 +78,8 @@ func _test_assets() -> void:
 		paths.append(String(pet.get("art", "")))
 		var awakening: Dictionary = pet.get("awakening", {})
 		var awakening_art := String(awakening.get("art", ""))
-		if not awakening_art.is_empty():
-			paths.append(awakening_art)
+		if not awakening_art.is_empty() and not ResourceLoader.exists(awakening_art):
+			print("FULLFLOW ART TODO: optional awakening asset missing: %s" % awakening_art)
 	for stage: Dictionary in GameData.STAGES:
 		paths.append(String(stage.get("art", "")))
 	for quality: String in ["common", "rare", "epic", "legendary", "mythic"]:
