@@ -1,6 +1,6 @@
 import {DurableObject} from 'cloudflare:workers';
 import {dealHand,makeFighter,resolveCardAction,resolveBasic,resolveAutoBasic,afterAction,cloneFighter,bondMultiplier,supportBoost,isOffensive,applyPetRoundEnd,progressionStats} from '../src/cards.js';
-import {cleanRpg} from '../src/rpg.js';
+import {cleanRpg,maxedPkRpg} from '../src/rpg.js';
 import {makeQuestion} from '../src/words.js';
 
 const WORD_COUNT=1200;
@@ -61,7 +61,7 @@ export class Matchmaker extends DurableObject{
   constructor(ctx,env){super(ctx,env);this.ctx=ctx;this.env=env}
   async fetch(request){if(request.headers.get('Upgrade')!=='websocket')return new Response('WebSocket required',{status:426});const session=await readSession(request,this.env),questionKeys=session?.sub?[`line:${session.sub}`]:[],pair=new WebSocketPair(),client=pair[0],server=pair[1];this.ctx.acceptWebSocket(server);server.serializeAttachment({id:crypto.randomUUID(),userId:session?.sub||null,state:'new',profile:null,opponentId:null,matchId:null,fighter:null,hand:null,used:[],round:1,ready:null,selection:null,quizStartedAt:0,questionKeys,questionBatch:[]});server.send(JSON.stringify({type:'connected'}));return new Response(null,{status:101,webSocket:client})}
   async webSocketMessage(ws,message){let data;try{data=JSON.parse(typeof message==='string'?message:new TextDecoder().decode(message))}catch{return}if(data.type==='join')await this.join(ws,data.profile||{});if(data.type==='quiz-start')this.beginQuiz(ws,data);if(data.type==='ready')await this.ready(ws,data)}
-  profile(p){return {name:String(p.name||'PLAYER').slice(0,16),role:['warrior','mage','archer'].includes(p.role)?p.role:'warrior',pet:['fox','owl','dragon'].includes(p.pet)?p.pet:'fox',level:clamp(Math.round(Number(p.level)||1),1,50),rpg:cleanRpg(p.rpg||{})}}
+  profile(p){return {name:String(p.name||'PLAYER').slice(0,16),role:['warrior','mage','archer'].includes(p.role)?p.role:'warrior',pet:['fox','owl','dragon'].includes(p.pet)?p.pet:'fox',level:50,rpg:maxedPkRpg()}}
   send(ws,data){try{ws.send(JSON.stringify(data))}catch{}}
   find(id){return this.ctx.getWebSockets().find(x=>x.deserializeAttachment()?.id===id)}
   view(att){const fighter=cloneFighter(att.fighter);delete fighter.rpg;const p=att.profile||{};return {...fighter,profile:{name:p.name,role:p.role,pet:p.pet,level:p.level}}}
