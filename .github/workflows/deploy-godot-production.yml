@@ -7,6 +7,8 @@ on:
         description: 'Type DEPLOY_GODOT to replace the production Web assets with the tested Godot Web build'
         required: true
         type: string
+  pull_request:
+    types: [ready_for_review]
 
 permissions:
   contents: read
@@ -17,7 +19,9 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/godot-migration' && inputs.confirm == 'DEPLOY_GODOT'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/godot-migration' && inputs.confirm == 'DEPLOY_GODOT') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'godot-migration' && github.event.pull_request.base.ref == 'main')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Godot migration
