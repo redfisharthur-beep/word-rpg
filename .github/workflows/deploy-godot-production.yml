@@ -106,3 +106,51 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.godot.jsonc
+
+      - name: Verify live Godot production
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_URL="https://word-rpg.redfisharthur.workers.dev"
+
+          READY=0
+          for ATTEMPT in {1..12}; do
+            if curl --fail --silent --show-error "$BASE_URL/" -o /tmp/word-rpg-live-index.html; then
+              READY=1
+              break
+            fi
+            sleep 5
+          done
+          test "$READY" -eq 1
+
+          grep -q 'word-rpg-chunk-loader' /tmp/word-rpg-live-index.html
+          curl --fail --silent --show-error "$BASE_URL/godot-chunks.json" -o /tmp/godot-chunks.json
+
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const manifest = JSON.parse(fs.readFileSync('/tmp/godot-chunks.json', 'utf8'));
+          for (const key of ['index.pck', 'index.wasm']) {
+            const entry = manifest[key];
+            if (!entry || !Array.isArray(entry.parts) || entry.parts.length < 2) {
+              throw new Error(`Invalid live chunk manifest for ${key}`);
+            }
+            if (!entry.parts.every((part) => Number(part.size) > 0 && Number(part.size) < 25 * 1024 * 1024)) {
+              throw new Error(`Cloudflare-unsafe live chunk detected for ${key}`);
+            }
+          }
+          NODE
+
+          for ASSET in             index.js             index.pck.part00             index.pck.part01             index.pck.part02             index.wasm.part00             index.wasm.part01; do
+            curl --fail --silent --show-error --head "$BASE_URL/$ASSET" >/dev/null
+          done
+
+          curl --fail --silent --show-error "$BASE_URL/api/session" -o /tmp/word-rpg-session.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const session = JSON.parse(fs.readFileSync('/tmp/word-rpg-session.json', 'utf8'));
+          if (typeof session !== 'object' || session === null) {
+            throw new Error('Live /api/session did not return JSON');
+          }
+          NODE
+
+          echo "Live Godot production smoke test passed."
