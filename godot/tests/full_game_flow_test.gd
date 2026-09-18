@@ -5,6 +5,7 @@ const AdventureRun = preload("res://godot/scripts/adventure_run.gd")
 const WordBank = preload("res://godot/scripts/word_bank.gd")
 const RpgRuntime = preload("res://godot/scripts/rpg_runtime.gd")
 const InventoryRuntime = preload("res://godot/scripts/inventory_runtime.gd")
+const UiFont = preload("res://godot/scripts/ui_font.gd")
 
 var failures: Array[String] = []
 
@@ -50,6 +51,39 @@ func _test_word_bank() -> void:
 	_check(not String(q.get("answer", "")).is_empty(), "question should have an answer")
 	_check((q.get("options", []) as Array).size() == 4, "question should have four options")
 	_check((q.get("options", []) as Array).has(q.get("answer")), "question options should include the answer")
+
+
+func _test_ui_font() -> void:
+	var font: Font = UiFont.get_font()
+	_check(font != null, "bundled Traditional Chinese UI font should load")
+	if font == null:
+		return
+	var sources: Array[String] = [
+		"res://src/words.js",
+		"res://data/game-data.json",
+		"res://godot/scripts/game.gd",
+		"res://godot/scripts/game_v3.gd",
+		"res://godot/scripts/game_runtime.gd",
+		"res://godot/scripts/pk_native.gd",
+		"res://godot/scripts/game_data.gd",
+		"res://godot/scripts/battle_rules.gd",
+		"res://godot/scripts/rpg_runtime.gd",
+		"res://godot/scripts/reward_runtime.gd",
+		"res://godot/scripts/game_state.gd",
+		"res://godot/scripts/game_state_revision.gd",
+		"res://godot/scripts/cloud_sync_notice.gd"
+	]
+	var seen := {}
+	for source_path: String in sources:
+		var source := FileAccess.get_file_as_string(source_path)
+		_check(not source.is_empty(), "font coverage source should be readable: %s" % source_path)
+		for i: int in range(source.length()):
+			var codepoint := source.unicode_at(i)
+			if codepoint < 128 or seen.has(codepoint):
+				continue
+			seen[codepoint] = true
+			_check(font.has_char(codepoint), "bundled UI font missing glyph codepoint %d" % codepoint)
+	_check(seen.size() >= 1000, "font coverage test should inspect the full Traditional Chinese vocabulary")
 
 func _test_assets() -> void:
 	var paths: Array[String] = [
@@ -271,6 +305,7 @@ func _run() -> void:
 	print("FULLFLOW: begin")
 	_reset_state()
 	_test_word_bank()
+	_test_ui_font()
 	_test_assets()
 	_test_state_and_progression()
 	_test_adventure()
