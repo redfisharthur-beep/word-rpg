@@ -413,8 +413,21 @@ func _copy_inventory(raw_value: Variant) -> void:
 	if not raw_value is Array:
 		return
 	for value: Variant in raw_value:
-		if value is Dictionary:
-			inventory.append(value.duplicate(true))
+		if not value is Dictionary:
+			continue
+		var item: Dictionary = value.duplicate(true)
+		var art := String(item.get("art", ""))
+		if art.begins_with("/images/"):
+			item["art"] = "res://images/%s" % art.trim_prefix("/images/")
+		elif art.begins_with("images/"):
+			item["art"] = "res://%s" % art
+		elif art.is_empty():
+			var item_type := String(item.get("type", ""))
+			var subtype := String(item.get("subtype", ""))
+			var quality := String(item.get("quality", "common"))
+			if not item_type.is_empty() and not subtype.is_empty():
+				item["art"] = "res://images/loot-%s-%s-%s.png" % [item_type, subtype, quality]
+		inventory.append(item)
 
 func _safe_role(value: String) -> String:
 	return value if ["warrior","mage","archer"].has(value) else "warrior"
