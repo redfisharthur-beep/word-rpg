@@ -45,6 +45,12 @@ jobs:
           use-dotnet: false
           include-templates: true
 
+      - name: Build Traditional Chinese Godot font
+        run: |
+          python -m pip install --disable-pip-version-check "fonttools[woff]>=4.58,<5" brotli
+          python scripts/build-godot-font.py
+          test -s godot/fonts/noto-tc/WordRpgNotoSansTC.ttf
+
       - name: Import project and validate scripts
         run: godot --headless --path . --editor --quit
 
