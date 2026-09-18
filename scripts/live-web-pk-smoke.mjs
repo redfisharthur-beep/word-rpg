@@ -88,8 +88,8 @@ async function delay(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const a = new Client('WEB-PK-A', 'warrior', 'fox', 12);
-const b = new Client('WEB-PK-B', 'mage', 'owl', 27);
+const a = new Client('WEB-PK-A', 'warrior', 'fox', 1);
+const b = new Client('WEB-PK-B', 'warrior', 'fox', 50);
 
 try {
   await a.connect();
@@ -101,8 +101,12 @@ try {
     b.waitFor('matched'),
   ]);
 
-  assert(matchedA.self?.profile?.level === 12, 'player A real level should reach PK');
-  assert(matchedB.self?.profile?.level === 27, 'player B real level should reach PK');
+  assert(matchedA.self?.profile?.level === 50, 'player A should be normalized to max PK level');
+  assert(matchedB.self?.profile?.level === 50, 'player B should be normalized to max PK level');
+  assert(matchedA.self?.maxHp === matchedB.self?.maxHp, 'same role/pet should have identical max PK HP regardless of account progress');
+  assert(matchedA.self?.atk === matchedB.self?.atk, 'same role/pet should have identical max PK ATK regardless of account progress');
+  assert(matchedA.self?.def === matchedB.self?.def, 'same role/pet should have identical max PK DEF regardless of account progress');
+  assert(matchedA.self?.crit === matchedB.self?.crit, 'same role/pet should have identical max PK CRIT regardless of account progress');
   assert(Array.isArray(matchedA.hand) && matchedA.hand.length === 9, 'player A should receive 9 cards');
   assert(Array.isArray(matchedB.hand) && matchedB.hand.length === 9, 'player B should receive 9 cards');
 
