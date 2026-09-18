@@ -24,9 +24,16 @@ assert.ok(EQUIPMENT_VALUES.mythic.warbreaker.atk>0);
 const rpg=cleanRpg(emptyRpg());
 const stats=progressionStats('warrior','fox',1,rpg).total;
 assert.ok(stats.maxHp>0&&stats.atk>0&&stats.def>0);
-const hand=dealHand(9,'warrior',50);
-assert.equal(hand.length,9);
-assert.ok(hand.filter(x=>x.exclusive).length>=1);
+for(const level of [1,9,10,29]){
+  const hand=dealHand(9,'warrior',level);
+  assert.equal(hand.length,9);
+  assert.equal(hand.filter(x=>x.exclusive).length,1,`Lv.${level} should deal exactly 1 exclusive card`);
+}
+for(const level of [30,40,50]){
+  const hand=dealHand(9,'warrior',level);
+  assert.equal(hand.length,9);
+  assert.equal(hand.filter(x=>x.exclusive).length,2,`Lv.${level} should deal exactly 2 exclusive cards`);
+}
 assert.equal(collectionEntries().length,30,'Collection should contain 30 equipment discoveries');
 
 console.log('v2 systems ok');
