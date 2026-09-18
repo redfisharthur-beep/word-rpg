@@ -48,10 +48,10 @@ jobs:
           test -s build/web/index.pck
           du -h build/web/*
           PCK_BYTES=$(stat -c%s build/web/index.pck)
-          PCK_LIMIT=$((70 * 1024 * 1024))
+          PCK_LIMIT=$((24 * 1024 * 1024))
           echo "PCK bytes: $PCK_BYTES / limit: $PCK_LIMIT"
           if [ "$PCK_BYTES" -gt "$PCK_LIMIT" ]; then
-            echo "::error::Godot Web index.pck exceeds the 70 MiB budget. Review newly added large textures before merging."
+            echo "::error::Godot Web index.pck exceeds the 24 MiB Cloudflare asset budget. Review newly added large textures before merging."
             exit 1
           fi
       - name: Upload tested Web build
