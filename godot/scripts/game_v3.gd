@@ -315,11 +315,11 @@ func _build_combat_stage(player_state: Dictionary, enemy_state: Dictionary) -> v
 		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hud.add_child(frame)
 	if bool(unlocks.get("title", false)):
-		_hud_label("✦  萬象收藏家  ✦", Rect2(55, 82, 270, 28), 14, HORIZONTAL_ALIGNMENT_CENTER, Color("9e792b"))
+		_hud_label("*  萬象收藏家  *", Rect2(55, 82, 270, 28), 14, HORIZONTAL_ALIGNMENT_CENTER, Color("9e792b"))
 	var pet_data := GameState.pet_display_data(GameState.pet)
 	_texture_to_hud(String(pet_data.get("art", GameData.PETS[GameState.pet]["art"])), Rect2(40, 260, 92, 82))
 	if bool(pet_data.get("awakened", false)):
-		_hud_label("✦", Rect2(47, 247, 78, 26), 20, HORIZONTAL_ALIGNMENT_CENTER, Color("d7a934"))
+		_hud_label("*", Rect2(47, 247, 78, 26), 20, HORIZONTAL_ALIGNMENT_CENTER, Color("d7a934"))
 	if run != null and run.mode == "tower":
 		var rule := run.tower_rule()
 		var rule_text := "%dF" % run.tower_floor
