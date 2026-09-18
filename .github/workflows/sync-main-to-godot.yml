@@ -36,8 +36,8 @@ jobs:
             exit 0
           fi
 
-          if ! git merge --no-ff --no-edit -X theirs origin/main; then
-            echo "::error::Automatic sync hit an unresolved merge conflict. No changes were pushed."
+          if ! git merge --no-ff --no-edit origin/main; then
+            echo "::error::Automatic sync hit a merge conflict. Nothing was pushed; resolve it explicitly so Godot-specific files are never silently replaced by main."
             git merge --abort || true
             exit 1
           fi
