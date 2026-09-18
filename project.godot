@@ -24,6 +24,10 @@ window/size/window_height_override=800
 window/size/resizable=true
 window/stretch/mode="canvas_items"
 
+[gui]
+
+fonts/dynamic_fonts/use_oversampling=true
+
 [importer_defaults]
 
 texture={
