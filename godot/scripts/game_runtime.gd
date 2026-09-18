@@ -95,7 +95,7 @@ func show_pet_progression() -> void:
 		panel.add_child(enhance_btn)
 		enhance_btn.pressed.connect(_enhance_current_pet)
 	else:
-		panel.add_child(_label("✦ 覺醒完成 ✦", Rect2(365, 292, 210, 58), 19, HORIZONTAL_ALIGNMENT_CENTER, Color("a77e28")))
+		panel.add_child(_label("* 覺醒完成 *", Rect2(365, 292, 210, 58), 19, HORIZONTAL_ALIGNMENT_CENTER, Color("a77e28")))
 	_add_tabs(["fox", "owl", "dragon"], ["靈狐", "夜梟", "幼龍"], GameState.pet, 30, 430, _select_pet_from_progression)
 	panel.add_child(_label("技能樹", Rect2(55, 500, 180, 38), 22, HORIZONTAL_ALIGNMENT_LEFT, INK))
 	var pet_skills: Dictionary = RpgRuntime.ensure_shape(GameState.rpg)["petSkills"]
