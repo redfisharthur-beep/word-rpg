@@ -151,7 +151,7 @@ static func bonus_text(bonuses: Dictionary, item: Dictionary = {}) -> String:
 	if float(bonuses.get("crit",0.0)) > 0.0: parts.append("爆擊 +%d%%" % roundi(float(bonuses["crit"]) * 100.0))
 	if String(item.get("quality", "")) == "mythic":
 		var power := String(item.get("mythicPower", RpgRuntime.MYTHIC_DEFAULT_BY_SUBTYPE.get(String(item.get("subtype", "")), "")))
-		if not power.is_empty(): parts.append("✦ %s" % RpgRuntime.mythic_name(power))
+		if not power.is_empty(): parts.append("* %s" % RpgRuntime.mythic_name(power))
 	return " · ".join(parts)
 
 static func stage_stats(stage_index: int, level: int) -> Dictionary:
