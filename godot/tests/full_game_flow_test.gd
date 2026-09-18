@@ -299,6 +299,8 @@ func _test_ui_routes() -> void:
 	game.start_adventure()
 	_check(String(game.mode) == "cards", "Fight should enter card selection")
 	_check(game.run != null and game.run.hand.size() == 9, "Fight should initialize a nine-card run")
+	_check(game.player_sprite != null and game.player_sprite.get_parent() == game.hud, "combat fighter art should render above the HUD battle panel")
+	_check(game.enemy_sprite != null and game.enemy_sprite.get_parent() == game.hud, "combat enemy art should render above the HUD battle panel")
 	game.show_setup()
 	game.start_tower()
 	_check(String(game.mode) == "cards", "tower should enter card selection")
