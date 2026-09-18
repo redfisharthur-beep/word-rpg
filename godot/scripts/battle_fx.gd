@@ -194,7 +194,7 @@ func _spawn_effect(texture: Texture2D, at_position: Vector2, tint: Color, rotati
 	effect.rotation = rotation_value
 	effect.modulate = Color(tint.r, tint.g, tint.b, 0.98)
 	effect.z_index = 40
-	effect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	effect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	var source_size := texture.get_size()
 	var factor := target_size / maxf(1.0, maxf(source_size.x, source_size.y))
 	effect.scale = Vector2.ONE * factor * 0.45
