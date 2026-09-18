@@ -2,6 +2,7 @@ extends Node2D
 
 const GameData = preload("res://godot/scripts/game_data.gd")
 const WordBank = preload("res://godot/scripts/word_bank.gd")
+const UiFont = preload("res://godot/scripts/ui_font.gd")
 const VIEW := Vector2(720, 1280)
 const BG_GAME := "res://images/bg-game.png"
 const INK := Color("29332f")
@@ -162,6 +163,7 @@ func _show_cards() -> void:
 		button.focus_mode = Control.FOCUS_NONE
 		button.text = "%s\n%s\n%s" % ["●".repeat(order) if order > 0 else "", String(card.get("name", "技能")), String(card.get("text", ""))]
 		button.add_theme_font_size_override("font_size", 16)
+		UiFont.apply(button)
 		button.add_theme_stylebox_override("normal", _box(_card_color(String(card.get("color", "neutral"))), 18, Color(1,1,1,0.55), 1))
 		button.add_theme_stylebox_override("pressed", _box(Color("c9bd9f"), 18, Color("8f7b4d"), 3))
 		button.pressed.connect(_toggle_card.bind(i))
@@ -381,6 +383,7 @@ func _add_background() -> void:
 		return
 	var sprite := Sprite2D.new()
 	sprite.texture = texture
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	sprite.position = VIEW * 0.5
 	var size := texture.get_size()
 	if size.x > 0.0 and size.y > 0.0:
@@ -440,6 +443,7 @@ func _label(text: String, rect: Rect2, font_size: int, align: int, color: Color)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
+	UiFont.apply(label)
 	return label
 
 func _hud_label(text: String, rect: Rect2, font_size: int, align: int, color: Color) -> Label:
@@ -455,6 +459,7 @@ func _button(text: String, rect: Rect2, font_size: int, bg: Color, fg: Color) ->
 	button.focus_mode = Control.FOCUS_NONE
 	button.add_theme_font_size_override("font_size", font_size)
 	button.add_theme_color_override("font_color", fg)
+	UiFont.apply(button)
 	button.add_theme_stylebox_override("normal", _box(bg, 16, Color(1,1,1,0.30), 1))
 	button.add_theme_stylebox_override("pressed", _box(bg.darkened(0.07), 16, Color(1,1,1,0.50), 2))
 	return button
@@ -464,6 +469,7 @@ func _texture_to_hud(path: String, rect: Rect2) -> TextureRect:
 	view.position = rect.position
 	view.size = rect.size
 	view.texture = _load_texture(path)
+	view.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	view.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
