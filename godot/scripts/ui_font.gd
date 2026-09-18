@@ -45,6 +45,7 @@ const FONT_PATHS: Array[String] = [
 ]
 
 static var _cached_font: Font
+static var _font_faces: Array[Font] = []
 
 static func get_font() -> Font:
 	if _cached_font != null:
@@ -62,6 +63,7 @@ static func get_font() -> Font:
 		push_warning("Word RPG Traditional Chinese font subsets are unavailable; using Godot fallback font.")
 		return null
 
+	_font_faces = loaded
 	var primary: Font = loaded[0]
 	var fallbacks: Array[Font] = []
 	for i: int in range(1, loaded.size()):
@@ -74,3 +76,10 @@ static func apply(control: Control) -> void:
 	var font := get_font()
 	if font != null:
 		control.add_theme_font_override("font", font)
+
+static func supports_char(codepoint: int) -> bool:
+	get_font()
+	for face: Font in _font_faces:
+		if face.has_char(codepoint):
+			return true
+	return false
