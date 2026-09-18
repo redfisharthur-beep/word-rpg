@@ -27,9 +27,9 @@ window/stretch/mode="canvas_items"
 [importer_defaults]
 
 texture={
-"compress/lossy_quality": 0.78,
+"compress/lossy_quality": 0.85,
 "compress/mode": 1,
-"process/size_limit": 1280
+"process/size_limit": 2048
 }
 
 [word_rpg]
