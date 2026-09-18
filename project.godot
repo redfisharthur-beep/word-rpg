@@ -1,0 +1,50 @@
+; Engine configuration file
+; Word RPG - Godot + Cloudflare
+; Target engine: Godot 4.7.x
+
+config_version=5
+
+[application]
+
+config/name="Word RPG"
+run/main_scene="res://godot/scenes/game.tscn"
+
+[autoload]
+
+CloudflareClient="*res://godot/scripts/cloudflare_client.gd"
+GameState="*res://godot/scripts/game_state_revision.gd"
+CloudSyncNotice="*res://godot/scripts/cloud_sync_notice.gd"
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1280
+window/size/window_width_override=450
+window/size/window_height_override=800
+window/size/resizable=true
+window/stretch/mode="canvas_items"
+
+[gui]
+
+fonts/dynamic_fonts/use_oversampling=true
+
+[importer_defaults]
+
+texture={
+"compress/lossy_quality": 1.0,
+"compress/mode": 0,
+"mipmaps/generate": true,
+"process/fix_alpha_border": true,
+"process/size_limit": 4096
+}
+
+[word_rpg]
+
+cloudflare_base_url="https://word-rpg.redfisharthur.workers.dev"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+environment/defaults/default_clear_color=Color(0.105, 0.102, 0.11, 1)

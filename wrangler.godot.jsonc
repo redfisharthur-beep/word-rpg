@@ -8,7 +8,7 @@
     "required": ["LINE_CHANNEL_SECRET"]
   },
   "assets": {
-    "directory": ".",
+    "directory": "build/web",
     "binding": "ASSETS",
     "run_worker_first": ["/match", "/auth/*", "/api/*"]
   },
