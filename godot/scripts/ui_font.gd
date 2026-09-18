@@ -56,8 +56,19 @@ static func get_font() -> Font:
 	if ResourceLoader.exists(MERGED_FONT_PATH):
 		var merged_resource := load(MERGED_FONT_PATH)
 		if merged_resource is Font:
-			_cached_font = merged_resource as Font
+			var merged_font := merged_resource as Font
+			var merged_fallbacks: Array[Font] = []
+			for path: String in FONT_PATHS:
+				if not ResourceLoader.exists(path):
+					continue
+				var fallback_resource := load(path)
+				if fallback_resource is Font:
+					merged_fallbacks.append(fallback_resource as Font)
+			merged_font.fallbacks = merged_fallbacks
+			_cached_font = merged_font
 			_font_faces = [_cached_font]
+			for fallback: Font in merged_fallbacks:
+				_font_faces.append(fallback)
 			return _cached_font
 
 	var loaded: Array[Font] = []
