@@ -73,7 +73,7 @@ func _reset_scene() -> void:
 	hud = CanvasLayer.new()
 	add_child(hud)
 	fx = BattleFx.new()
-	add_child(fx)
+	hud.add_child(fx)
 	timer_label = null
 	status_label = null
 	player_sprite = null
