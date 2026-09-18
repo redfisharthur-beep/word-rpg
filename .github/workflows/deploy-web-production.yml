@@ -84,3 +84,8 @@ jobs:
           }
           console.log('Original Web production smoke: PASS');
           NODE
+
+      - name: Run live Web PK quiz-to-battle smoke
+        env:
+          WORD_RPG_BASE_URL: https://word-rpg.redfisharthur.workers.dev
+        run: timeout 35s node scripts/live-web-pk-smoke.mjs
