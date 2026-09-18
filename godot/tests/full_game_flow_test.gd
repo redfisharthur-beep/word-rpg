@@ -160,6 +160,11 @@ func _test_state_and_progression() -> void:
 	GameState.inventory.clear()
 	GameState.rpg = {}
 	GameState.call("_ensure_rpg")
+	GameState.call("_copy_inventory", [{"id":"legacy-art","type":"gem","subtype":"ruby","quality":"common","art":"/images/loot-gem-ruby-common.png"}])
+	_check(GameState.inventory.size() == 1, "legacy Web inventory should import")
+	if GameState.inventory.size() == 1:
+		_check(String(GameState.inventory[0].get("art", "")) == "res://images/loot-gem-ruby-common.png", "legacy Web inventory art path should normalize for Godot")
+	GameState.inventory.clear()
 	for i in range(4):
 		GameState.add_loot(_item("g%d" % i, "gem", "ruby", "common"))
 		GameState.equip_item("g%d" % i)
