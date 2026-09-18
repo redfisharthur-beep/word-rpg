@@ -611,10 +611,14 @@ func _sprite(path: String, at: Vector2, max_size: Vector2) -> Sprite2D:
 	sprite.texture = texture
 	sprite.position = at
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	sprite.z_index = 2
 	var size := texture.get_size()
 	if size.x > 0.0 and size.y > 0.0:
 		sprite.scale = Vector2.ONE * minf(max_size.x / size.x, max_size.y / size.y)
-	add_child(sprite)
+	if is_instance_valid(hud):
+		hud.add_child(sprite)
+	else:
+		add_child(sprite)
 	return sprite
 
 func _texture(path: String, rect: Rect2) -> TextureRect:
