@@ -49,6 +49,20 @@ const FONT_PATHS: Array[String] = [
 static var _cached_font: Font
 static var _font_faces: Array[Font] = []
 
+static func _tune_font(font: Font) -> Font:
+	if font is FontFile:
+		var file := font as FontFile
+		# Small Traditional Chinese glyphs are frequently scaled down by the
+		# 720x1280 canvas on Web. Render them at a higher internal resolution
+		# and use stronger hinting/subpixel positioning for crisper strokes.
+		file.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+		file.hinting = TextServer.HINTING_NORMAL
+		file.force_autohinter = true
+		file.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_ONE_QUARTER
+		file.generate_mipmaps = true
+		file.oversampling = 2.0
+	return font
+
 static func get_font() -> Font:
 	if _cached_font != null:
 		return _cached_font
@@ -65,7 +79,7 @@ static func get_font() -> Font:
 				if fallback_resource is Font:
 					merged_fallbacks.append(fallback_resource as Font)
 			merged_font.fallbacks = merged_fallbacks
-			_cached_font = merged_font
+			_cached_font = _tune_font(merged_font)
 			_font_faces = [_cached_font]
 			for fallback: Font in merged_fallbacks:
 				_font_faces.append(fallback)
@@ -84,6 +98,8 @@ static func get_font() -> Font:
 		return null
 
 	_font_faces = loaded
+	for i: int in range(loaded.size()):
+		loaded[i] = _tune_font(loaded[i])
 	var primary: Font = loaded[0]
 	var fallbacks: Array[Font] = []
 	for i: int in range(1, loaded.size()):
