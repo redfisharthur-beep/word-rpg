@@ -33,8 +33,8 @@ export function randomCard(){
   return {uid:crypto.randomUUID(),id,kind:id==='boost'?'support':'skill',name:def.name,text:def.text,color:def.color,boost:id==='boost'?rnd(3,8)*10:0};
 }
 export function dealHand(n=9,role=null,level=1){
-  const lv=clamp(Math.round(Number(level)||1),1,50),skills=role?unlockedRoleSkills(role,lv):[];
-  let exclusiveCount=role?(lv>=50?3:lv>=30?2:lv>=10?1:0):0;
+  const lv=clamp(Math.round(Number(level)||1),1,50),skills=role?unlockedRoleSkills(role,Math.max(lv,10)):[];
+  let exclusiveCount=role?(lv>=30?2:1):0;
   exclusiveCount=Math.min(n,exclusiveCount,skills.length);
   const hand=Array.from({length:n-exclusiveCount},randomCard),pool=[...skills];
   for(let i=0;i<exclusiveCount;i++){const at=rnd(0,pool.length-1),skill=pool.splice(at,1)[0];hand.push({...skill,uid:crypto.randomUUID(),kind:'exclusive',exclusive:true,role});}
