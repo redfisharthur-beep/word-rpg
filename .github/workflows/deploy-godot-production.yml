@@ -62,10 +62,18 @@ jobs:
           test -s build/web/index.html
           test -s build/web/index.wasm
           test -s build/web/index.pck
-          PCK_BYTES=$(stat -c%s build/web/index.pck)
-          PCK_LIMIT=$((24 * 1024 * 1024))
-          echo "PCK bytes: $PCK_BYTES / limit: $PCK_LIMIT"
-          test "$PCK_BYTES" -le "$PCK_LIMIT"
+          node scripts/split-godot-web-assets.mjs build/web
+          test ! -e build/web/index.wasm
+          test ! -e build/web/index.pck
+          test -s build/web/index.wasm.part00
+          test -s build/web/index.pck.part00
+          grep -q 'word-rpg-chunk-loader' build/web/index.html
+          ASSET_LIMIT=$((24 * 1024 * 1024))
+          while IFS= read -r -d '' file; do
+            BYTES=$(stat -c%s "$file")
+            echo "$BYTES bytes  $file"
+            test "$BYTES" -le "$ASSET_LIMIT"
+          done < <(find build/web -maxdepth 1 -type f -print0)
           du -h build/web/*
 
       - name: Smoke test main scene
