@@ -11,6 +11,7 @@ on:
       - 'images/**'
       - 'data/game-data.json'
       - 'scripts/split-godot-web-assets.mjs'
+      - 'scripts/live-production-smoke.mjs'
 
 concurrency:
   group: validate-godot-${{ github.ref }}
@@ -35,6 +36,8 @@ jobs:
         run: godot --headless --path . --script res://godot/tests/rpg_parity_test.gd
       - name: Run native PK protocol tests
         run: timeout 20s godot --headless --path . res://godot/tests/pk_protocol_test.tscn
+      - name: Run full Godot game flow tests
+        run: timeout 60s godot --headless --path . res://godot/tests/full_game_flow_test.tscn
       - name: Verify Web export templates
         run: |
           echo "Godot version: $(godot --version)"
