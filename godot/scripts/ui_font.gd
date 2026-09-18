@@ -4,6 +4,8 @@ class_name WordRpgUiFont
 # Noto Sans TC 400 subsets containing every Traditional Chinese glyph currently
 # used by Word RPG's Godot UI and vocabulary. TC-209 includes ASCII/Latin and
 # acts as the primary face; the other files are glyph fallbacks.
+const MERGED_FONT_PATH := "res://godot/fonts/noto-tc/WordRpgNotoSansTC.ttf"
+
 const FONT_PATHS: Array[String] = [
 	"res://godot/fonts/noto-tc/TC-209.woff2",
 	"res://godot/fonts/noto-tc/TC-115.woff2",
@@ -50,6 +52,13 @@ static var _font_faces: Array[Font] = []
 static func get_font() -> Font:
 	if _cached_font != null:
 		return _cached_font
+
+	if ResourceLoader.exists(MERGED_FONT_PATH):
+		var merged_resource := load(MERGED_FONT_PATH)
+		if merged_resource is Font:
+			_cached_font = merged_resource as Font
+			_font_faces = [_cached_font]
+			return _cached_font
 
 	var loaded: Array[Font] = []
 	for path: String in FONT_PATHS:
