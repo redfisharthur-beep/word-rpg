@@ -29,9 +29,9 @@ window/stretch/mode="canvas_items"
 texture={
 "compress/lossy_quality": 1.0,
 "compress/mode": 0,
-"mipmaps/generate": false,
+"mipmaps/generate": true,
 "process/fix_alpha_border": true,
-"process/size_limit": 2048
+"process/size_limit": 4096
 }
 
 [word_rpg]
