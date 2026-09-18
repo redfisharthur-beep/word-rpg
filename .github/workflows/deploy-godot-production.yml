@@ -54,6 +54,9 @@ jobs:
       - name: Run native PK protocol tests
         run: timeout 20s godot --headless --path . res://godot/tests/pk_protocol_test.tscn
 
+      - name: Run full Godot game flow tests
+        run: timeout 60s godot --headless --path . res://godot/tests/full_game_flow_test.tscn
+
       - name: Export production Godot Web build
         run: |
           set -euo pipefail
@@ -154,3 +157,8 @@ jobs:
           NODE
 
           echo "Live Godot production smoke test passed."
+
+      - name: Run live API and two-client PK integration
+        env:
+          WORD_RPG_BASE_URL: https://word-rpg.redfisharthur.workers.dev
+        run: timeout 45s node scripts/live-production-smoke.mjs
