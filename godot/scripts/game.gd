@@ -4,6 +4,7 @@ const GameData = preload("res://godot/scripts/game_data.gd")
 const WordBank = preload("res://godot/scripts/word_bank.gd")
 const AdventureRun = preload("res://godot/scripts/adventure_run.gd")
 const BattleFx = preload("res://godot/scripts/battle_fx.gd")
+const UiFont = preload("res://godot/scripts/ui_font.gd")
 
 const VIEW := Vector2(720, 1280)
 const BG_GAME := "res://images/bg-game.png"
@@ -587,7 +588,7 @@ func _add_background(path: String, alpha := 1.0) -> void:
 	sprite.texture = texture
 	sprite.position = VIEW * 0.5
 	sprite.modulate.a = alpha
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	var size := texture.get_size()
 	if size.x > 0.0 and size.y > 0.0:
 		sprite.scale = Vector2.ONE * maxf(VIEW.x / size.x, VIEW.y / size.y)
@@ -609,7 +610,7 @@ func _sprite(path: String, at: Vector2, max_size: Vector2) -> Sprite2D:
 	var sprite := Sprite2D.new()
 	sprite.texture = texture
 	sprite.position = at
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	var size := texture.get_size()
 	if size.x > 0.0 and size.y > 0.0:
 		sprite.scale = Vector2.ONE * minf(max_size.x / size.x, max_size.y / size.y)
@@ -623,7 +624,7 @@ func _texture(path: String, rect: Rect2) -> TextureRect:
 	texture_rect.texture = _load_texture(path)
 	texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	texture_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	texture_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	texture_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return texture_rect
 
@@ -668,6 +669,7 @@ func _label(text: String, rect: Rect2, font_size: int, align := HORIZONTAL_ALIGN
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
+	UiFont.apply(label)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
@@ -685,6 +687,7 @@ func _text_button(text: String, rect: Rect2, font_size: int, bg: Color, fg: Colo
 	button.add_theme_font_size_override("font_size", font_size)
 	button.add_theme_color_override("font_color", fg)
 	button.add_theme_color_override("font_hover_color", fg)
+	UiFont.apply(button)
 	button.add_theme_stylebox_override("normal", _box(bg, 16, Color(1, 1, 1, 0.28), 1))
 	button.add_theme_stylebox_override("hover", _box(bg.lightened(0.04), 16, Color(1, 1, 1, 0.42), 1))
 	button.add_theme_stylebox_override("pressed", _box(bg.darkened(0.06), 16, Color(1, 1, 1, 0.52), 2))
