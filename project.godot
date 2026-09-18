@@ -27,8 +27,10 @@ window/stretch/mode="canvas_items"
 [importer_defaults]
 
 texture={
-"compress/lossy_quality": 0.85,
-"compress/mode": 1,
+"compress/lossy_quality": 1.0,
+"compress/mode": 0,
+"mipmaps/generate": false,
+"process/fix_alpha_border": true,
 "process/size_limit": 2048
 }
 
