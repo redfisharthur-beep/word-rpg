@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const UiFont = preload("res://godot/scripts/ui_font.gd")
+
 var banner: Panel
 var message_label: Label
 
@@ -44,5 +46,6 @@ func _show_banner() -> void:
 	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	message_label.add_theme_font_size_override("font_size", 16)
 	message_label.add_theme_color_override("font_color", Color(1.0, 0.93, 0.76, 1.0))
+	UiFont.apply(message_label)
 	message_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	banner.add_child(message_label)
