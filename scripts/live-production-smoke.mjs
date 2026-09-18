@@ -26,17 +26,21 @@ class TestClient {
       } catch {
         return;
       }
-      this.messages.push(message);
+      let delivered = false;
       const remaining = [];
       for (const waiter of this.waiters) {
-        if (waiter.predicate(message)) {
+        if (!delivered && waiter.predicate(message)) {
           clearTimeout(waiter.timer);
           waiter.resolve(message);
+          delivered = true;
         } else {
           remaining.push(waiter);
         }
       }
       this.waiters = remaining;
+      if (!delivered) {
+        this.messages.push(message);
+      }
     });
     await new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(`${this.name} WebSocket open timeout`)), 10000);
@@ -166,10 +170,12 @@ async function verifyPk() {
     assert(matchedB.self?.profile?.role === 'mage', 'player B role should round-trip');
 
     let [resultA, resultB] = await finishRound(a, b, [0, 1, 2], [0, 1, 2]);
+    assert(Number(resultA.round) === 1 && Number(resultB.round) === 1, 'first PK battle-result should be round one');
     assert(resultA.finished === resultB.finished, 'both clients should agree whether PK is finished');
 
     if (!resultA.finished) {
       [resultA, resultB] = await finishRound(a, b, [3, 4, 5], [3, 4, 5]);
+      assert(Number(resultA.round) === 2 && Number(resultB.round) === 2, 'second PK battle-result should be round two');
     }
 
     assert(resultA.finished === true && resultB.finished === true, 'PK should finish no later than round two');
