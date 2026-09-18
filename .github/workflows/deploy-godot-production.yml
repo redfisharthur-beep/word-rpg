@@ -63,7 +63,7 @@ jobs:
           test -s build/web/index.wasm
           test -s build/web/index.pck
           PCK_BYTES=$(stat -c%s build/web/index.pck)
-          PCK_LIMIT=$((70 * 1024 * 1024))
+          PCK_LIMIT=$((24 * 1024 * 1024))
           echo "PCK bytes: $PCK_BYTES / limit: $PCK_LIMIT"
           test "$PCK_BYTES" -le "$PCK_LIMIT"
           du -h build/web/*
