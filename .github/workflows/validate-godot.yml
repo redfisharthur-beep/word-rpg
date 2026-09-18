@@ -10,6 +10,7 @@ on:
       - 'export_presets.cfg'
       - 'images/**'
       - 'data/game-data.json'
+      - 'scripts/split-godot-web-assets.mjs'
 
 concurrency:
   group: validate-godot-${{ github.ref }}
@@ -20,6 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: chickensoft-games/setup-godot@v2
         with:
           version: '4.7.0'
@@ -46,14 +50,22 @@ jobs:
           test -s build/web/index.html
           test -s build/web/index.wasm
           test -s build/web/index.pck
+          node scripts/split-godot-web-assets.mjs build/web
+          test ! -e build/web/index.wasm
+          test ! -e build/web/index.pck
+          test -s build/web/index.wasm.part00
+          test -s build/web/index.pck.part00
+          grep -q 'word-rpg-chunk-loader' build/web/index.html
+          ASSET_LIMIT=$((24 * 1024 * 1024))
+          while IFS= read -r -d '' file; do
+            BYTES=$(stat -c%s "$file")
+            echo "$BYTES bytes  $file"
+            if [ "$BYTES" -gt "$ASSET_LIMIT" ]; then
+              echo "::error::Cloudflare static asset limit exceeded by $file ($BYTES bytes)."
+              exit 1
+            fi
+          done < <(find build/web -maxdepth 1 -type f -print0)
           du -h build/web/*
-          PCK_BYTES=$(stat -c%s build/web/index.pck)
-          PCK_LIMIT=$((24 * 1024 * 1024))
-          echo "PCK bytes: $PCK_BYTES / limit: $PCK_LIMIT"
-          if [ "$PCK_BYTES" -gt "$PCK_LIMIT" ]; then
-            echo "::error::Godot Web index.pck exceeds the 24 MiB Cloudflare asset budget. Review newly added large textures before merging."
-            exit 1
-          fi
       - name: Upload tested Web build
         uses: actions/upload-artifact@v4
         with:
