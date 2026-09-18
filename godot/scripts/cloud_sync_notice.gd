@@ -21,7 +21,7 @@ func _show_banner() -> void:
 		return
 	banner = Panel.new()
 	banner.position = Vector2(28, 22)
-	banner.size = Vector2(664, 86)
+	banner.size = Vector2(664, 98)
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var box := StyleBoxFlat.new()
 	box.bg_color = Color(0.18, 0.16, 0.13, 0.94)
@@ -38,14 +38,16 @@ func _show_banner() -> void:
 	add_child(banner)
 
 	message_label = Label.new()
-	message_label.position = Vector2(20, 9)
-	message_label.size = Vector2(624, 68)
+	message_label.position = Vector2(20, 8)
+	message_label.size = Vector2(624, 82)
 	message_label.text = "雲端進度已在其他裝置更新\n本機進度已保留，雲端同步暫停"
 	message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	message_label.add_theme_font_size_override("font_size", 16)
-	message_label.add_theme_color_override("font_color", Color(1.0, 0.93, 0.76, 1.0))
+	message_label.add_theme_font_size_override("font_size", 20)
+	message_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.82, 1.0))
+	message_label.add_theme_constant_override("outline_size", 1)
+	message_label.add_theme_color_override("font_outline_color", Color(0.08, 0.07, 0.06, 0.72))
 	UiFont.apply(message_label)
 	message_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	banner.add_child(message_label)
