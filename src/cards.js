@@ -7,13 +7,13 @@ const ROLE_BASE=Object.fromEntries(Object.entries(GAME_ROLES).map(([id,x])=>[id,
 const PET_BASE=Object.fromEntries(Object.entries(GAME_PETS).map(([id,x])=>[id,{hp:x.base.hp,atk:x.base.atk,def:x.base.def}]));
 export const TITLE_TIERS=SHARED_TITLE_TIERS;
 const ROLE_SKILLS=SHARED_ROLE_SKILLS;
-export function titleTier(level=1){const lv=clamp(Math.round(Number(level)||1),1,50);return TITLE_TIERS.find(x=>lv>=x.level)||TITLE_TIERS[TITLE_TIERS.length-1];}
-export function unlockedRoleSkills(role='warrior',level=1){const lv=clamp(Math.round(Number(level)||1),1,50);return (ROLE_SKILLS[role]||[]).filter(x=>lv>=x.level);}
+export function titleTier(level=1){const lv=clamp(Math.round(Number(level)||1),1,80);return TITLE_TIERS.find(x=>lv>=x.level)||TITLE_TIERS[TITLE_TIERS.length-1];}
+export function unlockedRoleSkills(role='warrior',level=1){const lv=clamp(Math.round(Number(level)||1),1,80);return (ROLE_SKILLS[role]||[]).filter(x=>lv>=x.level);}
 const clone=x=>JSON.parse(JSON.stringify(x));
 const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function progressionStats(role='warrior',pet='fox',level=1,rpg=null){
-  const lv=clamp(Math.round(Number(level)||1),1,50),rb=ROLE_BASE[role]||ROLE_BASE.warrior,pb=PET_BASE[pet]||PET_BASE.fox,tier=titleTier(lv),eq=equipmentBonuses(rpg||{}),petFx=petSkillEffects(pet,rpg||{});
+  const lv=clamp(Math.round(Number(level)||1),1,80),rb=ROLE_BASE[role]||ROLE_BASE.warrior,pb=PET_BASE[pet]||PET_BASE.fox,tier=titleTier(lv),eq=equipmentBonuses(rpg||{}),petFx=petSkillEffects(pet,rpg||{});
   const rawRole={maxHp:rb.hp*(1+(lv-1)*.035),atk:rb.atk*(1+(lv-1)*.025),def:rb.def*(1+(lv-1)*.025)};
   const roleStats={maxHp:Math.round(rawRole.maxHp*(1+tier.hp)),atk:Math.round(rawRole.atk*(1+tier.atk)),def:Math.round(rawRole.def*(1+tier.def))};
   const petEnhance=petEnhanceLevel(pet,rpg||{}),petScale=1+petEnhance*.10,petStats={maxHp:Math.round(pb.hp*(1+(lv-1)*.03)*petScale),atk:Math.round(pb.atk*(1+(lv-1)*.03)*petScale),def:Math.round(pb.def*(1+(lv-1)*.03)*petScale)};
@@ -33,7 +33,7 @@ export function randomCard(){
   return {uid:crypto.randomUUID(),id,kind:id==='boost'?'support':'skill',name:def.name,text:def.text,color:def.color,boost:id==='boost'?rnd(3,8)*10:0};
 }
 export function dealHand(n=9,role=null,level=1){
-  const lv=clamp(Math.round(Number(level)||1),1,50),skills=role?unlockedRoleSkills(role,Math.max(lv,10)):[];
+  const lv=clamp(Math.round(Number(level)||1),1,80),skills=role?unlockedRoleSkills(role,Math.max(lv,10)):[];
   let exclusiveCount=role?(lv>=30?2:1):0;
   exclusiveCount=Math.min(n,exclusiveCount,skills.length);
   const hand=Array.from({length:n-exclusiveCount},randomCard),pool=[...skills];
