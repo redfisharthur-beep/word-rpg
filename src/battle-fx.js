@@ -87,7 +87,8 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
       actorImg.src=frames[n%2];
       addClass(actor,n%2?'fx-strike-2':'fx-strike-1');
       playSfx(n===hits-1&&step.ultimate?'finisher':'swing');
-      await sleep(hits>1?135:205);if(token!==seq)return;
+      await sleep(hits>1?135:100);if(token!==seq)return;
+      if(hits===1){removeClass(actor,'fx-strike-1');actorImg.src=frames[1];addClass(actor,'fx-strike-2');playSfx('swing');await sleep(110);if(token!==seq)return}
       effect(target,n===hits-1&&critical?'crit':'slash');
       flash(target,critical&&n===hits-1);
       shake(stage,critical&&n===hits-1);
