@@ -45,9 +45,9 @@ response=await req('/friends',a,ca);let fa=await response.json();assert.equal(fa
 response=await req('/friends',c,cc);pc=await response.json();assert.equal(pc.friends[0].code,ca);assert.equal(pc.incoming.length,0);
 response=await req('/friends',a,ca,{action:'remove',code:cc});assert.equal(response.status,200);
 response=await req('/friends',c,cc);assert.equal((await response.json()).friends.length,0);
-response=await req('/friends',b,cb,{action:'request',code:ca});assert.equal(response.status,200);
-response=await req('/friends',a,ca,{action:'reject',code:cb});assert.equal(response.status,200);
-response=await req('/friends',b,cb);assert.equal((await response.json()).outgoing.length,0);
+response=await req('/friends',c,cc,{action:'request',code:ca});assert.equal(response.status,200);
+response=await req('/friends',a,ca,{action:'reject',code:cc});assert.equal(response.status,200);
+response=await req('/friends',c,cc);assert.equal((await response.json()).outgoing.length,0);
 response=await req('/friends',a,ca,{action:'block',code:cb});assert.equal(response.status,200);
 response=await req('/friends',b,cb,{action:'request',code:ca});assert.equal(response.status,403);
 response=await req('/friends',a,ca,{action:'unblock',code:cb});assert.equal(response.status,200);
