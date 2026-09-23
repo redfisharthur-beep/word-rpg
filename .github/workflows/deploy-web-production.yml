@@ -89,3 +89,12 @@ jobs:
         env:
           WORD_RPG_BASE_URL: https://word-rpg.redfisharthur.workers.dev
         run: timeout 35s node scripts/live-web-pk-smoke.mjs
+      - name: Validate four concurrent PK players
+        env:
+          WORD_RPG_BASE_URL: https://word-rpg.redfisharthur.workers.dev
+        run: timeout 45s node scripts/live-pk-concurrency-smoke.mjs
+
+      - name: Verify AI takeover after 60 seconds and finish quiz
+        env:
+          WORD_RPG_BASE_URL: https://word-rpg.redfisharthur.workers.dev
+        run: timeout 110s node scripts/live-ai-pk-smoke.mjs
