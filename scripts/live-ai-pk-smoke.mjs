@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import {setTimeout as sleep} from 'node:timers/promises';
 const root=process.env.WORD_RPG_BASE_URL||'https://word-rpg.redfisharthur.workers.dev';
-const wsUrl=root.replace(/^https:/,'wss:').replace(/^http:/,'ws:')+'/match';
+const ROOM='ci-'+(process.env.GITHUB_RUN_ID||crypto.randomUUID())+'-'+(process.env.GITHUB_RUN_ATTEMPT||'1')+'-ai';
+const wsUrl=root.replace(/^https:/,'wss:').replace(/^http:/,'ws:')+'/match?practice='+encodeURIComponent(ROOM);
 const ws=new WebSocket(wsUrl),queue=[],waiters=[];
 let active=true;
 ws.addEventListener('message',event=>{
