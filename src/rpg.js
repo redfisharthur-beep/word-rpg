@@ -2,7 +2,7 @@ import {QUALITY_DEFS,EQUIPMENT_VALUES,COLLECTION_REWARDS} from './generated/game
 
 export const QUALITY_ORDER=['common','rare','epic','legendary'];
 export const EQUIPMENT_ENHANCE_MAX=10;
-const EQUIPMENT_ENHANCE_COST={common:4,rare:8,epic:15,legendary:28,mythic:45};
+const EQUIPMENT_ENHANCE_COST={common:2,rare:3,epic:5,legendary:8,mythic:12};
 const EQUIPMENT_ENHANCE_CHANCE={common:.95,rare:.85,epic:.75,legendary:.65,mythic:.55};
 export function equipmentEnhanceInfo(item){
   const level=Math.min(EQUIPMENT_ENHANCE_MAX,Math.max(0,Math.floor(Number(item?.enhance)||0))),quality=EQUIPMENT_ENHANCE_COST[item?.quality]?item.quality:'common';
