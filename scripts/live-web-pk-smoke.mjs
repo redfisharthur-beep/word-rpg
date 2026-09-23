@@ -130,6 +130,12 @@ try {
   a.send({ type: 'ready', answers: ['', '', '', '', ''] });
   b.send({ type: 'ready', answers: ['', '', '', '', ''] });
 
+  const [reviewA, reviewB] = await Promise.all([a.waitFor('quiz-reviewed', 20000), b.waitFor('quiz-reviewed', 20000)]);
+  for (const review of [reviewA, reviewB]) {
+    assert(Array.isArray(review.wordResults) && review.wordResults.length === 5, 'each player should receive five graded words');
+    assert(review.wordResults.every(x => Number.isInteger(x.index) && typeof x.correct === 'boolean'), 'PK word progress must be based on server grading');
+  }
+
   const [battleA, battleB] = await Promise.all([
     a.waitFor('battle-result', 20000),
     b.waitFor('battle-result', 20000),
