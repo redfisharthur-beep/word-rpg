@@ -61,7 +61,7 @@ function logout(request){const url=new URL(request.url),headers=new Headers({Loc
 
 async function communityApi(request,env){
   const url=new URL(request.url),route=url.pathname.replace('/api/community','');
-  const methods={GET:new Set(['/chat','/me','/friends']),POST:new Set(['/chat','/friends','/report'])};
+  const methods={GET:new Set(['/chat','/me','/friends','/records']),POST:new Set(['/chat','/friends','/report','/duel'])};
   if(!methods[request.method]?.has(route))return json({error:'Not found'},404);
   const origin=request.headers.get('Origin');
   if(request.method==='POST'&&origin&&origin!==url.origin)return json({error:'Forbidden'},403);
