@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 const ROOT=process.env.WORD_RPG_BASE_URL||'https://word-rpg.redfisharthur.workers.dev';
-const URL=ROOT.replace(/^https:/,'wss:').replace(/^http:/,'ws:')+'/match';
+const ROOM='ci-'+(process.env.GITHUB_RUN_ID||crypto.randomUUID())+'-'+(process.env.GITHUB_RUN_ATTEMPT||'1')+'-concurrent';
+const URL=ROOT.replace(/^https:/,'wss:').replace(/^http:/,'ws:')+'/match?practice='+encodeURIComponent(ROOM);
 const clients=Array.from({length:4},(_,i)=>({id:'PK-LOAD-'+i+'-'+crypto.randomUUID().slice(0,6),ws:null,queue:[],waiters:[]}));
 function next(client,type,limit=25000){const idx=client.queue.findIndex(m=>m.type===type);if(idx>=0)return Promise.resolve(client.queue.splice(idx,1)[0]);return new Promise((resolve,reject)=>{const item={type,resolve, reject};const timer=setTimeout(()=>{client.waiters=client.waiters.filter(w=>w!==item);reject(Error(client.id+' timeout '+type))},limit);item.resolve=m=>{clearTimeout(timer);resolve(m)};item.reject=e=>{clearTimeout(timer);reject(e)};client.waiters.push(item)})}
 async function connect(client){
