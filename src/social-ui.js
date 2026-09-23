@@ -33,7 +33,7 @@ export function createSocialUI({app,getMeta,onLogin,esc}){
   function renderRecords(){
     if(!root||tab!=='records')return;
     const slot=root.querySelector('[data-social-record-view]');if(!slot)return;
-    if(!signedIn()){slot.innerHTML='<p class="social-empty">LINE 登入後查看對戰紀錄</p><button type="button" data-social-login>LINE 登入</button>';return}
+    if(!signedIn())records=Array.isArray(getMeta()?.pkHistory)?getMeta().pkHistory:[];
     slot.innerHTML=records.length?records.map(rec=>'<article class="social-record"><strong class="social-record-'+esc(rec.outcome)+'">'+(rec.outcome==='win'?'勝':rec.outcome==='loss'?'敗':'平')+'</strong><div><b>'+esc(rec.opponent||'對手')+'</b><small>'+(rec.room?'好友 PK':'PK')+' · '+esc(new Date(rec.at).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}))+'</small></div></article>').join(''):'<p class="social-empty">尚無對戰紀錄</p>';
   }
   function host(){
@@ -56,7 +56,7 @@ export function createSocialUI({app,getMeta,onLogin,esc}){
       }
       renderMessages();
       if(tab==='friends')renderFriends();
-      if(signedIn()){const history=await req('/records');if(run!==epoch)return;records=history.records||[];}
+      if(signedIn()){const history=await req('/records');if(run!==epoch)return;records=history.records||[];}else records=Array.isArray(getMeta()?.pkHistory)?getMeta().pkHistory:[];
       if(tab==='records')renderRecords();
     }catch(err){if(run===epoch&&showError)feedback(err.message||'社群目前無法連線')}
     finally{pending=false}
