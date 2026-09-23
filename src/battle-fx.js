@@ -34,7 +34,7 @@ function shake(stage,strong=false){
   if(!stage)return;addClass(stage,strong?'fx-shake-strong':'fx-shake');setTimeout(()=>removeClass(stage,strong?'fx-shake-strong':'fx-shake'),strong?260:160);
 }
 async function hitStop(stage,critical){
-  if(!critical)return;addClass(stage,'fx-hit-stop');await sleep(80);removeClass(stage,'fx-hit-stop');
+  addClass(stage,'fx-hit-stop');await sleep(critical?90:38);removeClass(stage,'fx-hit-stop');
 }
 function effect(target,kind='slash'){
   const src=ASSETS.effect?.[kind]||ASSETS.effect?.slash;if(!target||!src)return;
@@ -75,19 +75,19 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
     if(warriorRush){
       actor.style.setProperty('--fx-target-x',`${targetOffset(actor,target)}px`);
       addClass(actor,'fx-approach');
-      await sleep(240);if(token!==seq)return;
+      await sleep(180);if(token!==seq)return;
     }
 
     actorImg.src=frames[0];
     addClass(actor,'fx-strike-1');
     playSfx('swing');
-    await sleep(800);if(token!==seq)return;
+    await sleep(210);if(token!==seq)return;
 
     removeClass(actor,'fx-strike-1');
     actorImg.src=frames[1];
     addClass(actor,'fx-strike-2');
     playSfx('swing');
-    await sleep(800);if(token!==seq)return;
+    await sleep(185);if(token!==seq)return;
 
     effect(target,critical?'crit':'slash');
     flash(target,critical);

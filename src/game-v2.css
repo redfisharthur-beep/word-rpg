@@ -19,3 +19,7 @@
 /* simplified loot reveal: item + light only */
 .loot-reveal-stage{min-height:250px!important}.loot-chest,.loot-reveal-copy,.mythic-power-reveal{display:none!important}.loot-beam{bottom:18px!important;width:140px!important;height:250px!important}.loot-drop-art{width:170px!important;height:170px!important}.loot-reveal-stage.mythic .loot-drop-art{width:190px!important;height:190px!important}
 @media(max-width:700px){.weakness-row{grid-template-columns:minmax(90px,.8fr) minmax(0,1.2fr);gap:9px;padding:9px 10px}.loot-reveal-stage{min-height:230px!important}}
+
+/* Faster synchronized attack beats: prevent the older one-second lunge from competing with JS choreography. */
+.action-screen .fighter.is-acting .fighter-art,.action-screen .fighter.is-hit .fighter-art{animation:none}
+.action-screen .fighter.fx-windup,.action-screen .fighter.fx-dash,.action-screen .fighter.fx-approach,.action-screen .fighter.fx-strike-1,.action-screen .fighter.fx-strike-2,.action-screen .fighter.fx-return{will-change:transform}
