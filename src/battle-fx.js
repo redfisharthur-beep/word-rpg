@@ -62,10 +62,12 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
   const token=++seq,{actor,target,stage,actorImg}=fighterParts(step.who);
   if(!actor||!target||!stage)return;
   const logs=step.logs||[],critical=logs.some(x=>String(x).includes('爆擊')),supportive=logs.some(x=>/回血|護盾|回復|防禦|治療/.test(String(x)))&&!logs.some(x=>/攻擊|傷害|重擊|連擊/.test(String(x)));
-  const delta=impactValue(step,previous),frames=step.who==='player'?roleFrames(role):null,original=actorImg?.getAttribute('src')||'';
+  const delta=impactValue(step,previous),frames=roleFrames(step.who==='player'?role:step.enemy?.role),original=actorImg?.getAttribute('src')||'';
   const framedAttack=!supportive&&actorImg&&frames?.[0]&&frames?.[1];
-  const warriorRush=framedAttack&&step.who==='player'&&role==='warrior';
+  const warriorRush=framedAttack&&(step.who==='player'?role:step.enemy?.role)==='warrior';
 
+  const assist=step.who==='player'?step.player?.pet:step.enemy?.pet;
+  if(assist&&step.slot===2&&step.card&&/靈狐|夜梟|幼龍|龍息|狐|梟/.test(logs.join(' '))){const src=ASSETS.pet?.[assist];if(src){const pet=document.createElement('img');pet.src=src;pet.alt='';pet.className=`fx-pet-assist pet-${assist}`;actor.appendChild(pet);setTimeout(()=>pet.remove(),850);playSfx('pet')}}
   if(framedAttack){
     clearAttackPose(actor);
     addClass(actor,'fx-windup');
@@ -78,29 +80,28 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
       await sleep(180);if(token!==seq)return;
     }
 
-    actorImg.src=frames[0];
-    addClass(actor,'fx-strike-1');
-    playSfx('swing');
-    await sleep(210);if(token!==seq)return;
-
-    removeClass(actor,'fx-strike-1');
-    actorImg.src=frames[1];
-    addClass(actor,'fx-strike-2');
-    playSfx('swing');
-    await sleep(185);if(token!==seq)return;
-
-    effect(target,critical?'crit':'slash');
-    flash(target,critical);
-    addClass(target,'fx-knockback');
-    setTimeout(()=>removeClass(target,'fx-knockback'),260);
-    shake(stage,critical);
-    await hitStop(stage,critical);
-    playSfx(critical?'crit':'hit');
-    if(delta.damage)popNumber(target,`-${delta.damage}`,critical);
+    const hits=step.ultimate?Math.max(1,Math.min(3,step.hits||2)):step.card?.id==='combo'?3:Array.isArray(step.card?.fx?.hits)?Math.max(1,Math.min(4,step.card.fx.hits.length)):1;
+    for(let n=0;n<hits;n++){
+      if(token!==seq)return;
+      removeClass(actor,'fx-strike-1');removeClass(actor,'fx-strike-2');
+      actorImg.src=frames[n%2];
+      addClass(actor,n%2?'fx-strike-2':'fx-strike-1');
+      playSfx(n===hits-1&&step.ultimate?'finisher':'swing');
+      await sleep(hits>1?135:205);if(token!==seq)return;
+      effect(target,n===hits-1&&critical?'crit':'slash');
+      flash(target,critical&&n===hits-1);
+      shake(stage,critical&&n===hits-1);
+      await hitStop(stage,critical&&n===hits-1);if(token!==seq)return;
+      playSfx(n===hits-1&&critical?'crit':hits>1?'combo':'hit');
+      if(delta.damage){const each=Math.floor(delta.damage/hits),value=n===hits-1?delta.damage-each*(hits-1):each;if(value>0)popNumber(target,`-${value}`,critical&&n===hits-1)}
+      if(n===hits-1){addClass(target,'fx-knockback');setTimeout(()=>removeClass(target,'fx-knockback'),260)}
+      if(n<hits-1){await sleep(65);if(token!==seq)return}
+    }
 
     await sleep(120);if(token!==seq)return;
     removeClass(actor,'fx-strike-2');
 
+    removeClass(actor,'fx-strike-1');
     if(warriorRush){
       removeClass(actor,'fx-approach');
       addClass(actor,'fx-return');
@@ -113,7 +114,7 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
   }
 
   addClass(actor,'fx-windup');
-  playSfx(supportive?'loot':'swing');
+  playSfx(supportive?'pet':'swing');
   await sleep(Math.min(420,duration*.28));if(token!==seq)return;
   removeClass(actor,'fx-windup');addClass(actor,'fx-dash');
   await sleep(Math.min(360,duration*.24));if(token!==seq)return;
@@ -122,7 +123,7 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
   else{
     effect(target,critical?'crit':'slash');flash(target,critical);addClass(target,'fx-knockback');setTimeout(()=>removeClass(target,'fx-knockback'),260);shake(stage,critical);await hitStop(stage,critical);playSfx(critical?'crit':'hit');if(delta.damage)popNumber(target,`-${delta.damage}`,critical);
   }
-  await sleep(Math.max(160,duration-780));if(token!==seq)return;
+  await sleep(Math.max(110,duration-780));if(token!==seq)return;
   if(actorImg&&original)actorImg.src=original;
   clearAttackPose(actor);
 }
