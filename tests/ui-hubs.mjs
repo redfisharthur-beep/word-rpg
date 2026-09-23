@@ -27,7 +27,7 @@ globalThis.Audio=class{pause(){}play(){return Promise.resolve()}getAttribute(){r
 globalThis.location={search:'',pathname:'/',hash:''};
 globalThis.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};
 let clipboard='';
-globalThis.navigator={clipboard:{writeText:async text=>{clipboard=text}}};
+Object.defineProperty(globalThis,'navigator',{configurable:true,value:{clipboard:{writeText:async text=>{clipboard=text}}}});
 await import('../src/game-core.js');
 assert.match(app.innerHTML,/data-action="guest-login"/);
 document.querySelector('[data-action="guest-login"]').click();
