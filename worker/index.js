@@ -1,4 +1,6 @@
 import {DurableObject} from 'cloudflare:workers';
+import {SocialHub} from './community.js';
+export {SocialHub};
 import {dealHand,makeFighter,resolveCardAction,resolveBasic,resolveAutoBasic,afterAction,cloneFighter,bondMultiplier,supportBoost,isOffensive,applyPetRoundEnd,progressionStats} from '../src/cards.js';
 import {cleanRpg,maxedPkRpg} from '../src/rpg.js';
 import {makeQuestion} from '../src/words.js';
@@ -56,7 +58,32 @@ async function progressApi(request,env){if(request.method!=='POST')return json({
 async function seasonApi(request,env){if(request.method!=='GET')return json({error:'Method not allowed'},405);const session=await readSession(request,env);if(!session)return json({error:'Unauthorized'},401);return json({season:await userSeason(env,session.sub)})}
 function logout(request){const url=new URL(request.url),headers=new Headers({Location:url.origin+'/'});headers.append('Set-Cookie',clearCookie(SESSION_COOKIE));return new Response(null,{status:302,headers})}
 
-export default{async fetch(request,env){const url=new URL(request.url);if(url.pathname==='/match'){const room=url.searchParams.get('practice'),practice=room&&/^[a-zA-Z0-9_-]{8,70}$/.test(room)?room:null;const id=env.MATCHMAKER.idFromName(practice?`practice:${practice}`:'global-matchmaker');return env.MATCHMAKER.get(id).fetch(request)}if(url.pathname==='/auth/line')return beginLineLogin(request,env);if(url.pathname==='/auth/line/callback')return finishLineLogin(request,env);if(url.pathname==='/api/session')return sessionApi(request,env);if(url.pathname==='/api/progress')return progressApi(request,env);if(url.pathname==='/api/questions')return questionsApi(request,env);if(url.pathname==='/api/question-identity')return identityApi(request,env);if(url.pathname==='/api/questions/result')return questionResultApi(request,env);if(url.pathname==='/api/season')return seasonApi(request,env);if(url.pathname==='/auth/logout')return logout(request);return env.ASSETS.fetch(request)}};
+async function communityApi(request,env){
+  const url=new URL(request.url),route=url.pathname.replace('/api/community','');
+  const methods={GET:new Set(['/chat','/me','/friends']),POST:new Set(['/chat','/friends','/report'])};
+  if(!methods[request.method]?.has(route))return json({error:'Not found'},404);
+  const origin=request.headers.get('Origin');
+  if(request.method==='POST'&&origin&&origin!==url.origin)return json({error:'Forbidden'},403);
+  const session=await readSession(request,env);
+  if(!session?.sub&&!(route==='/chat'&&request.method==='GET'))return json({error:'請先使用 LINE 登入'},401);
+  const headers=new Headers();
+  if(session?.sub){
+    const secret=env.SESSION_SECRET||env.LINE_CHANNEL_SECRET;
+    const code='F-'+(await hmac(secret,'social:'+session.sub)).slice(0,12).toUpperCase();
+    headers.set('X-Social-User',session.sub);
+    headers.set('X-Social-Code',code);
+  }
+  let body;
+  if(request.method==='POST'){
+    body=await request.text();
+    if(body.length>2048)return json({error:'Request too large'},413);
+    headers.set('Content-Type','application/json');
+  }
+  const hub=env.SOCIAL_HUB.get(env.SOCIAL_HUB.idFromName('word-rpg-social-global-v1'));
+  return hub.fetch(new Request('https://social.internal'+route,{method:request.method,headers,body}));
+}
+
+export default{async fetch(request,env){const url=new URL(request.url);if(url.pathname==='/match'){const room=url.searchParams.get('practice'),practice=room&&/^[a-zA-Z0-9_-]{8,70}$/.test(room)?room:null;const id=env.MATCHMAKER.idFromName(practice?`practice:${practice}`:'global-matchmaker');return env.MATCHMAKER.get(id).fetch(request)}if(url.pathname==='/auth/line')return beginLineLogin(request,env);if(url.pathname==='/auth/line/callback')return finishLineLogin(request,env);if(url.pathname.startsWith('/api/community/'))return communityApi(request,env);if(url.pathname==='/api/session')return sessionApi(request,env);if(url.pathname==='/api/progress')return progressApi(request,env);if(url.pathname==='/api/questions')return questionsApi(request,env);if(url.pathname==='/api/question-identity')return identityApi(request,env);if(url.pathname==='/api/questions/result')return questionResultApi(request,env);if(url.pathname==='/api/season')return seasonApi(request,env);if(url.pathname==='/auth/logout')return logout(request);return env.ASSETS.fetch(request)}};
 
 export class UserStore extends DurableObject{
   constructor(ctx,env){super(ctx,env);this.ctx=ctx;this.env=env}
