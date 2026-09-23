@@ -161,7 +161,7 @@ export function maxedPkRpg(){
     {id:'pk-ring-warbreaker',type:'ring',subtype:'warbreaker',quality:'mythic',mythicPower:'critburst'},
     {id:'pk-ring-battlesoul',type:'ring',subtype:'battlesoul',quality:'mythic',mythicPower:'truehit'}
   ];
-  const inventory=rawItems.map(item=>normalizeItem(item)).filter(Boolean);
+  const inventory=rawItems.map(item=>normalizeItem({...item,enhance:EQUIPMENT_ENHANCE_MAX})).filter(Boolean);
   return cleanRpg({
     inventory,
     equipped:{
