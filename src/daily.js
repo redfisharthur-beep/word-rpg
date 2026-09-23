@@ -20,7 +20,7 @@ export function cleanDaily(raw={},now=Date.now()){
   for(const key of keys){counts[key]=same?counter(raw?.counts,key):0;totals[key]=counter(raw?.totals,key)}
   totals.towerBest=counter(raw?.totals,'towerBest');
   const ids=DAILY_QUESTS.map(q=>q.id),achievements=LEARNING_ACHIEVEMENTS.map(q=>q.id);
-  return {date:today,counts,totals,claimed:same&&Array.isArray(raw?.claimed)?[...new Set(raw.claimed)].filter(x=>ids.includes(x)):[],achievementClaims:Array.isArray(raw?.achievementClaims)?[...new Set(raw.achievementClaims)].filter(x=>achievements.includes(x)):[],activeTitle:typeof raw?.activeTitle==='string'?raw.activeTitle.slice(0,32):''};
+  return {date:today,counts,totals,claimed:same&&Array.isArray(raw?.claimed)?[...new Set(raw.claimed)].filter(x=>ids.includes(x)):[],achievementClaims:Array.isArray(raw?.achievementClaims)?[...new Set(raw.achievementClaims)].filter(x=>achievements.includes(x)):[],activeTitle:typeof raw?.activeTitle==='string'?raw.activeTitle.slice(0,32):'',bonusClaimed:same&&raw?.bonusClaimed===true};
 }
 export function recordDaily(raw,key,amount=1,now=Date.now()){
   const state=cleanDaily(raw,now);if(!keys.includes(key))return state;
@@ -40,4 +40,10 @@ export function claimAchievement(raw,id,now=Date.now()){
   if(!achievement||state.achievementClaims.includes(id)||state.totals[achievement.key]<achievement.target)return {state,reward:0};
   state.achievementClaims.push(id);state.activeTitle=achievement.title;
   return {state,reward:achievement.reward,title:achievement.title};
+}
+
+export function claimDailyChest(raw,now=Date.now()){
+  const state=cleanDaily(raw,now);
+  if(state.bonusClaimed||DAILY_QUESTS.some(q=>!state.claimed.includes(q.id)))return {state,granted:false};
+  state.bonusClaimed=true;return {state,granted:true};
 }
