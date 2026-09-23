@@ -38,7 +38,7 @@ response=await req('/report',b,cb,{messageId:message.id});assert.equal(response.
 response=await req('/chat',b,cb);assert.equal((await response.json()).messages.length,0,'reporting hides offender messages for reporting player');
 response=await req('/chat',a,ca);assert.equal((await response.json()).messages.length,1,'report does not silently delete global history');
 response=await req('/report',a,ca,{messageId:message.id});assert.equal(response.status,404,'cannot report own message');
-response=await req('/friends',a,ca,{action:'request',code:cc});assert.equal(response.status,201||200);
+response=await req('/friends',a,ca,{action:'request',code:cc});assert.equal(response.status,200);
 response=await req('/friends',c,cc);let pc=await response.json();assert.equal(pc.incoming[0].code,ca);assert.equal(pc.outgoing.length,0);assert.ok(!JSON.stringify(pc).includes(a));
 response=await req('/friends',c,cc,{action:'accept',code:ca});assert.equal(response.status,200);
 response=await req('/friends',a,ca);let fa=await response.json();assert.equal(fa.friends.length,1);assert.equal(fa.friends[0].code,cc);
