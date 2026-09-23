@@ -7,6 +7,7 @@ async function connect(client){
   const ws=new WebSocket(URL);client.ws=ws;
   ws.addEventListener('message',event=>{
     const m=JSON.parse(String(event.data));
+    console.log('PK-CONCURRENT EVENT',client.id,m.type,m.message||'',m.opponent?.profile?.name||'');
     if(m.type==='error'){for(const waiter of client.waiters.splice(0))waiter.reject(Error(m.message));return}
     const i=client.waiters.findIndex(w=>w.type===m.type);
     if(i>=0)client.waiters.splice(i,1)[0].resolve(m);else client.queue.push(m);
