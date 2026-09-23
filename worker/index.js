@@ -82,7 +82,7 @@ export class UserStore extends DurableObject{
 export class Matchmaker extends DurableObject{
   constructor(ctx,env){super(ctx,env);this.ctx=ctx;this.env=env}
   async fetch(request){if(request.headers.get('Upgrade')!=='websocket')return new Response('WebSocket required',{status:426});const session=await readSession(request,this.env),questionKeys=await questionIdentityKeys(request,this.env);if(!questionKeys.length)questionKeys.push(`temporary:${crypto.randomUUID()}`);const pair=new WebSocketPair(),client=pair[0],server=pair[1];this.ctx.acceptWebSocket(server);server.serializeAttachment({id:crypto.randomUUID(),userId:session?.sub||null,state:'new',profile:null,opponentId:null,matchId:null,fighter:null,hand:null,used:[],round:1,ready:null,selection:null,quizStartedAt:0,questionKeys,questionBatch:[],queuedAt:0,botId:null,practice:new URL(request.url).searchParams.has('practice')});server.send(JSON.stringify({type:'connected'}));return new Response(null,{status:101,webSocket:client})}
-  async webSocketMessage(ws,message){let data;try{data=JSON.parse(typeof message==='string'?message:new TextDecoder().decode(message))}catch{return}if(data.type==='join')await this.join(ws,data.profile||{});if(data.type==='quiz-start')this.beginQuiz(ws,data);if(data.type==='ready')await this.ready(ws,data)}
+  async webSocketMessage(ws,message){let data;try{data=JSON.parse(typeof message==='string'?message:new TextDecoder().decode(message))}catch{return}if(data.type==='join')await this.join(ws,data.profile||{});if(data.type==='quiz-start')this.beginQuiz(ws,data);if(data.type==='ready')await this.ready(ws,data);if(data.type==='request-ai')await this.requestAi(ws)}
   profile(p){return {name:String(p.name||'PLAYER').slice(0,16),role:['warrior','mage','archer'].includes(p.role)?p.role:'warrior',pet:['fox','owl','dragon'].includes(p.pet)?p.pet:'fox',level:80,rpg:maxedPkRpg()}}
   send(ws,data){try{ws.send(JSON.stringify(data))}catch{}}
   find(id){return this.ctx.getWebSockets().find(x=>x.deserializeAttachment()?.id===id)}
@@ -90,6 +90,7 @@ export class Matchmaker extends DurableObject{
 
   async scheduleQueueAlarm(){const deadlines=this.ctx.getWebSockets().map(ws=>ws.deserializeAttachment()).filter(a=>a?.state==='waiting'&&a.queuedAt).map(a=>a.queuedAt+60000);if(deadlines.length)await this.ctx.storage.setAlarm(Math.max(Date.now()+100,Math.min(...deadlines)));}
   async alarm(){const now=Date.now();for(const ws of this.ctx.getWebSockets()){const a=ws.deserializeAttachment();if(a?.state==='waiting'&&a.queuedAt&&now-a.queuedAt>=60000)await this.matchBot(ws)}await this.scheduleQueueAlarm();}
+  async requestAi(ws){const a=ws.deserializeAttachment();if(!a||a.state!=='waiting'||!a.queuedAt)return;if(Date.now()-a.queuedAt<60000)return;await this.matchBot(ws)}
   async matchBot(ws){let a=ws.deserializeAttachment();if(!a||a.state!=='waiting')return;
     a.state='matching';ws.serializeAttachment(a);let batch;try{batch=await reserveDailyQuestions(this.env,a.questionKeys||[],10)}catch(err){a.state='finished';ws.serializeAttachment(a);this.send(ws,{type:'error',message:err?.message||'題庫暫時無法使用'});return}
     const roles=['warrior','mage','archer'],pets=['fox','owl','dragon'];
