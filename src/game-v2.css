@@ -178,3 +178,36 @@
  .pet-branch-head h3{font-size:16px}
  .pet-skill-node{min-height:94px}
 }
+
+
+/* Compact system presentation, gear refinement and friend challenges. */
+.word-book-item{appearance:none;width:100%;font:inherit;text-align:left;cursor:pointer;min-height:76px;touch-action:manipulation}
+.word-book-item:hover,.word-book-item:focus-visible{border-color:#85a991;box-shadow:0 3px 12px rgba(53,101,67,.14)}
+.word-book-item:active{transform:scale(.98)}
+.word-book-item .word-book-item-title b>span[aria-hidden]{background:transparent!important;color:#4e765f!important;font-size:14px;padding:0 1px}
+.equip-upgrade-btn{background:linear-gradient(135deg,#2d3227,#826d3e)!important;color:#ffe7ad!important;border:1px solid #a58b50!important;font-size:12px!important;line-height:1.35;white-space:normal;min-height:36px;padding:6px 8px}
+.equip-upgrade-btn:disabled{opacity:.45}.equip-slot .equip-upgrade-btn{font-size:11px!important}
+.enhance-feedback{margin:8px 0;padding:9px 12px;border:1px solid #c8ac6d;border-radius:12px;background:#fff5da;color:#655021;font-size:14px;text-align:center}
+.social-app{gap:5px;padding:9px}.social-tabs{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.social-tabs button{font-size:13px;padding:6px 2px;min-height:38px}
+.social-guidance{font-size:11px;margin:0}.social-compose{width:100%;margin:2px 0;min-width:0}
+.social-compose>div{display:grid;grid-template-columns:minmax(0,1fr) 40px;gap:5px;width:100%;min-width:0}
+.social-compose input{box-sizing:border-box;width:100%;min-width:0;flex:none;min-height:44px;padding:9px 11px;font-size:15px}
+.social-compose button{width:40px!important;min-width:40px!important;max-width:40px!important;min-height:44px!important;height:44px!important;padding:0!important;display:grid;place-items:center;font-size:17px}
+.social-duel-create{justify-self:end;border:1px solid #bea56b;border-radius:9px;background:#f5e8c8;color:#695028;font-size:12px;font-weight:750;padding:8px 10px;min-height:33px;cursor:pointer}
+.social-duel-link{display:inline-flex;align-items:center;justify-content:center;align-self:start;margin-top:3px;padding:8px 12px;min-height:34px;border-radius:9px;background:#3e7052;color:#fff;text-decoration:none;font-size:13px;font-weight:800}
+.social-duel-link:hover,.social-duel-link:focus-visible{background:#285c40;color:#fff}
+.social-records{display:grid;gap:7px;min-height:60px}
+.social-record{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid #d8e1d4;border-radius:11px;background:#fbfcf8}
+.social-record>strong{display:grid;place-items:center;flex:0 0 33px;height:33px;border-radius:9px;background:#e2ede0;color:#326447;font-size:15px}
+.social-record>strong.social-record-loss{background:#f7e9e6;color:#9b5b50}
+.social-record>strong.social-record-draw{background:#f1eee3;color:#8d7741}
+.social-record>div{display:grid;gap:3px;min-width:0}
+.social-record b{font-size:13px;color:#344c3c}.social-record small{font-size:11px;color:#798275}
+.community-preview{padding:9px 12px}.community-preview p{font-size:12px}
+.community-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:9px 0}
+.community-actions button{font-size:12px;min-height:37px;padding:7px 4px}
+.duel-ready{grid-column:1/-1;border:1px solid #c7a45c;border-radius:16px;background:linear-gradient(110deg,#fbf3d9,#f0e3c4);padding:11px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;color:#58441b}
+.duel-ready b{font-size:16px}.duel-ready span{font-size:12px}.duel-ready button{border:1px solid #9e7c37;border-radius:9px;background:#3e3c30;color:#ffe7ad;padding:8px 12px;min-height:37px;font-size:13px;font-weight:800;cursor:pointer}
+.duel-ready button[data-action="duel-cancel"]{background:transparent;color:#75613e}
+@media(max-width:700px){.social-compose>div{grid-template-columns:minmax(0,1fr) 38px;gap:4px}.social-compose button{width:38px!important;min-width:38px!important;max-width:38px!important}.community-card{padding:12px}.social-tabs button{font-size:12px}.community-actions button{font-size:11px}.duel-ready{padding:8px;gap:6px}}
