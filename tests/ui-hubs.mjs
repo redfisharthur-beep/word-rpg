@@ -40,8 +40,12 @@ assert.ok(identity,'player info must live in right-side growth panel directly ab
 assert.match(identity[1],/^<b class="growth-level-value">LV1<\/b><span class="growth-title">[^<]+<\/span><span class="growth-player-name">訪客<\/span>$/,'three distinct identity lines must be level, title, player name');
 assert.ok(home.indexOf('class="growth-art role-growth-art"')<home.indexOf('class="growth-panel role-growth-panel"'),'character art should remain in the left column');
 const homeStyles=fs.readFileSync(new URL('../src/game-v2.css',import.meta.url),'utf8');
-assert.match(homeStyles,/\.role-feature \.role-growth-art img\s*\{[^}]*height:415px/,'desktop character art must be enlarged');
-assert.match(homeStyles,/@media\(max-width:700px\)[\s\S]*?\.role-feature \.role-growth-art img\s*\{[^}]*height:345px/,'mobile character art must be enlarged');
+assert.match(homeStyles,/\.role-feature \.role-growth-art\s*\{[^}]*height:325px/,'desktop character art must fit inside its own frame');
+assert.match(homeStyles,/\.role-feature \.role-growth-art img\s*\{[^}]*object-fit:contain;[^}]*transform:none/,'character art must not be scaled beyond frame');
+assert.match(homeStyles,/@media\(max-width:700px\)[\s\S]*?\.role-feature \.role-growth-art\s*\{[^}]*height:260px/,'mobile character art must fit inside its own frame');
+assert.match(homeStyles,/\.role-feature \.role-growth-panel\s*\{[^}]*justify-items:center;[^}]*text-align:center/,'right-hand player info must be centered');
+assert.match(homeStyles,/\.role-feature \.growth-level\s*\{[^}]*justify-items:center;[^}]*text-align:center/,'all three identity lines must be centered');
+assert.match(homeStyles,/\.role-feature \.role-growth-panel \.player-season-tier\s*\{[^}]*justify-self:center/,'season badge must be centered under player info');
 for(const id of ['quests','achievements','community'])assert.match(home,new RegExp('data-action="'+id+'"'),id+' button missing');
 assert.doesNotMatch(home,/data-action="daily"/,'combined daily/achievement button must disappear');
 const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
