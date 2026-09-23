@@ -8,7 +8,7 @@ globalThis.location={protocol:'https:',host:'example.test'};
 globalThis.fetch=async()=>({ok:true,json:async()=>({ok:true})});
 globalThis.WebSocket=class{
   static OPEN=1;
-  constructor(){this.readyState=1;socket=this;queueMicrotask(()=>this.onopen?.());}
+  constructor(url){this.url=url;this.readyState=1;socket=this;queueMicrotask(()=>this.onopen?.());}
   send(){}
   close(){this.readyState=3;}
   deliver(message){this.onmessage?.({data:JSON.stringify(message)});}
@@ -43,3 +43,13 @@ try{
   assert.equal(exits,0);
   console.log('PK bot snapshot -> battle render: PASS');
 }finally{mode.stop(false)}
+
+const inviteRoom='12345678-aaaa-4bbb-8ccc-123456789abc';
+const friendMode=createPkMode({app,meta:{playerName:'玩家',role:'warrior',pet:'fox',level:1,rpg:{}},ROLES:roles,PETS:pets,visual:src=>src,effects:{},room:inviteRoom});
+try{
+  await friendMode.start();
+  assert.equal(socket.url,'wss://example.test/match?practice='+inviteRoom,'friend link must use isolated room WebSocket');
+  assert.match(app.innerHTML,/好友對戰/);
+  assert.doesNotMatch(app.innerHTML,/將由 AI 挑戰者接手/,'friend invite should not turn into AI after 60 seconds');
+  console.log('Friend PK link: separate room and no AI substitution: PASS');
+}finally{friendMode.stop(false)}
