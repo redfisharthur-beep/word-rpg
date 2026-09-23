@@ -40,10 +40,64 @@ function xpNeed(level=meta.level){return 60+Math.max(0,level-1)*12}
 function titleFor(level=meta.level){return titleTier(level).name}
 function recordVocabulary(index,correct){meta.wordBook=recordWordAnswer(meta.wordBook,index,correct);saveMeta()}
 function recordPkVocabulary(results){if(!Array.isArray(results))return;for(const result of results){if(!Number.isInteger(result?.index)||typeof result.correct!=='boolean')continue;meta.wordBook=recordWordAnswer(meta.wordBook,result.index,result.correct)}saveMeta()}
+function earnedTitles(){
+  const daily=cleanDaily(meta.daily),book=cleanWordBook(meta.wordBook),earned=collectionProgress(meta.rpg).owned;
+  const titles=[{name:titleFor(),desc:'角色等級稱號'}];
+  for(const achievement of LEARNING_ACHIEVEMENTS)if(daily.achievementClaims.includes(achievement.id))titles.push({name:achievement.title,desc:achievement.name});
+  for(const title of unlockedWordTitles(book))titles.push({name:title.name,desc:'精熟 '+title.required+' 個不同單字'});
+  const collectionTitle=collectionCosmetics(earned).title;
+  if(collectionTitle)titles.push({name:collectionTitle,desc:'裝備圖鑑收集成就'});
+  return [...new Map(titles.map(t=>[t.name,t])).values()];
+}
+function activePlayerTitle(){
+  const owned=new Set(earnedTitles().map(t=>t.name));
+  for(const title of [meta.equippedTitle,meta.wordBook?.activeTitle,meta.daily?.activeTitle,collectionCosmetics(collectionProgress(meta.rpg).owned).title,titleFor()]){
+    if(title&&owned.has(title))return title;
+  }
+  return titleFor();
+}
+function chooseTitle(title){if(!earnedTitles().some(t=>t.name===title))return;meta.equippedTitle=title;saveMeta();render()}
 function logDaily(key,amount=1){meta.daily=recordDaily(meta.daily,key,amount);saveMeta()}
-function claimDailyReward(id,achievement=false){const result=achievement?claimAchievement(meta.daily,id):claimQuest(meta.daily,id);if(!result.reward)return;meta.daily=result.state;meta.rpg=cleanRpg(meta.rpg);meta.rpg.crystals+=result.reward;saveMeta();render()}
+function claimDailyReward(id,achievement=false){const result=achievement?claimAchievement(meta.daily,id):claimQuest(meta.daily,id);if(!result.reward)return;meta.daily=result.state;if(achievement&&result.title&&!meta.equippedTitle)meta.equippedTitle=result.title;meta.rpg=cleanRpg(meta.rpg);meta.rpg.crystals+=result.reward;saveMeta();render()}
 function openDailyChest(){const result=claimDailyChest(meta.daily);if(!result.granted)return;meta.daily=result.state;const item=rollLoot(3,meta.level);if(item)meta.rpg=addLoot(meta.rpg,item);saveMeta();render()}
-function renderDaily(){meta.daily=cleanDaily(meta.daily);const daily=meta.daily,row=q=>{const progress=Math.min(q.target,daily.counts[q.id]||0),claimed=daily.claimed.includes(q.id);return `<div class="daily-quest-row"><div><b>${esc(q.name)}</b><small>${esc(q.desc)} · ${progress}/${q.target} · 結晶 ${q.reward}</small></div><button data-claim-quest="${esc(q.id)}" ${claimed||progress<q.target?'disabled':''}>${claimed?'已領取':'領取'}</button></div>`},ach=a=>{const progress=Math.min(a.target,daily.totals[a.key]||0),claimed=daily.achievementClaims.includes(a.id);return `<div class="daily-quest-row"><div><b>${esc(a.name)}</b><small>${esc(a.desc)} · ${progress}/${a.target} · ${esc(a.title)}稱號、結晶 ${a.reward}</small></div><button data-claim-achievement="${esc(a.id)}" ${claimed||progress<a.target?'disabled':''}>${claimed?'已領取':'領取'}</button></div>`};return `<main class="system-screen daily-screen"><section class="result-card daily-card"><h1>每日任務</h1><p>每日 00:00（台灣時間）重置 · 結晶 ${Math.max(0,meta.rpg.crystals||0)}</p>${DAILY_QUESTS.map(row).join('')}<button class="daily-chest" data-daily-chest ${daily.bonusClaimed||DAILY_QUESTS.some(q=>!daily.claimed.includes(q.id))?'disabled':''}>${daily.bonusClaimed?'今日寶箱已領取':'完成四項任務領取每日寶箱'}</button><h2>英文學習成就</h2>${LEARNING_ACHIEVEMENTS.map(ach).join('')}<button class="secondary-btn" data-daily-back>返回遊戲</button></section></main>`}
+function renderQuests(){
+  meta.daily=cleanDaily(meta.daily);
+  const daily=meta.daily;
+  const row=q=>{const progress=Math.min(q.target,daily.counts[q.id]||0),claimed=daily.claimed.includes(q.id);return `<div class="daily-quest-row"><div><b>${esc(q.name)}</b><small>${esc(q.desc)} · ${progress}/${q.target} · 結晶 ${q.reward}</small></div><button data-claim-quest="${esc(q.id)}" ${claimed||progress<q.target?'disabled':''}>${claimed?'已領取':'領取'}</button></div>`};
+  return `<main class="system-screen daily-screen"><section class="result-card daily-card"><div class="system-head">${systemBackButton()}<h1>每日任務</h1><b>結晶 ${Math.max(0,meta.rpg.crystals||0)}</b></div><p>每日 00:00（台灣時間）重置 · 已完成 ${DAILY_QUESTS.filter(q=>daily.claimed.includes(q.id)).length}/${DAILY_QUESTS.length} 項</p>${DAILY_QUESTS.map(row).join('')}<button class="daily-chest" data-daily-chest ${daily.bonusClaimed||DAILY_QUESTS.some(q=>!daily.claimed.includes(q.id))?'disabled':''}>${daily.bonusClaimed?'今日寶箱已領取':'完成四項任務領取每日寶箱'}</button></section></main>`;
+}
+function renderAchievements(){
+  meta.daily=cleanDaily(meta.daily);
+  const daily=meta.daily,word=wordBookProgress(meta.wordBook),collection=collectionProgress(meta.rpg),selected=activePlayerTitle();
+  const achievementRow=a=>{const progress=Math.min(a.target,daily.totals[a.key]||0),claimed=daily.achievementClaims.includes(a.id);return `<div class="daily-quest-row"><div><b>${esc(a.name)}</b><small>${esc(a.desc)} · ${progress}/${a.target} · 結晶 ${a.reward} · 稱號「${esc(a.title)}」</small></div><button data-claim-achievement="${esc(a.id)}" ${claimed||progress<a.target?'disabled':''}>${claimed?'已領取':'領取'}</button></div>`};
+  const mastery=WORD_TITLES.map(t=>{const done=word.mastered>=t.required;return `<div class="achievement-milestone ${done?'unlocked':''}"><b>${esc(t.name)}</b><small>不同單字精熟 ${Math.min(word.mastered,t.required)}/${t.required} 個</small><span>${done?'已解鎖':'尚未達成'}</span></div>`}).join('');
+  const collectionMilestones=collectionUnlocks(collection.owned).map(item=>`<div class="achievement-milestone ${item.unlocked?'unlocked':''}"><b>${esc(item.name)}</b><small>裝備收集 ${Math.min(collection.owned,item.count)}/${item.count} · ${esc(item.desc)}</small><span>${item.unlocked?'已解鎖':'尚未達成'}</span></div>`).join('');
+  const locker=earnedTitles().map(t=>`<div class="achievement-title-row"><div><b>${esc(t.name)}</b><small>${esc(t.desc)}</small></div><button data-equip-title="${esc(t.name)}" ${selected===t.name?'disabled':''}>${selected===t.name?'使用中':'使用稱號'}</button></div>`).join('');
+  return `<main class="system-screen daily-screen"><section class="result-card daily-card achievement-card"><div class="system-head">${systemBackButton()}<h1>成就殿堂</h1><b>${esc(selected)}</b></div><p>在這裡查看所有成就進度、領取成就獎勵，並集中管理已獲得的稱號。</p><h2>英文學習與冒險成就</h2>${LEARNING_ACHIEVEMENTS.map(achievementRow).join('')}<h2>單字精熟成就</h2><p>已精熟 ${word.mastered} 個不同單字</p><div class="achievement-milestones">${mastery}</div><h2>裝備收集成就</h2><div class="achievement-milestones">${collectionMilestones}</div><h2>稱號收藏</h2><div class="achievement-title-list">${locker}</div></section></main>`;
+}
+function socialShareText(){
+  const book=wordBookProgress(meta.wordBook),floor=Math.max(0,Number(meta.rpg.towerBest)||0);
+  return `我在 Word RPG 的冒險紀錄：Lv.${meta.level}，試煉塔 ${floor} 層，已精熟 ${book.mastered} 個英文單字！一起學英文、挑戰 PK 吧！`;
+}
+function renderCommunity(){
+  const link='https://word-rpg.redfisharthur.workers.dev/';
+  return `<main class="system-screen daily-screen"><section class="result-card daily-card community-card"><div class="system-head">${systemBackButton()}<h1>冒險社群</h1><span></span></div><p>分享你的冒險紀錄，邀請朋友一起學英文、挑戰線上 PK。</p><div class="community-preview"><b>我的冒險分享</b><p>${esc(socialShareText())}</p><small>${esc(link)}</small></div><div class="community-actions"><button data-community-share>分享成績</button><button data-community-copy>複製邀請文字與連結</button><button data-community-pk>前往 PK 對戰</button></div><p class="community-feedback" data-community-feedback aria-live="polite"></p><textarea class="community-copy-fallback" data-community-copy-fallback readonly hidden></textarea></section></main>`;
+}
+async function shareCommunity(copyOnly=false){
+  const message=socialShareText(),url='https://word-rpg.redfisharthur.workers.dev/',share={title:'Word RPG 冒險邀請',text:message,url};
+  const feedback=document.querySelector('[data-community-feedback]'),fallback=document.querySelector('[data-community-copy-fallback]');
+  try{
+    if(!copyOnly&&typeof navigator!=='undefined'&&typeof navigator.share==='function'){
+      await navigator.share(share);if(feedback)feedback.textContent='已開啟分享';return;
+    }
+    if(!navigator.clipboard?.writeText)throw new Error('clipboard unavailable');
+    await navigator.clipboard.writeText(message+'\n'+url);if(feedback)feedback.textContent='邀請文字與連結已複製';
+  }catch(error){
+    if(error?.name==='AbortError')return;
+    if(fallback){fallback.hidden=false;fallback.value=message+'\n'+url;fallback.focus();fallback.select()}
+    if(feedback)feedback.textContent='無法自動分享，請複製下方文字與連結';
+  }
+}
 function addXp(amount){if(meta.authMode==='guest')return {amount:0,old:1,newLevel:1,levels:[],title:'訪客模式',guest:true};if(meta.level>=MAX_LEVEL){meta.level=MAX_LEVEL;meta.xp=0;saveMeta();return {amount:0,old:MAX_LEVEL,newLevel:MAX_LEVEL,levels:[],title:titleFor(MAX_LEVEL),max:true}}const old=meta.level,levels=[];meta.xp+=Math.max(0,Math.round(amount));while(meta.level<MAX_LEVEL&&meta.xp>=xpNeed(meta.level)){meta.xp-=xpNeed(meta.level);meta.level++;levels.push(meta.level)}if(meta.level>=MAX_LEVEL)meta.xp=0;saveMeta();return {amount,old,newLevel:meta.level,levels,title:titleFor(meta.level),max:meta.level>=MAX_LEVEL}}
 function clearFlow(){flowToken++;clearTimeout(selectTimeout);clearInterval(selectTicker);clearTimeout(questionTimeout);selectTimeout=questionTimeout=null;selectTicker=null;cancelBattleFx();if(ultimateResolver){ultimateResolver(false);ultimateResolver=null}}
 function role(){return ROLES[meta.role]||ROLES.warrior}
