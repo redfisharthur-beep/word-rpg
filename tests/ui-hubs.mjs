@@ -75,7 +75,7 @@ assert.doesNotMatch(app.innerHTML,/單字精熟系統|首次作答才收錄|累�
 assert.doesNotMatch(app.innerHTML,/data-word-title=/,'title selection must move out of vocabulary collection');
 document.querySelector('[data-action="setup-back"]').click();
 document.querySelector('[data-action="community"]').click();
-assert.match(app.innerHTML,/分享成績/);
+assert.match(app.innerHTML,/data-community-share/);assert.match(app.innerHTML,/data-social-app|id="social-app"/);
 assert.match(app.innerHTML,/data-community-pk/);
 await document.querySelector('[data-community-copy]').click();
 assert.match(clipboard,/Word RPG/);
