@@ -59,6 +59,17 @@ export function playSfx(kind='hit'){
     tone({freq:660,endFreq:940,duration:.13,type:'sine',gain:.035});tone({freq:880,endFreq:1240,duration:.14,type:'triangle',gain:.025,delay:.06});
   }else if(kind==='finisher'){
     noise({duration:.16,gain:.085,highpass:180});tone({freq:150,endFreq:48,duration:.22,type:'sawtooth',gain:.075});tone({freq:620,endFreq:180,duration:.16,type:'triangle',gain:.035,delay:.025});
+  }else if(kind==='ultimate-warrior'){
+    noise({duration:.22,gain:.08,highpass:170});
+    tone({freq:180,endFreq:54,duration:.28,type:'sawtooth',gain:.075});
+    tone({freq:420,endFreq:160,duration:.18,type:'triangle',gain:.04,delay:.04});
+  }else if(kind==='ultimate-mage'){
+    tone({freq:480,endFreq:1100,duration:.4,type:'sine',gain:.045});
+    tone({freq:650,endFreq:1480,duration:.3,type:'triangle',gain:.035,delay:.06});
+    noise({duration:.13,gain:.035,highpass:1400,delay:.12});
+  }else if(kind==='ultimate-archer'){
+    noise({duration:.09,gain:.055,highpass:1100});
+    for(let i=0;i<3;i++)tone({freq:760,endFreq:290,duration:.11,type:'triangle',gain:.035,delay:i*.105});
   }else if(kind==='ultimate'){
     tone({freq:90,endFreq:180,duration:.32,type:'sawtooth',gain:.045});tone({freq:280,endFreq:760,duration:.34,type:'triangle',gain:.035,delay:.05});
   }else if(kind==='loot'){
