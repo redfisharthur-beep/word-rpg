@@ -169,7 +169,7 @@ export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offe
   return logs;
 }
 export function applyPetRoundEnd(actor,cards=[],logs=[]){
-  if(actor?.pet==='owl'&&actor.hp>0){const stable=cards.filter(c=>c?.color==='green'||c?.color==='blue').length,fx=petSkillEffects(actor.pet,actor.rpg||{});if(stable>=2)healHpOnly(actor,Math.round(actor.maxHp*(.08+fx.guardHeal)),logs,'夜梟守心');}
+  if(actor?.pet&&actor.hp>0){const stable=cards.filter(c=>c?.color==='green'||c?.color==='blue').length,fx=petSkillEffects(actor.pet,actor.rpg||{}),base=actor.pet==='owl'?.08:0;if(stable>=2&&(base+fx.guardHeal)>0)healHpOnly(actor,Math.round(actor.maxHp*(base+fx.guardHeal)),logs,actor.pet==='owl'?'夜梟守心':'寵物續航');}
   return logs;
 }
 function basicAttack(actor,target,mult,logs,label){
