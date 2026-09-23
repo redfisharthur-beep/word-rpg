@@ -10,7 +10,7 @@ const unique=list=>[...new Set(Array.isArray(list)?list.filter(x=>typeof x==='st
 const cleanRecord=raw=>({...blank(),friends:unique(raw?.friends).slice(0,SOCIAL_FRIEND_LIMIT),incoming:unique(raw?.incoming).slice(0,SOCIAL_REQUEST_LIMIT),outgoing:unique(raw?.outgoing).slice(0,SOCIAL_REQUEST_LIMIT),blocked:unique(raw?.blocked).slice(0,150),lastRequestAt:Number(raw?.lastRequestAt)||0,lastMessageAt:Number(raw?.lastMessageAt)||0});
 const upsert=(items,id)=>unique([...items,id]);
 const drop=(items,id)=>items.filter(value=>value!==id);
-const publicChat=(m,blocked)=>m.filter(msg=>!blocked.includes(msg.authorId)).map(socialPublicMessage);
+const publicChat=(m,blocked)=>m.filter(msg=>!blocked.includes(msg.authorId)).map(msg=>({...socialPublicMessage(msg),...(msg.kind==='duel'&&/^[0-9a-f-]{36}$/.test(msg.room||'')?{kind:'duel',room:msg.room}:{})}));
 const textLimit=(value,max)=>typeof value==='string'?value.slice(0,max):'';
 
 export class SocialHub extends DurableObject {
@@ -37,6 +37,7 @@ export class SocialHub extends DurableObject {
   }
   async fetch(request){
     const url=new URL(request.url),auth=identity(request),id=auth.id,code=auth.code;
+    if(url.pathname==='/record'&&request.method==='POST')return this.recordBattle(request);
     if(url.pathname==='/chat'&&request.method==='GET'){
       const messages=await this.ctx.storage.get('chat')||[];
       const blocked=id?(await this.profile(id)).blocked:[];
@@ -46,9 +47,11 @@ export class SocialHub extends DurableObject {
     await this.ensureIdentity(id,code);
     if(url.pathname==='/me'&&request.method==='GET')return json(await this.snapshot(id,code));
     if(url.pathname==='/friends'&&request.method==='GET')return json(await this.snapshot(id,code));
+    if(url.pathname==='/records'&&request.method==='GET')return json({records:await this.ctx.storage.get('battles:'+id)||[]});
     if(request.method!=='POST')return json({error:'Method not allowed'},405);
     let body;try{body=await request.json()}catch{return json({error:'Invalid JSON'},400)}
     if(url.pathname==='/chat')return this.sendChat(id,code,body);
+    if(url.pathname==='/duel')return this.postDuel(id,code);
     if(url.pathname==='/friends')return this.changeFriend(id,code,body);
     if(url.pathname==='/report')return this.report(id,body);
     return json({error:'Not found'},404);
@@ -62,6 +65,29 @@ export class SocialHub extends DurableObject {
     member.lastMessageAt=now;
     await this.ctx.storage.put({chat:[...messages,message].slice(-SOCIAL_HISTORY_LIMIT),[userKey(id)]:member});
     return json({message:socialPublicMessage(message)},201);
+  }
+  async postDuel(id,code){
+    const member=await this.profile(id),now=Date.now();
+    if(!canSend(member.lastMessageAt,now))return json({error:'請稍後再發送'},429);
+    const room=crypto.randomUUID(),message={id:crypto.randomUUID(),authorId:id,name:socialName(code),text:'邀請你一起 PK',kind:'duel',room,at:now};
+    const messages=await this.ctx.storage.get('chat')||[];
+    member.lastMessageAt=now;
+    await this.ctx.storage.put({chat:[...messages,message].slice(-SOCIAL_HISTORY_LIMIT),[userKey(id)]:member});
+    return json({message:publicChat([message],[])[0]},201);
+  }
+  async recordBattle(request){
+    // This route is never exposed by the public /api/community gateway.
+    const id=request.headers.get('X-Social-User');
+    if(!id)return json({error:'Unauthorized'},401);
+    let body;try{body=await request.json()}catch{return json({error:'Invalid JSON'},400)}
+    const matchId=String(body?.matchId||''),outcome=String(body?.outcome||'');
+    if(!/^[0-9a-f-]{36}$/.test(matchId)||!['win','loss','draw'].includes(outcome))return json({error:'Invalid record'},400);
+    const key='battles:'+id,history=await this.ctx.storage.get(key)||[];
+    if(history.some(item=>item.matchId===matchId))return json({ok:true});
+    const opponent=String(body?.opponent||'對手').slice(0,22);
+    const record={matchId,outcome,opponent,room:!!body?.room,at:Date.now()};
+    await this.ctx.storage.put(key,[record,...history].slice(0,30));
+    return json({ok:true});
   }
   async changeFriend(id,code,body){
     const action=textLimit(body?.action,24),targetCode=textLimit(body?.code,32).trim().toUpperCase();
