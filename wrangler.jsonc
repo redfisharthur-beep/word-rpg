@@ -21,6 +21,10 @@
       {
         "name": "USER_STORE",
         "class_name": "UserStore"
+      },
+      {
+        "name": "SOCIAL_HUB",
+        "class_name": "SocialHub"
       }
     ]
   },
@@ -32,6 +36,10 @@
     {
       "tag": "v2",
       "new_sqlite_classes": ["UserStore"]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["SocialHub"]
     }
   ]
 }
