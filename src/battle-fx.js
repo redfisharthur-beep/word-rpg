@@ -130,7 +130,7 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
 
 export function playUltimateIntro(role='warrior'){
   const stage=document.querySelector('.action-screen .combat-stage');
-  if(!stage)return;stage.dataset.ultimate=role;addClass(stage,'fx-ultimate');playSfx('ultimate');setTimeout(()=>removeClass(stage,'fx-ultimate'),720);
+  if(!stage)return;stage.dataset.ultimate=role;addClass(stage,'fx-ultimate');playSfx(`ultimate-${role}`);setTimeout(()=>removeClass(stage,'fx-ultimate'),720);
 }
 
 export function playLootReveal(quality='common'){
