@@ -1,0 +1,55 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {safeMessage,validFriendCode,canSend,SOCIAL_RATE_MS} from '../worker/social-rules.js';
+assert.equal(safeMessage(' Hi!  ').text,'Hi!');
+assert.equal(safeMessage('https://example.com').error!==undefined,true);
+assert.equal(safeMessage('0900123456').error!==undefined,true);
+assert.equal(safeMessage('a'.repeat(161)).error!==undefined,true);
+assert.equal(canSend(1000,1000+SOCIAL_RATE_MS-1),false);
+assert.equal(canSend(1000,1000+SOCIAL_RATE_MS),true);
+const filepath=new URL('../worker/community.js',import.meta.url);
+const rules=new URL('../worker/social-rules.js',import.meta.url).href;
+const source=fs.readFileSync(filepath,'utf8')
+  .replace("import {DurableObject} from 'cloudflare:workers';","class DurableObject { constructor(ctx,env){this.ctx=ctx;this.env=env} }")
+  .replace("from './social-rules.js'","from '"+rules+"'");
+const {SocialHub}=await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source));
+const state=new Map();
+const storage={
+  async get(key){return structuredClone(state.get(key))},
+  async put(key,value){if(typeof key==='object'){for(const [k,v] of Object.entries(key))state.set(k,structuredClone(v))}else state.set(key,structuredClone(value))},
+  async transaction(fn){return fn(this)}
+};
+const hub=new SocialHub({storage},{});
+const req=(endpoint,user='',code='',body)=>hub.fetch(new Request('https://social.internal'+endpoint,{method:body?'POST':'GET',headers:{'X-Social-User':user,'X-Social-Code':code,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}));
+const a='user-alice',b='user-bob',c='user-charlie';
+const ca='F-ABC123DEF456',cb='F-ABC123DEF457',cc='F-ABC123DEF458';
+assert.ok([ca,cb,cc].every(validFriendCode));
+let response=await req('/chat');assert.equal(response.status,200);assert.equal((await response.json()).messages.length,0);
+response=await req('/chat','', '',{text:'No login'});assert.equal(response.status,401);
+response=await req('/me',a,ca);assert.equal(response.status,200);const pa=await response.json();assert.equal(pa.code,ca);assert.ok(pa.name.startsWith('冒險者-'));assert.ok(!JSON.stringify(pa).includes(a));
+response=await req('/me',b,cb);assert.equal(response.status,200);
+response=await req('/me',c,cc);assert.equal(response.status,200);
+response=await req('/chat',a,ca,{text:'嗨，大家好！'});assert.equal(response.status,201);const message=(await response.json()).message;
+assert.equal(message.text,'嗨，大家好！');assert.ok(!JSON.stringify(message).includes(a));assert.equal(message.authorCode,undefined);
+response=await req('/chat',a,ca,{text:'連續洗頻'});assert.equal(response.status,429);
+response=await req('/chat');const publicMessages=(await response.json()).messages;assert.equal(publicMessages.length,1);assert.ok(!JSON.stringify(publicMessages).includes(a));assert.ok(!JSON.stringify(publicMessages).includes(ca));
+response=await req('/chat',b,cb,{text:'https://spam.example'});assert.equal(response.status,400);
+response=await req('/report',b,cb,{messageId:message.id});assert.equal(response.status,200);
+response=await req('/chat',b,cb);assert.equal((await response.json()).messages.length,0,'reporting hides offender messages for reporting player');
+response=await req('/chat',a,ca);assert.equal((await response.json()).messages.length,1,'report does not silently delete global history');
+response=await req('/report',a,ca,{messageId:message.id});assert.equal(response.status,404,'cannot report own message');
+response=await req('/friends',a,ca,{action:'request',code:cc});assert.equal(response.status,201||200);
+response=await req('/friends',c,cc);let pc=await response.json();assert.equal(pc.incoming[0].code,ca);assert.equal(pc.outgoing.length,0);assert.ok(!JSON.stringify(pc).includes(a));
+response=await req('/friends',c,cc,{action:'accept',code:ca});assert.equal(response.status,200);
+response=await req('/friends',a,ca);let fa=await response.json();assert.equal(fa.friends.length,1);assert.equal(fa.friends[0].code,cc);
+response=await req('/friends',c,cc);pc=await response.json();assert.equal(pc.friends[0].code,ca);assert.equal(pc.incoming.length,0);
+response=await req('/friends',a,ca,{action:'remove',code:cc});assert.equal(response.status,200);
+response=await req('/friends',c,cc);assert.equal((await response.json()).friends.length,0);
+response=await req('/friends',b,cb,{action:'request',code:ca});assert.equal(response.status,200);
+response=await req('/friends',a,ca,{action:'reject',code:cb});assert.equal(response.status,200);
+response=await req('/friends',b,cb);assert.equal((await response.json()).outgoing.length,0);
+response=await req('/friends',a,ca,{action:'block',code:cb});assert.equal(response.status,200);
+response=await req('/friends',b,cb,{action:'request',code:ca});assert.equal(response.status,403);
+response=await req('/friends',a,ca,{action:'unblock',code:cb});assert.equal(response.status,200);
+const reloaded=new SocialHub({storage},{});response=await reloaded.fetch(new Request('https://social.internal/chat'));assert.equal((await response.json()).messages.length,1,'chat history must persist across DO instances');
+console.log('Social hub: guest read-only chat, 160-char/privacy/spam rules, report/hide, mutual friend invites, reject/remove/block, opaque IDs and durable history: PASS');
