@@ -213,42 +213,44 @@
 @media(max-width:700px){.social-compose>div{grid-template-columns:minmax(0,1fr) 38px;gap:4px}.social-compose button{width:38px!important;min-width:38px!important;max-width:38px!important}.community-card{padding:12px}.social-tabs button{font-size:12px}.community-actions button{font-size:11px}.duel-ready{padding:8px;gap:6px}}
 
 
-/* Home: tall left character art, three right-hand identity lines above season. */
+/* Home: center the three-line identity above the season; fit art inside its frame. */
 .role-feature.growth-feature{
-  grid-template-columns:minmax(0,1.65fr) minmax(168px,.65fr);
-  gap:4px;
-  min-height:452px;
-  padding:12px 16px;
-  align-items:stretch;
+  grid-template-columns:minmax(0,1.45fr) minmax(168px,.75fr);
+  gap:8px;
+  min-height:360px;
+  padding:14px 16px;
+  align-items:center;
 }
 .role-feature .role-growth-art{
   min-width:0;
-  min-height:420px;
-  padding:0;
-  overflow:visible;
-  align-self:stretch;
+  min-height:0;
+  width:100%;
+  height:325px;
+  padding:8px;
+  overflow:hidden;
+  align-self:center;
   display:grid;
   place-items:center;
 }
 .role-feature .role-growth-art img{
   display:block;
   width:100%;
-  max-width:none;
-  height:415px;
+  max-width:100%;
+  height:100%;
   max-height:100%;
   object-fit:contain;
   object-position:center center;
-  transform:translateX(3%) scale(1.15);
+  transform:none;
   transform-origin:center center;
 }
 .role-feature .role-growth-panel{
   min-width:0;
-  align-self:stretch;
-  align-content:start;
-  justify-items:end;
-  gap:11px;
-  padding-top:8px;
-  text-align:right;
+  align-self:center;
+  align-content:center;
+  justify-items:center;
+  gap:10px;
+  padding:0;
+  text-align:center;
 }
 .role-feature .growth-level{
   position:static;
@@ -258,10 +260,10 @@
   width:100%;
   min-width:0;
   gap:3px;
-  align-items:start;
-  justify-items:end;
-  justify-content:stretch;
-  text-align:right;
+  align-items:center;
+  justify-items:center;
+  justify-content:center;
+  text-align:center;
   white-space:normal;
   line-height:1.2;
 }
@@ -286,34 +288,53 @@
   overflow-wrap:anywhere;
 }
 .role-feature .role-growth-panel .player-season-tier{
-  justify-self:end;
+  justify-self:center;
+  justify-items:center;
   max-width:100%;
   min-width:0;
   margin:0;
   text-align:center;
 }
 .role-feature .role-growth-panel .growth-stats{
-  justify-self:end;
+  justify-self:center;
   margin-top:5px;
   transform:none;
 }
 @media(max-width:700px){
   .role-feature.growth-feature{
-    grid-template-columns:minmax(0,1.48fr) minmax(112px,.67fr);
-    gap:2px;
-    min-height:378px;
-    padding:10px 7px 10px 5px;
+    grid-template-columns:minmax(0,1.34fr) minmax(112px,.76fr);
+    gap:3px;
+    min-height:292px;
+    padding:8px 6px;
   }
-  .role-feature .role-growth-art{min-height:350px;padding:0;overflow:visible}
+  .role-feature .role-growth-art{
+    min-height:0;
+    height:260px;
+    padding:5px;
+    overflow:hidden;
+    align-self:center;
+  }
   .role-feature .role-growth-art img{
-    height:345px;
     width:100%;
-    max-width:none;
+    max-width:100%;
+    height:100%;
     max-height:100%;
-    transform:translateX(3%) scale(1.16);
+    transform:none;
   }
-  .role-feature .role-growth-panel{gap:8px;padding-top:4px}
-  .role-feature .growth-level{top:auto;left:auto;right:auto;gap:2px;justify-items:end}
+  .role-feature .role-growth-panel{
+    gap:7px;
+    padding:0;
+    justify-items:center;
+    text-align:center;
+  }
+  .role-feature .growth-level{
+    top:auto;
+    left:auto;
+    right:auto;
+    gap:2px;
+    justify-items:center;
+    text-align:center;
+  }
   .role-feature .growth-level .growth-level-value{font-size:clamp(21px,6vw,26px)}
   .role-feature .growth-level .growth-title{font-size:clamp(12px,3.7vw,16px)!important}
   .role-feature .growth-level .growth-player-name{font-size:clamp(13px,4.2vw,17px)!important}
@@ -321,6 +342,10 @@
   .role-feature .role-growth-panel .growth-stats{margin-top:3px}
 }
 @media(max-width:365px){
-  .role-feature.growth-feature{grid-template-columns:minmax(0,1.45fr) minmax(105px,.65fr)}
+  .role-feature.growth-feature{
+    grid-template-columns:minmax(0,1.28fr) minmax(105px,.72fr);
+    padding:7px 4px;
+  }
+  .role-feature .role-growth-art{height:245px;padding:4px}
   .role-feature .role-growth-panel .player-season-tier{font-size:13px;padding:5px 4px}
 }
