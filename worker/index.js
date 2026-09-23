@@ -117,10 +117,10 @@ export class Matchmaker extends DurableObject{
   find(id){return this.ctx.getWebSockets().find(x=>x.deserializeAttachment()?.id===id)}
   view(att){const fighter=fighterSnapshot(att.fighter);const p=att.profile||{};return {...fighter,profile:{name:p.name,role:p.role,pet:p.pet,level:p.level}}}
 
-  async scheduleQueueAlarm(){const deadlines=this.ctx.getWebSockets().map(ws=>ws.deserializeAttachment()).filter(a=>a?.state==='waiting'&&a.queuedAt).map(a=>a.queuedAt+60000);if(deadlines.length)await this.ctx.storage.setAlarm(Math.max(Date.now()+100,Math.min(...deadlines)));}
-  async alarm(){const now=Date.now();for(const ws of this.ctx.getWebSockets()){const a=ws.deserializeAttachment();if(a?.state==='waiting'&&a.queuedAt&&now-a.queuedAt>=60000)await this.matchBot(ws)}await this.scheduleQueueAlarm();}
-  async requestAi(ws){const a=ws.deserializeAttachment();if(!a||a.state!=='waiting'||!a.queuedAt)return;if(Date.now()-a.queuedAt<60000)return;await this.matchBot(ws)}
-  async matchBot(ws){let a=ws.deserializeAttachment();if(!a||a.state!=='waiting')return;
+  async scheduleQueueAlarm(){const deadlines=this.ctx.getWebSockets().map(ws=>ws.deserializeAttachment()).filter(a=>a?.state==='waiting'&&!a.practice&&a.queuedAt).map(a=>a.queuedAt+60000);if(deadlines.length)await this.ctx.storage.setAlarm(Math.max(Date.now()+100,Math.min(...deadlines)));}
+  async alarm(){const now=Date.now();for(const ws of this.ctx.getWebSockets()){const a=ws.deserializeAttachment();if(a?.state==='waiting'&&!a.practice&&a.queuedAt&&now-a.queuedAt>=60000)await this.matchBot(ws)}await this.scheduleQueueAlarm();}
+  async requestAi(ws){const a=ws.deserializeAttachment();if(!a||a.state!=='waiting'||a.practice||!a.queuedAt)return;if(Date.now()-a.queuedAt<60000)return;await this.matchBot(ws)}
+  async matchBot(ws){let a=ws.deserializeAttachment();if(!a||a.state!=='waiting'||a.practice)return;
     a.state='matching';ws.serializeAttachment(a);let batch;try{batch=await reserveDailyQuestions(this.env,a.questionKeys||[],10)}catch(err){a.state='finished';ws.serializeAttachment(a);this.send(ws,{type:'error',message:err?.message||'題庫暫時無法使用'});return}
     const roles=['warrior','mage','archer'],pets=['fox','owl','dragon'];
     const role=roles[Math.floor(Math.random()*roles.length)],pet=pets[Math.floor(Math.random()*pets.length)],profile=this.profile({name:'AI 挑戰者',role,pet}),stats=progressionStats(role,pet,profile.level,profile.rpg).total;
