@@ -19,6 +19,8 @@ class Client {
 
   async connect() {
     this.ws = new WebSocket(WS_URL);
+    this.ws.addEventListener('close',event=>console.error('WEB-PK SOCKET CLOSE',this.name,event.code,event.reason));
+    this.ws.addEventListener('error',event=>console.error('WEB-PK SOCKET ERROR',this.name));
     this.ws.addEventListener('message', (event) => {
       let message;
       try {
@@ -63,6 +65,7 @@ class Client {
   }
 
   send(value) {
+    if(value?.type==='ready')console.log('WEB-PK SEND READY',this.name,'state',this.ws.readyState,'when',Date.now());
     this.ws.send(JSON.stringify(value));
   }
 
