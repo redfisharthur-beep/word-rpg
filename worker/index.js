@@ -119,6 +119,7 @@ export class Matchmaker extends DurableObject{
     const indices=(a.questionBatch||[]).slice((a.round-1)*5,a.round*5);
     try{await recordQuestionAnswers(this.env,a.questionKeys||[],indices,data.answers)}catch(err){this.send(ws,{type:'error',message:err?.message||'錯題紀錄更新失敗'});return}
     a.ready=ready;ws.serializeAttachment(a);
+    this.send(ws,{type:'quiz-reviewed',round:a.round,wordResults:indices.map((index,i)=>({index,correct:String(data.answers[i]??'')===String(makeQuestion(index).answer)}))});
     if(a.botId){let bot=await this.ctx.storage.get(`bot:${a.id}`);if(!bot||bot.id!==a.botId){this.send(ws,{type:'error',message:'AI 對戰資料已失效'});return}
       const chosen=this.selectBotCards(bot,a.fighter);if(chosen.length!==3){this.send(ws,{type:'error',message:'AI 卡牌資料不足'});return}
       bot.selection=[...chosen];bot.ready={correct:bot.round===1?5:4,elapsedMs:7800,selected:[...chosen]};
