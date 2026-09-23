@@ -27,6 +27,7 @@ class Client {
         return;
       }
       if (message.type === 'error') { console.error(this.name + ' server error:', message.message); for (const waiter of this.waiters.splice(0)) { clearTimeout(waiter.timer); waiter.reject(new Error(this.name + ' server error: ' + message.message)); } return; }
+      console.log('WEB-PK EVENT',this.name,message.type,message.opponent?.profile?.name||'',message.message||'');
       const index = this.waiters.findIndex((w) => w.type === message.type);
       if (index >= 0) {
         const [waiter] = this.waiters.splice(index, 1);
