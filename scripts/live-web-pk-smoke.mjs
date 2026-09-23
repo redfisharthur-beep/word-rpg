@@ -25,6 +25,7 @@ class Client {
       } catch {
         return;
       }
+      if (message.type === 'error') { console.error(this.name + ' server error:', message.message); for (const waiter of this.waiters.splice(0)) { clearTimeout(waiter.timer); waiter.reject(new Error(this.name + ' server error: ' + message.message)); } return; }
       const index = this.waiters.findIndex((w) => w.type === message.type);
       if (index >= 0) {
         const [waiter] = this.waiters.splice(index, 1);
@@ -70,7 +71,7 @@ class Client {
       return Promise.resolve(message);
     }
     return new Promise((resolve, reject) => {
-      const waiter = { type, resolve, timer: null };
+      const waiter = { type, resolve, reject, timer: null };
       waiter.timer = setTimeout(() => {
         this.waiters = this.waiters.filter((x) => x !== waiter);
         reject(new Error(this.name + ' timed out waiting for ' + type));
