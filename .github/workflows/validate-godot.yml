@@ -1,0 +1,89 @@
+name: Validate Godot
+
+on:
+  push:
+    branches: [godot-migration]
+  pull_request:
+    paths:
+      - 'godot/**'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - 'images/**'
+      - 'data/game-data.json'
+      - 'scripts/split-godot-web-assets.mjs'
+      - 'scripts/live-production-smoke.mjs'
+      - 'scripts/build-godot-font.py'
+
+concurrency:
+  group: validate-godot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  godot-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: '4.7.0'
+          use-dotnet: false
+          include-templates: true
+      - name: Build Traditional Chinese Godot font
+        run: |
+          python -m pip install --disable-pip-version-check "fonttools[woff]>=4.58,<5" brotli
+          python scripts/build-godot-font.py
+          test -s godot/fonts/noto-tc/WordRpgNotoSansTC.ttf
+      - name: Import project and validate scripts
+        run: godot --headless --path . --editor --quit
+      - name: Run Godot RPG parity tests
+        run: godot --headless --path . --script res://godot/tests/rpg_parity_test.gd
+      - name: Run native PK protocol tests
+        run: timeout 20s godot --headless --path . res://godot/tests/pk_protocol_test.tscn
+      - name: Run full Godot game flow tests
+        run: timeout 60s godot --headless --path . res://godot/tests/full_game_flow_test.tscn
+      - name: Verify Web export templates
+        run: |
+          echo "Godot version: $(godot --version)"
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.7.stable"
+          echo "Template dir: $TEMPLATE_DIR"
+          ls -lah "$TEMPLATE_DIR" || true
+          find "$TEMPLATE_DIR" -maxdepth 1 -type f -printf '%f %s bytes\n' 2>/dev/null | sort || true
+          test -s "$TEMPLATE_DIR/web_release.zip"
+      - name: Export production Web build
+        run: |
+          mkdir -p build/web
+          godot --verbose --headless --path . --export-release Web build/web/index.html
+          test -s build/web/index.html
+          test -s build/web/index.wasm
+          test -s build/web/index.pck
+          node scripts/split-godot-web-assets.mjs build/web
+          test ! -e build/web/index.wasm
+          test ! -e build/web/index.pck
+          test -s build/web/index.wasm.part00
+          test -s build/web/index.pck.part00
+          grep -q 'word-rpg-chunk-loader' build/web/index.html
+          ASSET_LIMIT=$((24 * 1024 * 1024))
+          while IFS= read -r -d '' file; do
+            BYTES=$(stat -c%s "$file")
+            echo "$BYTES bytes  $file"
+            if [ "$BYTES" -gt "$ASSET_LIMIT" ]; then
+              echo "::error::Cloudflare static asset limit exceeded by $file ($BYTES bytes)."
+              exit 1
+            fi
+          done < <(find build/web -maxdepth 1 -type f -print0)
+          du -h build/web/*
+      - name: Upload tested Web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: word-rpg-godot-web-${{ github.sha }}
+          path: build/web
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - name: Launch main scene smoke test
+        run: godot --headless --path . --quit-after 3
+      - name: Launch native PK scene smoke test
+        run: godot --headless --path . res://godot/scenes/pk.tscn --quit-after 3
