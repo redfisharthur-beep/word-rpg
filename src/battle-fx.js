@@ -67,7 +67,7 @@ export async function playBattleStep({step,previous,role='warrior',duration=1500
   const warriorRush=framedAttack&&(step.who==='player'?role:step.enemy?.role)==='warrior';
 
   const assist=step.who==='player'?step.player?.pet:step.enemy?.pet;
-  if(assist&&step.slot===2&&step.card&&/靈狐|夜梟|幼龍|龍息|狐|梟/.test(logs.join(' '))){const src=ASSETS.pet?.[assist];if(src){const pet=document.createElement('img');pet.src=src;pet.alt='';pet.className=`fx-pet-assist pet-${assist}`;actor.appendChild(pet);setTimeout(()=>pet.remove(),850);playSfx('pet')}}
+  if(assist&&step.card&&/靈狐|夜梟|幼龍|龍息|狐|梟/.test(logs.join(' '))){const src=ASSETS.pet?.[assist];if(src){const pet=document.createElement('img');pet.src=src;pet.alt='';pet.className=`fx-pet-assist pet-${assist}`;actor.appendChild(pet);setTimeout(()=>pet.remove(),850);playSfx('pet')}}
   if(framedAttack){
     clearAttackPose(actor);
     addClass(actor,'fx-windup');
