@@ -85,6 +85,9 @@ jobs:
           console.log('Original Web production smoke: PASS');
           NODE
 
+      - name: Settle Cloudflare WebSocket connections after deployment
+        run: sleep 15
+
       - name: Run live Web PK quiz-to-battle smoke
         env:
           WORD_RPG_BASE_URL: https://word-rpg.redfisharthur.workers.dev
