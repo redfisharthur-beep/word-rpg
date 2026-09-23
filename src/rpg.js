@@ -1,6 +1,26 @@
 import {QUALITY_DEFS,EQUIPMENT_VALUES,COLLECTION_REWARDS} from './generated/game-data.js';
 
 export const QUALITY_ORDER=['common','rare','epic','legendary'];
+export const EQUIPMENT_ENHANCE_MAX=10;
+const EQUIPMENT_ENHANCE_COST={common:4,rare:8,epic:15,legendary:28,mythic:45};
+const EQUIPMENT_ENHANCE_CHANCE={common:.95,rare:.85,epic:.75,legendary:.65,mythic:.55};
+export function equipmentEnhanceInfo(item){
+  const level=Math.min(EQUIPMENT_ENHANCE_MAX,Math.max(0,Math.floor(Number(item?.enhance)||0))),quality=EQUIPMENT_ENHANCE_COST[item?.quality]?item.quality:'common';
+  return {level,max:EQUIPMENT_ENHANCE_MAX,cost:level>=EQUIPMENT_ENHANCE_MAX?0:EQUIPMENT_ENHANCE_COST[quality]*(level+1),chance:level>=EQUIPMENT_ENHANCE_MAX?1:Math.max(.20,EQUIPMENT_ENHANCE_CHANCE[quality]-level*.025)};
+}
+export function enhanceEquipment(rpg,itemId,random=Math.random){
+  const clean=cleanRpg(rpg),index=clean.inventory.findIndex(item=>item.id===itemId);
+  if(index<0)return {rpg:clean,ok:false,reason:'找不到裝備'};
+  const item=clean.inventory[index],info=equipmentEnhanceInfo(item);
+  if(info.level>=10)return {rpg:clean,ok:false,reason:'已達 +10'};
+  if(clean.crystals<info.cost)return {rpg:clean,ok:false,reason:'結晶不足'};
+  clean.crystals-=info.cost;
+  const roll=Number(random()),success=Number.isFinite(roll)&&roll>=0&&roll<info.chance;
+  const next=Math.max(0,info.level+(success?1:-1));
+  clean.inventory[index]={...item,enhance:next};
+  return {rpg:cleanRpg(clean),ok:true,success,before:info.level,after:next,cost:info.cost,chance:info.chance};
+}
+
 export const QUALITY=QUALITY_DEFS;
 
 export const PET_TREES={
@@ -108,7 +128,7 @@ const LEGACY_MAP={gem:{ruby:'ruby',emerald:'thunder',sapphire:'ruby',topaz:'thun
 
 export function lootImage(item){const type=item?.type,subtype=item?.subtype,quality=item?.quality;if(!VALID_LOOT[type]?.has(subtype)||!QUALITY[quality])return '';return `/images/loot-${type}-${subtype}-${quality}.png`;}
 function bonusesFor(type,subtype,quality){const v=QVAL[quality]?.[subtype];if(!v)return {};if(type==='gem'&&subtype==='ruby')return {atkPct:v.atk,defPct:v.def};if(type==='gem'&&subtype==='thunder')return {hpPct:v.hp,crit:v.crit};if(type==='armor'&&subtype==='guardian')return {defPct:v.def};if(type==='armor'&&subtype==='bloodspirit')return {hpPct:v.hp};if(type==='ring'&&subtype==='warbreaker')return {atkPct:v.atk,hpPct:v.hp};if(type==='ring'&&subtype==='battlesoul')return {defPct:v.def,crit:v.crit};return {};}
-function normalizeItem(item){if(!item||typeof item!=='object'||typeof item.id!=='string')return null;const type=['gem','armor','ring'].includes(item.type)?item.type:null;if(!type)return null;const quality=QUALITY[item.quality]?item.quality:'common';const subtype=LEGACY_MAP[type]?.[item.subtype]||null;if(!subtype||!VALID_LOOT[type].has(subtype))return null;const normalized={...item,type,subtype,quality,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:bonusesFor(type,subtype,quality)};if(quality==='mythic'){const power=String(item.mythicPower||'');normalized.mythicPower=MYTHIC_POWERS[power]?.type===type?power:MYTHIC_DEFAULT_BY_SUBTYPE[subtype];}else delete normalized.mythicPower;normalized.art=lootImage(normalized);return normalized;}
+function normalizeItem(item){if(!item||typeof item!=='object'||typeof item.id!=='string')return null;const type=['gem','armor','ring'].includes(item.type)?item.type:null;if(!type)return null;const quality=QUALITY[item.quality]?item.quality:'common';const subtype=LEGACY_MAP[type]?.[item.subtype]||null;if(!subtype||!VALID_LOOT[type].has(subtype))return null;const enhance=clamp(Math.floor(Number(item.enhance)||0),0,EQUIPMENT_ENHANCE_MAX),bonuses=bonusesFor(type,subtype,quality),scale=1+enhance*.10;const normalized={...item,type,subtype,quality,enhance,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:Object.fromEntries(Object.entries(bonuses).map(([key,val])=>[key,Math.round(val*scale*1000000)/1000000]))};if(quality==='mythic'){const power=String(item.mythicPower||'');normalized.mythicPower=MYTHIC_POWERS[power]?.type===type?power:MYTHIC_DEFAULT_BY_SUBTYPE[subtype];}else delete normalized.mythicPower;normalized.art=lootImage(normalized);return normalized;}
 
 export function collectionKey(item){return item?.type&&item?.subtype&&item?.quality?`${item.type}:${item.subtype}:${item.quality}`:'';}
 function validCollectionKey(key){const [type,subtype,quality]=String(key||'').split(':');return !!(VALID_LOOT[type]?.has(subtype)&&QUALITY[quality]);}
@@ -204,4 +224,4 @@ export function rollMythicLoot({boss=false,towerFloor=0,level=1}={},r=Math.rando
 export function addLoot(rpg,item){const clean=cleanRpg(rpg),normalized=normalizeItem(item);if(!normalized)return clean;clean.inventory=[...clean.inventory,normalized];return cleanRpg(clean);}
 export function equipItem(rpg,itemId){const clean=cleanRpg(rpg),item=clean.inventory.find(x=>x.id===itemId);if(!item)return clean;if(item.type==='gem'){const gems=clean.equipped.gems.filter(id=>id!==itemId);if(gems.length>=3)return clean;clean.equipped.gems=[...gems,itemId];}else if(item.type==='armor')clean.equipped.armor=itemId;else if(item.type==='ring'){const rings=clean.equipped.rings.filter(id=>id!==itemId);if(rings.length>=2)return clean;clean.equipped.rings=[...rings,itemId];}return cleanRpg(clean);}
 export function unequipItem(rpg,itemId){const clean=cleanRpg(rpg);clean.equipped.gems=clean.equipped.gems.filter(id=>id!==itemId);if(clean.equipped.armor===itemId)clean.equipped.armor=null;clean.equipped.rings=clean.equipped.rings.filter(id=>id!==itemId);return cleanRpg(clean);}
-export function itemBonusText(item){const b=item?.bonuses||{},parts=[];if(b.hpPct)parts.push(`生命 +${Math.round(b.hpPct*100)}%`);if(b.atkPct)parts.push(`攻擊 +${Math.round(b.atkPct*100)}%`);if(b.defPct)parts.push(`防禦 +${Math.round(b.defPct*100)}%`);if(b.crit)parts.push(`爆擊 +${Math.round(b.crit*100)}%`);const mythic=mythicAbilityText(item);if(mythic)parts.push(`✦ ${mythic}`);return parts.join(' · ');}
+export function itemBonusText(item){const b=item?.bonuses||{},parts=[];if(item?.enhance>0)parts.push(`+${Math.min(10,Math.floor(Number(item.enhance)))}`);if(b.hpPct)parts.push(`生命 +${Math.round(b.hpPct*100)}%`);if(b.atkPct)parts.push(`攻擊 +${Math.round(b.atkPct*100)}%`);if(b.defPct)parts.push(`防禦 +${Math.round(b.defPct*100)}%`);if(b.crit)parts.push(`爆擊 +${Math.round(b.crit*100)}%`);const mythic=mythicAbilityText(item);if(mythic)parts.push(`✦ ${mythic}`);return parts.join(' · ');}
