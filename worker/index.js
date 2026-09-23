@@ -3,11 +3,11 @@ import {dealHand,makeFighter,resolveCardAction,resolveBasic,resolveAutoBasic,aft
 import {cleanRpg,maxedPkRpg} from '../src/rpg.js';
 import {makeQuestion} from '../src/words.js';
 import {cleanDaily} from '../src/daily.js';
+import {QUESTION_WINDOW_MS,normalizeQuestionHistory,reserveQuestionHistory,gradeQuestionHistory} from '../src/question-policy.js';
 
 const WORD_COUNT=1200;
 const SESSION_COOKIE='word_rpg_session';
 const GUEST_COOKIE='word_rpg_guest';
-const QUESTION_WINDOW_MS=24*60*60*1000;
 const OAUTH_STATE_COOKIE='word_rpg_oauth_state';
 const OAUTH_VERIFIER_COOKIE='word_rpg_oauth_verifier';
 const OAUTH_NONCE_COOKIE='word_rpg_oauth_nonce';
@@ -61,23 +61,18 @@ export class UserStore extends DurableObject{
   constructor(ctx,env){super(ctx,env);this.ctx=ctx;this.env=env}
   async fetch(request){const url=new URL(request.url);
     if(url.pathname==='/questions'||url.pathname==='/questions/result'){
-      const now=Date.now(),old=await this.ctx.storage.get('questionHistoryV2'),seen={},pending={};
-      if(old){for(const [key,value] of Object.entries(old.seen||{})){const i=Number(key),at=Number(value);if(Number.isInteger(i)&&i>=0&&i<WORD_COUNT&&at>now-QUESTION_WINDOW_MS&&at<=now)seen[i]=at;}for(const [key,value] of Object.entries(old.pending||{})){const i=Number(key);if(value&&Number.isInteger(i)&&i>=0&&i<WORD_COUNT)pending[i]=true;}}
-      else{const legacy=await this.ctx.storage.get('dailyQuestions');if(legacy?.date===dailyDate())for(const i of legacy.used||[])if(Number.isInteger(i)&&i>=0&&i<WORD_COUNT)seen[i]=now;}
-      if(url.pathname==='/questions'&&request.method==='GET')return json({seen,pending:Object.keys(pending).map(Number)});
+      const now=Date.now(),old=await this.ctx.storage.get('questionHistoryV2');
+      const legacy=old?null:await this.ctx.storage.get('dailyQuestions');
+      const history=normalizeQuestionHistory(old,now,legacy,WORD_COUNT);
+      if(url.pathname==='/questions'&&request.method==='GET')return json({seen:history.seen,pending:Object.keys(history.pending).map(Number)});
       if(request.method!=='POST')return json({error:'Method not allowed'},405);
       let body;try{body=await request.json()}catch{return json({error:'Invalid JSON'},400)}
-      if(url.pathname==='/questions'){
-        const indices=[...new Set((Array.isArray(body.indices)?body.indices:[]).map(Number))];
-        if(!indices.length||indices.length>20||indices.some(i=>!Number.isInteger(i)||i<0||i>=WORD_COUNT))return json({error:'Invalid questions'},400);
-        if(indices.some(i=>seen[i]&&!pending[i]))return json({error:'Question conflict'},409);
-        for(const i of indices)seen[i]=now;
-      }else{
-        const results=Array.isArray(body.results)?body.results:[];
-        if(!results.length||results.length>20)return json({error:'Invalid results'},400);
-        for(const result of results){const i=Number(result?.index);if(!Number.isInteger(i)||i<0||i>=WORD_COUNT||(!seen[i]&&!pending[i]))return json({error:'Question was not issued'},409);if(String(result.answer??'')===String(makeQuestion(i).answer))delete pending[i];else pending[i]=true;}
-      }
-      await this.ctx.storage.put('questionHistoryV2',{seen,pending});
+      let next;
+      try{
+        if(url.pathname==='/questions')next=reserveQuestionHistory(history,Array.isArray(body.indices)?body.indices:[],now,WORD_COUNT);
+        else next=gradeQuestionHistory(history,body.results,i=>makeQuestion(i).answer,WORD_COUNT);
+      }catch(err){return json({error:err?.message||'Invalid questions'},err?.message==='Question conflict'||err?.message==='Question was not issued'?409:400)}
+      await this.ctx.storage.put('questionHistoryV2',next);
       return json({ok:true});
     }
     if(url.pathname==='/season'){const current=url.searchParams.get('season')||seasonId();let record=cleanSeason(await this.ctx.storage.get('season')||seasonDefaults());if(record.season!==current)record=seasonDefaults();if(request.method==='GET')return json(record);if(request.method==='POST'){let body;try{body=await request.json()}catch{return json({error:'Invalid JSON'},400)}record=cleanSeason(await this.ctx.storage.get('season')||seasonDefaults());const result=String(body.result||'');if(!['win','loss','draw'].includes(result))return json({error:'Invalid result'},400);if(result==='win'){record.wins++;record.points+=18}else if(result==='loss'){record.losses++;record.points=Math.max(0,record.points-8)}else{record.draws++;record.points+=4}await this.ctx.storage.put('season',record);return json(record)}return json({error:'Method not allowed'},405)}
