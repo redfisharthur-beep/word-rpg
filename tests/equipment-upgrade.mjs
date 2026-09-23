@@ -3,6 +3,8 @@ import {emptyRpg,cleanRpg,addLoot,enhanceEquipment,equipmentEnhanceInfo,equipmen
 const item=(quality,id)=>({id,type:'gem',subtype:'ruby',quality});
 const qualities=['common','rare','epic','legendary','mythic'];
 const rates=qualities.map((quality,i)=>equipmentEnhanceInfo(item(quality,'q'+i)));
+assert.deepEqual(rates.map(x=>x.cost),[2,3,5,8,12],'reduced first-level costs by quality');
+assert.deepEqual(qualities.map((quality,i)=>equipmentEnhanceInfo({...item(quality,'q'+i),enhance:9}).cost),[20,30,50,80,120],'higher upgrade levels retain predictable reduced costs');
 for(let i=1;i<rates.length;i++){assert.ok(rates[i].cost>rates[i-1].cost,'higher gear quality needs more crystals');assert.ok(rates[i].chance<rates[i-1].chance,'higher gear quality is less likely to succeed')}
 let r=addLoot(emptyRpg(),item('common','a'));r.crystals=10000;r=equipItem(r,'a');
 const base=equipmentBonuses(r).atkPct;
