@@ -101,8 +101,8 @@ try {
     b.waitFor('matched'),
   ]);
 
-  assert(matchedA.self?.profile?.level === 50, 'player A should be normalized to max PK level');
-  assert(matchedB.self?.profile?.level === 50, 'player B should be normalized to max PK level');
+  assert(matchedA.self?.profile?.level === 80, 'player A should be normalized to max PK level');
+  assert(matchedB.self?.profile?.level === 80, 'player B should be normalized to max PK level');
   assert(matchedA.self?.maxHp === matchedB.self?.maxHp, 'same role/pet should have identical max PK HP regardless of account progress');
   assert(matchedA.self?.atk === matchedB.self?.atk, 'same role/pet should have identical max PK ATK regardless of account progress');
   assert(matchedA.self?.def === matchedB.self?.def, 'same role/pet should have identical max PK DEF regardless of account progress');
