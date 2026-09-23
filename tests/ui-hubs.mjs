@@ -10,12 +10,12 @@ function element(selector,dataset={}){
 function matches(selector){
   const m=selector.match(/^\[([^\]=]+)(?:="([^"]*)")?\]$/);
   if(!m)return null;
-  const marker=m[2]===undefined?m[1]+'=':m[1]+'="'+m[2]+'"';
+  const marker=m[2]===undefined?m[1]:m[1]+'="'+m[2]+'"';
   return app.innerHTML.includes(marker)?m:null;
 }
 globalThis.document={
   getElementById:()=>({}),addEventListener(){},
-  querySelector(selector){if(selector==='#app')return app;return matches(selector)?element(selector):null},
+  querySelector(selector){if(selector==='#app')return app;const match=matches(selector);if(!match)return null;if(match[2]!==undefined&&match[1].startsWith('data-')){const attr=match[1],key=attr.slice(5).replace(/-([a-z])/g,(_,c)=>c.toUpperCase());return this.querySelectorAll('['+attr+']').find(node=>node.dataset[key]===match[2])||null}return element(selector)},
   querySelectorAll(selector){
     const m=selector.match(/^\[data-([a-z-]+)\]$/);
     if(!m)return [];
