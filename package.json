@@ -6,7 +6,7 @@
     "sync:data": "node scripts/sync-game-data.mjs",
     "dev": "npm run sync:data && wrangler dev",
     "deploy": "npm run sync:data && wrangler deploy",
-    "test": "npm run sync:data && node tests/rpg-systems.mjs && node tests/words.mjs && node tests/v2-systems.mjs && node tests/pk-render.mjs && node tests/p1-policy.mjs && node tests/daily.mjs && node tests/word-book.mjs"
+    "test": "npm run sync:data && node tests/rpg-systems.mjs && node tests/words.mjs && node tests/v2-systems.mjs && node tests/pk-render.mjs && node tests/p1-policy.mjs && node tests/daily.mjs && node tests/word-book.mjs && node tests/ui-hubs.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.102.0"
