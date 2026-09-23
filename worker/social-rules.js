@@ -15,4 +15,4 @@ export function safeMessage(value){
   return {text};
 }
 export function canSend(lastSent,at=Date.now()){return at-(Number(lastSent)||0)>=SOCIAL_RATE_MS}
-export function socialPublicMessage(m){return {id:m.id,authorCode:m.authorCode,name:m.name,text:m.text,at:m.at}}
+export function socialPublicMessage(m){return {id:m.id,name:m.name,text:m.text,at:m.at}}
