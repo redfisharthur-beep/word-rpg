@@ -85,6 +85,11 @@ jobs:
           console.log('Original Web production smoke: PASS');
           NODE
 
+      - name: Verify live public chat and friend authorization
+        env:
+          WORD_RPG_BASE_URL: https://word-rpg.redfisharthur.workers.dev
+        run: timeout 20s node scripts/live-social-smoke.mjs
+
       - name: Settle Cloudflare WebSocket connections after deployment
         run: sleep 15
 
