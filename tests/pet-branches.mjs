@@ -47,9 +47,7 @@ legacy.petSkills.owl=['owl-1','owl-2','owl-3','owl-4','owl-5'];
 legacy.petSkills.dragon=['dragon-1','dragon-2','dragon-3','dragon-4','dragon-5'];
 legacy=cleanRpg(legacy);
 for(const pet of ['fox','owl','dragon'])assert.equal(legacy.petSkills[pet].length,5,'migration must retain all original skill IDs');
-assert.ok(canUnlockPetSkill('fox','fox-6',80,legacy),'original red skills unlock new terminal red skill');
-assert.ok(canUnlockPetSkill('owl','owl-6',80,legacy),'original wisdom skills unlock its new terminal skill');
-assert.ok(canUnlockPetSkill('dragon','dragon-7',80,legacy),'original dragon burst skills unlock new terminal skill');
+for(const [pet,node] of [['fox','fox-6'],['owl','owl-6'],['dragon','dragon-7']]){const isolated=cleanRpg({...emptyRpg(),petSkills:{fox:[],owl:[],dragon:[],[pet]:legacy.petSkills[pet]}});assert.ok(canUnlockPetSkill(pet,node,80,isolated),'original branch skills unlock new terminal skill: '+node)}
 assert.equal(petSkillEffects('fox',legacy).firstCardAmp,.15,'legacy first-card skill strength preserved');
 const maxed=maxedPkRpg();
 for(const pet of ['fox','owl','dragon'])assert.equal(maxed.petSkills[pet].length,9,'normalized PK retains all 3 max-level branches for every pet');
