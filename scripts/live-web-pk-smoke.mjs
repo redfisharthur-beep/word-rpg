@@ -1,5 +1,6 @@
 const BASE_URL = process.env.WORD_RPG_BASE_URL || 'https://word-rpg.redfisharthur.workers.dev';
-const WS_URL = BASE_URL.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:') + '/match';
+const ROOM = 'ci-' + (process.env.GITHUB_RUN_ID || crypto.randomUUID()) + '-' + (process.env.GITHUB_RUN_ATTEMPT || '1') + '-duel';
+const WS_URL = BASE_URL.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:') + '/match?practice=' + encodeURIComponent(ROOM);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
