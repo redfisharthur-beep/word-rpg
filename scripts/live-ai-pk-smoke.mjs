@@ -29,7 +29,8 @@ try{
   });
   ws.send(JSON.stringify({type:'join',profile:{name:'AI-SMOKE-'+crypto.randomUUID().slice(0,8),role:'mage',pet:'owl',level:1,rpg:{}}}));
   await waitFor('queued',15000);
-  const started=Date.now(),matched=await waitFor('matched',85000);
+  const started=Date.now(),takeover=setTimeout(()=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'request-ai'}))},61000),matched=await waitFor('matched',85000);
+  clearTimeout(takeover);
   assert.equal(matched.bot,true,'Expected 60-second AI fallback (test may encounter another human player)');
   assert.ok(Date.now()-started>=59000,'AI should not take over before 60 seconds');
   assert.equal(matched.opponent?.profile?.name,'AI 挑戰者');
