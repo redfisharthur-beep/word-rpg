@@ -1,0 +1,8 @@
+/* Global text weight: intentionally loaded after every other game stylesheet.
+   Keep typefaces, sizes, icons and artwork unchanged; only live text gets thinner. */
+html,body,body *,body *::before,body *::after{
+  font-weight:300!important;
+}
+button,input,textarea,select,option{
+  font-weight:300!important;
+}
