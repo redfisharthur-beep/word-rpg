@@ -48,7 +48,7 @@ legacy.petSkills.dragon=['dragon-1','dragon-2','dragon-3','dragon-4','dragon-5']
 legacy=cleanRpg(legacy);
 for(const pet of ['fox','owl','dragon'])assert.equal(legacy.petSkills[pet].length,5,'migration must retain all original skill IDs');
 for(const [pet,node] of [['fox','fox-6'],['owl','owl-6'],['dragon','dragon-7']]){const isolated=cleanRpg({...emptyRpg(),petSkills:{fox:[],owl:[],dragon:[],[pet]:legacy.petSkills[pet]}});assert.ok(canUnlockPetSkill(pet,node,80,isolated),'original branch skills unlock new terminal skill: '+node)}
-assert.equal(petSkillEffects('fox',legacy).firstCardAmp,.15,'legacy first-card skill strength preserved');
+assert.ok(Math.abs(petSkillEffects('fox',legacy).firstCardAmp-.15)<1e-10,'legacy first-card skill strength preserved');
 const maxed=maxedPkRpg();
 for(const pet of ['fox','owl','dragon'])assert.equal(maxed.petSkills[pet].length,9,'normalized PK retains all 3 max-level branches for every pet');
 console.log('Pet branching: 3 independent paths per pet, 27 skills, legacy saves, unlock gating, stats, healing and maxed PK: PASS');
