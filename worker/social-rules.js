@@ -5,7 +5,7 @@ export const SOCIAL_RATE_MS=4000;
 export const SOCIAL_REQUEST_LIMIT=8;
 export const SOCIAL_FRIEND_LIMIT=60;
 export const socialName=code=>'冒險者-'+String(code||'??????').replace(/^F-/,'').slice(0,6);
-export const validFriendCode=code=>/^F-[A-F0-9]{12}$/.test(String(code||''));
+export const validFriendCode=code=>/^F-[A-Z0-9_-]{12}$/.test(String(code||''));
 export function safeMessage(value){
   if(typeof value!=='string')return {error:'請輸入文字訊息'};
   const text=value.trim().replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s{3,}/g,'  ');
