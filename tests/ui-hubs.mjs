@@ -71,7 +71,7 @@ document.querySelector('[data-action="setup-back"]').click();
 document.querySelector('[data-action="collection"]').click();
 assert.doesNotMatch(app.innerHTML,/collection-rewards/,'collection rewards must move to achievements');
 document.querySelector('[data-collection-tab="words"]').click();
-assert.match(app.innerHTML,/單字精熟系統/);
+assert.doesNotMatch(app.innerHTML,/單字精熟系統|首次作答才收錄|累積答對 1 次/,'requested verbose word-book text must be removed');
 assert.doesNotMatch(app.innerHTML,/data-word-title=/,'title selection must move out of vocabulary collection');
 document.querySelector('[data-action="setup-back"]').click();
 document.querySelector('[data-action="community"]').click();
