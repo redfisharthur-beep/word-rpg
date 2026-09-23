@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+const base=process.env.WORD_RPG_BASE_URL||'https://word-rpg.redfisharthur.workers.dev';
+const chat=await fetch(base+'/api/community/chat',{cache:'no-store'});
+assert.equal(chat.status,200,'public chat must be readable without LINE');
+const body=await chat.json();
+assert.ok(Array.isArray(body.messages),'public chat returns message array');
+assert.equal(body.readOnly,true,'guest chat should be read-only');
+assert.ok(body.messages.every(x=>typeof x.name==='string'&&typeof x.text==='string'&&!('authorId' in x)&&!('authorCode' in x)),'public chat must not leak account or friend codes');
+const friends=await fetch(base+'/api/community/friends',{cache:'no-store'});
+assert.equal(friends.status,401,'friend list requires signed-in LINE session');
+const me=await fetch(base+'/api/community/me',{cache:'no-store'});
+assert.equal(me.status,401,'invitation code must not be available without LINE');
+const denied=await fetch(base+'/api/community/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'unsigned test'})});
+assert.equal(denied.status,401,'anonymous visitor may not post chat messages');
+const crossSite=await fetch(base+'/api/community/chat',{method:'POST',headers:{Origin:'https://untrusted.invalid','Content-Type':'application/json'},body:JSON.stringify({text:'not allowed'})});
+assert.equal(crossSite.status,403,'cross-origin chat mutation must be blocked');
+console.log('Live social: public read-only chat, private friend endpoints, authenticated posts, CORS/CSRF and identity redaction: PASS');
