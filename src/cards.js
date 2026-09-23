@@ -155,6 +155,10 @@ export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offe
   if(actor.pet==='dragon'&&card.color==='yellow'){const amp=.20+petFx.yellowAmp;petAmp*=1+amp;logs.push(`幼龍黃牌共鳴 +${Math.round(amp*100)}%`);}
   const yellowCount=cards.filter(x=>x?.color==='yellow').length;
   if(actor.pet==='dragon'&&yellowCount>=2&&slotIndex===cards.length-1){const amp=.30+petFx.finisherAmp;petAmp*=1+amp;logs.push(`幼龍終式爆發 +${Math.round(amp*100)}%`);}
+  // Cross-class pet bonds work identically in solo and normalized PK combat.
+  if(actor.role==='warrior'&&actor.pet==='fox'&&slotIndex===0&&card.color==='red'){petAmp*=1.12;logs.push('戰士 × 靈狐：疾風開場 +12%');}
+  if(actor.role==='mage'&&actor.pet==='owl'&&(card.color==='green'||card.color==='blue')){petAmp*=1.10;logs.push('法師 × 夜梟：賢者守護 +10%');}
+  if(actor.role==='archer'&&actor.pet==='dragon'&&card.color==='yellow'){petAmp*=1.12;logs.push('弓手 × 幼龍：元素箭矢 +12%');}
   if(slotIndex===0&&resonance.firstCardAmp>0){resAmp*=1+resonance.firstCardAmp;logs.push(`烈戰共鳴 +${Math.round(resonance.firstCardAmp*100)}%`);}
   if(card.color==='green'&&resonance.greenAmp>0){resAmp*=1+resonance.greenAmp;logs.push(`血靈共鳴 +${Math.round(resonance.greenAmp*100)}%`);}
   if(card.color==='blue'&&resonance.blueAmp>0){resAmp*=1+resonance.blueAmp;logs.push(`鐵壁共鳴 +${Math.round(resonance.blueAmp*100)}%`);}
