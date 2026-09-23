@@ -38,7 +38,7 @@ const home=app.innerHTML;
 const identity=home.match(/<div class="growth-level">([\s\S]*?)<\/div><div class="player-season-tier">/);
 assert.ok(identity,'player info must live in right-side growth panel directly above season');
 assert.match(identity[1],/^<b class="growth-level-value">LV1<\/b><span class="growth-title">[^<]+<\/span><span class="growth-player-name">訪客<\/span>$/,'three distinct identity lines must be level, title, player name');
-assert.ok(home.indexOf('class="role-growth-art"')<home.indexOf('class="role-growth-panel"'),'character art should remain in the left column');
+assert.ok(home.indexOf('class="growth-art role-growth-art"')<home.indexOf('class="growth-panel role-growth-panel"'),'character art should remain in the left column');
 const homeStyles=fs.readFileSync(new URL('../src/game-v2.css',import.meta.url),'utf8');
 assert.match(homeStyles,/\.role-feature \.role-growth-art img\s*\{[^}]*height:415px/,'desktop character art must be enlarged');
 assert.match(homeStyles,/@media\(max-width:700px\)[\s\S]*?\.role-feature \.role-growth-art img\s*\{[^}]*height:345px/,'mobile character art must be enlarged');
