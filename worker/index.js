@@ -2,6 +2,7 @@ import {DurableObject} from 'cloudflare:workers';
 import {dealHand,makeFighter,resolveCardAction,resolveBasic,resolveAutoBasic,afterAction,cloneFighter,bondMultiplier,supportBoost,isOffensive,applyPetRoundEnd,progressionStats} from '../src/cards.js';
 import {cleanRpg,maxedPkRpg} from '../src/rpg.js';
 import {makeQuestion} from '../src/words.js';
+import {cleanDaily} from '../src/daily.js';
 
 const WORD_COUNT=1200;
 const SESSION_COOKIE='word_rpg_session';
@@ -43,8 +44,8 @@ async function questionResultApi(request,env){if(request.method!=='POST')return 
 async function userSeason(env,userId){if(!userId)return null;const res=await userStub(env,userId).fetch(`https://user/season?season=${encodeURIComponent(seasonId())}`);if(!res.ok)return seasonDefaults();return cleanSeason(await res.json())}
 async function updateUserSeason(env,userId,result){if(!userId)return null;const res=await userStub(env,userId).fetch('https://user/season',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({season:seasonId(),result})});if(!res.ok)return null;return cleanSeason(await res.json())}
 function callbackUrl(url,env){return env.LINE_CALLBACK_URL||`${url.origin}/auth/line/callback`}
-function progressDefaults(){return {role:'warrior',pet:'fox',level:1,xp:0,rpg:cleanRpg()}}
-function cleanProgress(input={}){const level=clamp(Math.round(Number(input.level)||1),1,80);return {role:['warrior','mage','archer'].includes(input.role)?input.role:'warrior',pet:['fox','owl','dragon'].includes(input.pet)?input.pet:'fox',level,xp:level>=80?0:Math.max(0,Math.round(Number(input.xp)||0)),rpg:cleanRpg(input.rpg)}}
+function progressDefaults(){return {role:'warrior',pet:'fox',level:1,xp:0,rpg:cleanRpg(),daily:cleanDaily()}}
+function cleanProgress(input={}){const level=clamp(Math.round(Number(input.level)||1),1,80);return {role:['warrior','mage','archer'].includes(input.role)?input.role:'warrior',pet:['fox','owl','dragon'].includes(input.pet)?input.pet:'fox',level,xp:level>=80?0:Math.max(0,Math.round(Number(input.xp)||0)),rpg:cleanRpg(input.rpg),daily:cleanDaily(input.daily)}}
 async function userProgress(env,userId){const res=await userStub(env,userId).fetch('https://user/progress');if(!res.ok)return progressDefaults();return cleanProgress(await res.json())}
 async function saveUserProgress(env,userId,progress){return userStub(env,userId).fetch('https://user/progress',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cleanProgress(progress))})}
 async function beginLineLogin(request,env){if(!env.LINE_CHANNEL_ID||!env.LINE_CHANNEL_SECRET)return new Response('LINE Login 尚未設定：請先設定 LINE_CHANNEL_ID 與 LINE_CHANNEL_SECRET。',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});const url=new URL(request.url),state=randomToken(),verifier=randomToken(48),nonce=randomToken(),challenge=await sha256Base64Url(verifier),redirect=callbackUrl(url,env),auth=new URL('https://access.line.me/oauth2/v2.1/authorize');auth.search=new URLSearchParams({response_type:'code',client_id:env.LINE_CHANNEL_ID,redirect_uri:redirect,state,scope:'openid profile',nonce,code_challenge:challenge,code_challenge_method:'S256'}).toString();const headers=new Headers({Location:auth.toString(),'Cache-Control':'no-store'});headers.append('Set-Cookie',cookie(OAUTH_STATE_COOKIE,state,600));headers.append('Set-Cookie',cookie(OAUTH_VERIFIER_COOKIE,verifier,600));headers.append('Set-Cookie',cookie(OAUTH_NONCE_COOKIE,nonce,600));return new Response(null,{status:302,headers})}
