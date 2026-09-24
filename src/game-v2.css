@@ -467,3 +467,99 @@
   .pet-flow-tier-4 .pet-skill-node>small{font-size:12px}
   .pet-flow-tier-4 .pet-node-status{font-size:11px}
 }
+
+
+/* Equipment-only layout: fixed image at left, all item information/actions at right.
+   Scoped styles override the legacy flex!important rule that broke narrow screens. */
+.equipment-screen .system-card{min-width:0;max-width:min(860px,96%);box-sizing:border-box}
+.equipment-screen .equip-groups,.equipment-screen .equip-group,
+.equipment-screen .equip-group-slots,.equipment-screen .resonance-panel,
+.equipment-screen .inventory-list{min-width:0;max-width:100%}
+.equipment-screen .equip-slot{min-width:0;box-sizing:border-box;overflow-wrap:anywhere}
+.equipment-screen .equip-slot .mini-system-btn{max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.equipment-screen .inventory-list .equipment-inventory-item{
+  display:grid;grid-template-columns:90px minmax(0,1fr);
+  gap:12px;align-items:center;min-width:0;max-width:100%;
+  box-sizing:border-box;padding:12px;border-left-width:5px;
+}
+.equipment-screen .equipment-inventory-item>.loot-art{
+  display:block;grid-column:1;grid-row:1;justify-self:center;align-self:center;
+  width:84px;height:92px;max-width:100%;object-fit:contain;
+}
+.equipment-screen .equipment-inventory-item>.equipment-item-content{
+  grid-column:2;grid-row:1;min-width:0;width:100%;display:grid;
+  align-content:center;gap:10px;text-align:left;
+}
+.equipment-screen .equipment-inventory-item .equipment-item-info{
+  min-width:0;display:grid;gap:5px;text-align:left;
+}
+.equipment-screen .equipment-inventory-item .equipment-item-info>b{
+  font-size:clamp(16px,2.6vw,20px);line-height:1.35;overflow-wrap:anywhere;
+}
+.equipment-screen .equipment-inventory-item .equipment-item-info>small{
+  font-size:clamp(13px,2.3vw,15px);line-height:1.45;overflow-wrap:anywhere;
+}
+.equipment-screen .equipment-inventory-item .equipment-item-actions{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;min-width:0;width:100%;justify-content:stretch!important;
+  align-items:stretch;
+}
+.equipment-screen .equipment-inventory-item .equipment-item-actions>.mini-system-btn{
+  display:grid;place-items:center;box-sizing:border-box;
+  width:100%;min-width:0;min-height:36px;padding:7px 6px;
+  font-size:clamp(12px,2.2vw,14px);line-height:1.35;text-align:center;
+  white-space:normal!important;overflow-wrap:anywhere;
+}
+.equipment-screen .equipment-inventory-item .equipment-item-actions>.equip-upgrade-btn{
+  grid-column:1/-1;font-size:clamp(12px,2.2vw,14px)!important;
+}
+.equipment-screen .equipment-inventory-item .equipment-item-actions>.synth-btn{grid-column:1/-1}
+@media(max-width:700px){
+  .equipment-screen .system-card{width:96%;padding:10px;margin:12px auto}
+  .equipment-screen .system-head{min-width:0;grid-template-columns:minmax(0,112px) minmax(0,1fr);min-height:98px}
+  .equipment-screen .system-head>.system-back-btn{width:112px;max-width:100%;height:90px}
+  .equipment-screen .system-head>.crystal-count{min-width:0;max-width:100%;overflow-wrap:anywhere;text-align:right}
+  .equipment-screen .equip-groups{gap:12px}
+  .equipment-screen .equip-group h2{font-size:18px}
+  .equipment-screen .equip-group-slots{gap:7px}
+  .equipment-screen .equip-group.gems .equip-group-slots{
+    display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x proximity;overscroll-behavior-x:contain;
+    padding:2px 2px 8px;grid-template-columns:none;
+  }
+  .equipment-screen .equip-group.gems .equip-slot{
+    flex:0 0 clamp(128px,43%,180px);scroll-snap-align:start;
+  }
+  .equipment-screen .equip-group.rings .equip-group-slots{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .equipment-screen .equip-group.armor .equip-group-slots{grid-template-columns:minmax(0,1fr)}
+  .equipment-screen .equip-slot{min-height:105px;padding:8px 6px;gap:5px}
+  .equipment-screen .equip-slot .equip-art{height:64px;width:64px;max-width:100%;margin:auto}
+  .equipment-screen .equip-slot .equip-upgrade-btn{font-size:12px!important;min-height:34px;padding:5px 4px}
+  .equipment-screen .equip-slot>span,.equipment-screen .equip-slot>small{
+    min-width:0;max-width:100%;font-size:12px;line-height:1.35;overflow-wrap:anywhere;
+  }
+  .equipment-screen .resonance-panel{grid-template-columns:1fr;gap:6px}
+  .equipment-screen .inventory-list{gap:9px;margin-top:14px}
+  .equipment-screen .inventory-list .equipment-inventory-item{
+    grid-template-columns:74px minmax(0,1fr);gap:9px;padding:10px 8px;
+  }
+  .equipment-screen .equipment-inventory-item>.loot-art{height:86px;width:72px}
+  .equipment-screen .equipment-inventory-item>.equipment-item-content{gap:7px}
+  .equipment-screen .equipment-inventory-item .equipment-item-info>b{font-size:16px}
+  .equipment-screen .equipment-inventory-item .equipment-item-info>small{font-size:13px}
+  .equipment-screen .equipment-inventory-item .equipment-item-actions{gap:5px}
+  .equipment-screen .equipment-inventory-item .equipment-item-actions>.mini-system-btn{
+    padding:7px 4px;min-height:36px;font-size:12px;
+  }
+  .equipment-screen .equipment-inventory-item .equipment-item-actions>.equip-upgrade-btn{font-size:12px!important}
+}
+@media(max-width:375px){
+  .equipment-screen .inventory-list .equipment-inventory-item{
+    grid-template-columns:62px minmax(0,1fr);gap:7px;padding:8px 6px;
+  }
+  .equipment-screen .equipment-inventory-item>.loot-art{width:60px;height:75px}
+  .equipment-screen .equipment-inventory-item .equipment-item-info>b{font-size:15px}
+  .equipment-screen .equipment-inventory-item .equipment-item-info>small{font-size:12px}
+}
