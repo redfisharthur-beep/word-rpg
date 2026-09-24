@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {emptyRpg,cleanRpg,rollLoot,rollMythicLoot,addLoot,equipItem,synthesisInfo,synthesizeItem,equipmentResonance,collectionEntries,collectionProgress,crystallizeItem,petSkillEffects,recordTowerFloor,mythicEquipmentEffects} from '../src/rpg.js';
+import {emptyRpg,cleanRpg,rollLoot,rollMythicLoot,addLoot,equipItem,synthesisInfo,synthesizeItem,equipmentResonance,collectionEntries,collectionProgress,crystallizeItem,petSkillEffects,recordTowerFloor,mythicEquipmentEffects,itemBonusText,mythicAbilityText} from '../src/rpg.js';
 import {makeFighter,resolveCardAction,resolveAutoBasic} from '../src/cards.js';
 const seq=vals=>{let i=0;return ()=>vals[Math.min(i++,vals.length-1)]};
 const loot=(q=.1,type=.1,sub=.1)=>rollLoot(3,50,seq([0,q,type,sub]));
@@ -9,6 +9,27 @@ let keep=emptyRpg();const t=loot(.1,.1,.9);keep=addLoot(keep,t);const key=`${t.t
 let res=emptyRpg();const r1=loot(),r2=loot(),wr=loot(.1,.9,.1);for(const x of [r1,r2,wr])res=addLoot(res,x);res=equipItem(res,r1.id);res=equipItem(res,r2.id);res=equipItem(res,wr.id);assert.equal(equipmentResonance(res).firstCardAmp,.12);
 const base=makeFighter({maxHp:500,hp:500,atk:100,def:50,crit:0,role:'mage',pet:null,rpg:emptyRpg()}),boosted=makeFighter({maxHp:500,hp:500,atk:100,def:50,crit:0,role:'mage',pet:null,rpg:res}),target1=makeFighter({maxHp:1000,hp:1000,def:50,crit:0}),target2=makeFighter({maxHp:1000,hp:1000,def:50,crit:0}),card={id:'stat-atk',kind:'stat',stat:'atk',pct:20,color:'red',name:'test'};resolveCardAction(base,target1,card,3,{cards:[card],slotIndex:0});resolveCardAction(boosted,target2,card,3,{cards:[card],slotIndex:0});assert.ok(boosted.atk>base.atk);
 let aw=emptyRpg();aw.petEnhance.fox=4;aw=cleanRpg(aw);assert.ok(petSkillEffects('fox',aw).firstCardAmp>=.15);
+// Legendary equipment always gets precisely one real combat affix, including migrated items.
+for(const [type,subtype,power,effect] of [
+  ['gem','ruby','ember','lifesteal'],
+  ['gem','thunder','thunderbolt','stunChance'],
+  ['armor','guardian','ironward','blockChance'],
+  ['armor','bloodspirit','bloodthorn','reflect'],
+  ['ring','warbreaker','keenedge','critBonusMin'],
+  ['ring','battlesoul','quickblade','flurry2Chance']
+]){
+  let legendary=addLoot(emptyRpg(),{id:'legendary-'+subtype,type,subtype,quality:'legendary'});
+  const gear=legendary.inventory[0];
+  assert.equal(gear.legendaryPower,power,'old and new legendary items receive one subtype-specific affix');
+  assert.ok(itemBonusText(gear).includes('✦'),'legendary special affix must be visible in equipment description');
+  assert.ok(mythicAbilityText(gear).includes('｜'),'special affix must show its name and description');
+  legendary=equipItem(legendary,gear.id);
+  assert.ok(mythicEquipmentEffects(legendary)[effect]>0,'legendary special affix changes combat stats');
+  const saved=cleanRpg(JSON.parse(JSON.stringify(legendary)));
+  assert.equal(saved.inventory[0].legendaryPower,power,'legendary affix persists through save normalization');
+}
+const forged=cleanRpg({inventory:[{id:'forged',type:'gem',subtype:'ruby',quality:'legendary',legendaryPower:'truehit'}]});
+assert.equal(forged.inventory[0].legendaryPower,'ember','invalid or mythic-only affixes are replaced by the correct legendary affix');
 let tower=recordTowerFloor(emptyRpg(),7);tower=recordTowerFloor(tower,4);assert.equal(tower.towerBest,7);tower=recordTowerFloor(tower,20);assert.equal(tower.towerBest,20);tower=recordTowerFloor(tower,99);assert.equal(tower.towerBest,20);
 const noMyth=rollMythicLoot({boss:false,towerFloor:7,level:50},seq([0,.1]));assert.equal(noMyth,null);
 const bossMyth=rollMythicLoot({boss:true,level:50},seq([.01,.01]));assert.equal(bossMyth.quality,'mythic');assert.equal(synthesisInfo(addLoot(emptyRpg(),bossMyth),bossMyth.id).can,false);
