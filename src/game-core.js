@@ -133,7 +133,30 @@ function equipmentEnhanceButton(item){const info=equipmentEnhanceInfo(item),read
 function equipmentSlot(id){const item=meta.rpg.inventory.find(x=>x.id===id);return `<div class="equip-slot">${item?`${lootArt(item,'equip-art')}<span class="quality-${esc(item.quality)}">${esc(item.name)}${item.enhance?` +${item.enhance}`:''}</span><small>${esc(itemBonusText(item))}</small>${equipmentEnhanceButton(item)}<button class="mini-system-btn" data-unequip="${esc(item.id)}">卸下</button>`:'<span class="empty-equip-slot">—</span>'}</div>`}
 function equipmentGroup(label,kind,slots){return `<section class="equip-group ${esc(kind)}"><h2>${esc(label)}</h2><div class="equip-group-slots">${slots.join('')}</div></section>`}
 function resonanceHtml(){const r=equipmentResonance(meta.rpg);return `<section class="resonance-panel">${r.recipes.map(x=>`<div class="resonance-chip ${x.active?'active':''}"><b>${esc(x.name)}</b><small>${esc(x.desc)}</small></div>`).join('')}</section>`}
-function renderEquipment(){const eq=meta.rpg.equipped,rings=eq.rings||[],equipped=new Set([...eq.gems,eq.armor,...rings].filter(Boolean)),items=[...meta.rpg.inventory].filter(item=>!equipped.has(item.id)).sort((a,b)=>{const rank={common:0,rare:1,epic:2,legendary:3,mythic:4};return (rank[b.quality]??-1)-(rank[a.quality]??-1)||(Number(b.foundAt)||0)-(Number(a.foundAt)||0)});return `<main class="setup-screen system-screen"><section class="system-card"><div class="system-head">${systemBackButton()}<span></span><b class="crystal-count">結晶 ${meta.rpg.crystals||0}</b></div>${enhanceFeedback?`<p class="enhance-feedback" role="status">${esc(enhanceFeedback)}</p>`:''}<div class="equip-groups">${equipmentGroup('寶石','gems',[0,1,2].map(i=>equipmentSlot(eq.gems[i])))}${equipmentGroup('裝甲','armor',[equipmentSlot(eq.armor)])}${equipmentGroup('戒指','rings',[0,1].map(i=>equipmentSlot(rings[i])))}</div>${resonanceHtml()}<div class="inventory-list">${items.length?items.map(item=>{const full=(item.type==='gem'&&eq.gems.length>=3)||(item.type==='ring'&&rings.length>=2),syn=synthesisInfo(meta.rpg,item.id);return `<div class="loot-item quality-border-${esc(item.quality)}">${lootArt(item)}<div><b class="quality-${esc(item.quality)}">${esc(item.name)}${item.enhance?` +${item.enhance}`:''}</b><small>${esc(itemBonusText(item))}</small></div><div class="loot-item-actions">${equipmentEnhanceButton(item)}<button class="mini-system-btn" data-equip="${esc(item.id)}" ${full?'disabled':''}>裝備</button>${!['legendary','mythic'].includes(item.quality)?`<button class="mini-system-btn synth-btn" data-synthesize="${esc(item.id)}" ${syn.can?'':'disabled'}>合成 ${Math.min(3,syn.count)}/3</button>`:''}<button class="mini-system-btn crystal-btn" data-crystallize="${esc(item.id)}">結晶 +${crystalValue(item)}</button></div></div>`}).join(''):'<div class="empty-system">背包空</div>'}</div></section></main>`}
+function renderEquipment(){
+  const eq=meta.rpg.equipped,rings=eq.rings||[],equipped=new Set([...eq.gems,eq.armor,...rings].filter(Boolean));
+  const items=[...meta.rpg.inventory].filter(item=>!equipped.has(item.id)).sort((a,b)=>{
+    const rank={common:0,rare:1,epic:2,legendary:3,mythic:4};
+    return (rank[b.quality]??-1)-(rank[a.quality]??-1)||(Number(b.foundAt)||0)-(Number(a.foundAt)||0);
+  });
+  const inventory=items.length?items.map(item=>{
+    const full=(item.type==='gem'&&eq.gems.length>=3)||(item.type==='ring'&&rings.length>=2);
+    const syn=synthesisInfo(meta.rpg,item.id);
+    return `<article class="loot-item equipment-inventory-item quality-border-${esc(item.quality)}">
+      ${lootArt(item)}
+      <div class="equipment-item-content">
+        <div class="equipment-item-info"><b class="quality-${esc(item.quality)}">${esc(item.name)}${item.enhance?` +${item.enhance}`:''}</b><small>${esc(itemBonusText(item))}</small></div>
+        <div class="loot-item-actions equipment-item-actions">
+          ${equipmentEnhanceButton(item)}
+          <button class="mini-system-btn crystal-btn" data-crystallize="${esc(item.id)}">結晶 +${crystalValue(item)}</button>
+          <button class="mini-system-btn" data-equip="${esc(item.id)}" ${full?'disabled':''}>裝備</button>
+          ${!['legendary','mythic'].includes(item.quality)?`<button class="mini-system-btn synth-btn" data-synthesize="${esc(item.id)}" ${syn.can?'':'disabled'}>合成 ${Math.min(3,syn.count)}/3</button>`:''}
+        </div>
+      </div>
+    </article>`;
+  }).join(''):'<div class="empty-system">背包空</div>';
+  return `<main class="setup-screen system-screen equipment-screen"><section class="system-card"><div class="system-head">${systemBackButton()}<span></span><b class="crystal-count">結晶 ${meta.rpg.crystals||0}</b></div>${enhanceFeedback?`<p class="enhance-feedback" role="status">${esc(enhanceFeedback)}</p>`:''}<div class="equip-groups">${equipmentGroup('寶石','gems',[0,1,2].map(i=>equipmentSlot(eq.gems[i])))}${equipmentGroup('裝甲','armor',[equipmentSlot(eq.armor)])}${equipmentGroup('戒指','rings',[0,1].map(i=>equipmentSlot(rings[i])))}</div>${resonanceHtml()}<div class="inventory-list">${inventory}</div></section></main>`;
+}
 function renderPetTree(){
   const id=meta.pet,flow=PET_FLOW[id],tree=PET_TREES[id]||[],owned=new Set(meta.rpg.petSkills[id]||[]);
   const points=availableSkillPoints(meta.level,meta.rpg),crystals=meta.rpg.crystals||0,enhance=petEnhanceLevel(id,meta.rpg),cost=petEnhanceCost(id,meta.rpg);
