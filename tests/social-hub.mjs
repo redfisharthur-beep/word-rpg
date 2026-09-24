@@ -12,9 +12,15 @@ const rules=new URL('../worker/social-rules.js',import.meta.url).href;
 const source=fs.readFileSync(filepath,'utf8')
   .replace("import {DurableObject} from 'cloudflare:workers';","class DurableObject { constructor(ctx,env){this.ctx=ctx;this.env=env} }")
   .replace("from './social-rules.js'","from '"+rules+"'");
-const {SocialHub}=await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source));
+const {SocialHub,CHAT_RETENTION_MS}=await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(source));
+assert.equal(CHAT_RETENTION_MS,72*60*60*1000,'retention is exactly 72 hours');
 const state=new Map();
+let alarmTime=null;
 const storage={
+  async delete(key){state.delete(key)},
+  async setAlarm(at){alarmTime=at},
+  async getAlarm(){return alarmTime},
+  async deleteAlarm(){alarmTime=null},
   async get(key){return structuredClone(state.get(key))},
   async put(key,value){if(typeof key==='object'){for(const [k,v] of Object.entries(key))state.set(k,structuredClone(v))}else state.set(key,structuredClone(value))},
   async transaction(fn){return fn(this)}
@@ -70,4 +76,21 @@ response=await req('/record',a,ca,{matchId,outcome:'loss',opponent:'篡改'});as
 response=await req('/records',a,ca);records=(await response.json()).records;assert.equal(records.length,1,'a match must be recorded once');
 response=await req('/records');assert.equal(response.status,401,'private match history must reject guests');
 response=await req('/record',a,ca,{matchId:crypto.randomUUID(),outcome:'fake'});assert.equal(response.status,400);
+// Persistent storage must physically remove aged chat posts even when nobody is online.
+const base=Date.now(),oldAt=base-CHAT_RETENTION_MS-1000,recentAt=base-CHAT_RETENTION_MS+5000;
+const oldMessage={id:crypto.randomUUID(),authorId:a,name:'訪客',text:'已過期',at:oldAt};
+const recentMessage={id:crypto.randomUUID(),authorId:b,name:'訪客',text:'尚未過期',at:recentAt};
+await storage.put('chat',[oldMessage,recentMessage]);
+response=await req('/chat');
+assert.deepEqual((await response.json()).messages.map(m=>m.text),['尚未過期'],'old posts are hidden instantly even before alarm fires');
+assert.deepEqual((await storage.get('chat')).map(m=>m.text),['尚未過期'],'old posts are actually deleted from Durable Object storage');
+assert.equal(alarmTime,recentAt+CHAT_RETENTION_MS+1,'storage alarm is scheduled for the remaining message expiry');
+const originalNow=Date.now;
+try{
+  Date.now=()=>recentAt+CHAT_RETENTION_MS+2;
+  await hub.alarm();
+  assert.equal(await storage.get('chat'),undefined,'server alarm deletes the last post after 72h without a visitor');
+  assert.equal(alarmTime,null,'alarm is cleared after history expires');
+  response=await req('/chat');assert.equal((await response.json()).messages.length,0,'expired history stays empty after alarm');
+}finally{Date.now=originalNow}
 console.log('Social hub: guest chat, report/block, mutual friend consent, server-created PK invites, flood limits and isolated deduplicated match history: PASS');
