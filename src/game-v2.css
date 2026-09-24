@@ -563,3 +563,58 @@
   .equipment-screen .equipment-inventory-item .equipment-item-info>b{font-size:15px}
   .equipment-screen .equipment-inventory-item .equipment-item-info>small{font-size:12px}
 }
+
+
+/* Morandi achievement palette: distinct low-saturation colors keep text readable. */
+.achievement-card{--morandi-ink:#35433d}
+.achievement-card .morandi-tone-0{--morandi-bg:#e8eeea;--morandi-edge:#b9cdc0;--morandi-accent:#527663}
+.achievement-card .morandi-tone-1{--morandi-bg:#ede8f0;--morandi-edge:#c9bfd3;--morandi-accent:#76648b}
+.achievement-card .morandi-tone-2{--morandi-bg:#f1e7e2;--morandi-edge:#d9c1b5;--morandi-accent:#956f60}
+.achievement-card .morandi-tone-3{--morandi-bg:#e5edf2;--morandi-edge:#bdd0db;--morandi-accent:#567b94}
+.achievement-card .morandi-tone-4{--morandi-bg:#f1eddc;--morandi-edge:#d8cda9;--morandi-accent:#87794f}
+.achievement-card .morandi-tone-5{--morandi-bg:#e8ede2;--morandi-edge:#c5d1b7;--morandi-accent:#677d58}
+.achievement-card .achievement-quest-row.morandi-tone-0,
+.achievement-card .achievement-quest-row.morandi-tone-1,
+.achievement-card .achievement-quest-row.morandi-tone-2,
+.achievement-card .achievement-quest-row.morandi-tone-3,
+.achievement-card .achievement-quest-row.morandi-tone-4,
+.achievement-card .achievement-quest-row.morandi-tone-5,
+.achievement-card .achievement-title-row[class*="morandi-tone-"],
+.achievement-card .achievement-milestone[class*="morandi-tone-"]{
+  background:var(--morandi-bg);border:1px solid var(--morandi-edge);
+  color:var(--morandi-ink);box-sizing:border-box;
+}
+.achievement-card .achievement-quest-row[class*="morandi-tone-"]{border-left:4px solid var(--morandi-accent)}
+.achievement-card .achievement-title-row[class*="morandi-tone-"]{border-left:4px solid var(--morandi-accent)}
+.achievement-card .achievement-quest-row[class*="morandi-tone-"] b,
+.achievement-card .achievement-title-row[class*="morandi-tone-"] b,
+.achievement-card .achievement-milestone[class*="morandi-tone-"] b{color:var(--morandi-accent)}
+.achievement-card .achievement-milestone.unlocked[class*="morandi-tone-"]{
+  box-shadow:inset 0 0 0 1px var(--morandi-edge);
+}
+.achievement-card .achievement-title-row[class*="morandi-tone-"] button:not(:disabled),
+.achievement-card .achievement-quest-row[class*="morandi-tone-"] button:not(:disabled){
+  background:var(--morandi-accent);color:#fff;
+}
+.achievement-card .achievement-title-list{gap:8px}
+.achievement-card .achievement-title-row{min-width:0}
+.achievement-card .achievement-title-row>div{overflow-wrap:anywhere}
+.quest-card .quest-section-title{
+  margin:23px 0 10px;padding:11px 12px;border-radius:12px;
+  background:#e7ece5;border-left:4px solid #789683;
+  color:#455e51;font-size:clamp(18px,3.6vw,23px);line-height:1.4;
+}
+.quest-card .quest-section-title small{
+  display:block;font-size:12px;line-height:1.45;color:#69796c;
+}
+.quest-card .quest-section-title:has(+.weekly-quest-row){background:#e5e9f1;border-left-color:#7c92ae;color:#53667e}
+.quest-card .quest-section-title:has(+.lifetime-quest-row){background:#ede8e1;border-left-color:#a58c70;color:#78624d}
+.quest-card .weekly-quest-row{background:#f0f3f7;border-color:#d0dbe7}
+.quest-card .lifetime-quest-row{background:#f5f0e8;border-color:#ddd0bc}
+.quest-card .daily-quest-row button{flex:0 0 auto;min-width:0;width:auto;max-width:66px;padding:7px 9px;white-space:normal}
+@media(max-width:700px){
+  .achievement-card .achievement-milestones{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .achievement-card .achievement-quest-row,
+  .achievement-card .achievement-title-row{padding:9px 8px;gap:6px}
+  .quest-card .daily-quest-row{padding:9px 8px;gap:7px}
+}
