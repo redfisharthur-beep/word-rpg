@@ -2,6 +2,10 @@
 // Only server-issued pseudonyms, invitation codes and public messages are rendered.
 export function createSocialUI({app,getMeta,onLogin,esc}){
   let tab='chat',timer=null,root=null,session=null,messages=[],records=[],pending=false,epoch=0;
+  const queryInvite=new URLSearchParams(globalThis.location?.search||'').get('friend')||'';
+  if(/^F-[0-9A-F]{12}$/i.test(queryInvite))globalThis.sessionStorage?.setItem('word-rpg-friend-invite',queryInvite.toUpperCase());
+  let invitedCode=globalThis.sessionStorage?.getItem('word-rpg-friend-invite')||'';
+  if(!/^F-[0-9A-F]{12}$/.test(invitedCode))invitedCode='';
   const endpoint='/api/community';
   const signedIn=()=>getMeta()?.authMode==='line';
   const req=async(path,method='GET',body)=>{
@@ -18,7 +22,7 @@ export function createSocialUI({app,getMeta,onLogin,esc}){
     if(!slot)return;
     if(!signedIn()){slot.innerHTML='<p>LINE 登入後使用好友功能</p><button data-social-login type="button">使用 LINE 登入</button>';return}
     if(!session){slot.innerHTML='<p class="social-empty">正在讀取好友資料…</p>';return}
-    slot.innerHTML='<section class="social-me"><b>我的好友邀請代碼</b><div class="social-code"><input data-social-my-code readonly aria-label="我的好友邀請代碼" value="'+esc(session.code)+'"><button type="button" data-social-action="copy-code">複製</button></div><small>邀請需對方接受</small></section><form data-social-request><label for="social-request-code">輸入好友代碼</label><div class="social-code"><input id="social-request-code" name="code" maxlength="14" autocapitalize="characters" autocomplete="off" placeholder="F-XXXXXXXXXXXX" required><button type="submit">送出邀請</button></div></form><h3>好友 '+session.friends.length+'/'+session.limits.friends+'</h3>'+list(session.friends,'好友',[['remove','移除'],['block','封鎖']])+'<h3>收到的邀請 '+session.incoming.length+'</h3>'+list(session.incoming,'好友邀請',[['accept','接受'],['reject','拒絕']])+'<h3>已送出的邀請 '+session.outgoing.length+'</h3>'+list(session.outgoing,'送出中的好友邀請',[['cancel','取消']])+(session.blocked?.length?'<h3>已封鎖</h3>'+list(session.blocked,'封鎖名單',[['unblock','解除封鎖']]):'');
+    slot.innerHTML='<section class="social-me"><b>我的好友邀請代碼</b><div class="social-code social-copy-code"><button type="button" data-social-action="copy-code">複製代碼</button></div></section><div class="social-line-link"><button type="button" data-social-action="line-invite">邀請 LINE 好友</button><small>選擇 LINE 好友分享邀請，對方同意後才會成為遊戲好友。</small></div><form data-social-request><label for="social-request-code">輸入好友代碼</label><div class="social-code"><input id="social-request-code" name="code" maxlength="14" autocapitalize="characters" autocomplete="off" value="'+esc(invitedCode)+'" placeholder="F-XXXXXXXXXXXX" required><button type="submit">送出</button></div></form><h3>好友 '+session.friends.length+'/'+session.limits.friends+'</h3>'+list(session.friends,'好友',[['remove','移除'],['block','封鎖']])+'<h3>收到的邀請 '+session.incoming.length+'</h3>'+list(session.incoming,'好友邀請',[['accept','接受'],['reject','拒絕']])+'<h3>已送出的邀請 '+session.outgoing.length+'</h3>'+list(session.outgoing,'送出中的好友邀請',[['cancel','取消']])+(session.blocked?.length?'<h3>已封鎖</h3>'+list(session.blocked,'封鎖名單',[['unblock','解除封鎖']]):'');
   }
   function renderMessages(){
     if(!root||tab!=='chat')return;
@@ -70,13 +74,19 @@ export function createSocialUI({app,getMeta,onLogin,esc}){
     catch(err){feedback(err.message)}
   }
   async function updateFriend(action,code){
-    try{await req('/friends','POST',{action,code});feedback('好友資料已更新');session=await req('/friends');if(root)host()}
+    try{await req('/friends','POST',{action,code});if(action==='request'&&code===invitedCode){invitedCode='';globalThis.sessionStorage?.removeItem('word-rpg-friend-invite')}feedback('好友資料已更新');session=await req('/friends');if(root)host()}
     catch(err){feedback(err.message)}
   }
   async function onAction(target){
     const action=target.dataset.socialAction;
     if(action==='duel'){
       try{await req('/duel','POST',{});feedback('PK 連結已發送');await refresh(true)}catch(err){feedback(err.message)}return;
+    }
+    if(action==='line-invite'){
+      if(!session?.code)return;
+      const invite='一起玩 Word RPG！開啟邀請連結並使用 LINE 登入，即可送出好友邀請： https://word-rpg.redfisharthur.workers.dev/?friend='+encodeURIComponent(session.code);
+      globalThis.location?.assign?.('https://line.me/R/msg/text/?'+encodeURIComponent(invite));
+      return;
     }
     if(action==='copy-code'){
       try{await navigator.clipboard.writeText(session?.code||'');feedback('邀請代碼已複製')}catch{feedback('請長按上方代碼手動複製')}return;
@@ -112,7 +122,7 @@ export function createSocialUI({app,getMeta,onLogin,esc}){
   function mount(){
     const next=app.querySelector('#social-app');
     if(!next)return;
-    if(root!==next){leave();root=next;tab='chat';root.addEventListener('click',handleClick);root.addEventListener('submit',handleSubmit);host()}
+    if(root!==next){leave();root=next;tab=invitedCode?'friends':'chat';root.addEventListener('click',handleClick);root.addEventListener('submit',handleSubmit);host()}
     if(!timer)timer=setInterval(()=>{void refresh(false)},5000);
     void refresh(true);
   }
