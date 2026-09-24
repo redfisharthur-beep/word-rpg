@@ -619,3 +619,16 @@
   .achievement-card .achievement-title-row{padding:9px 8px;gap:6px}
   .quest-card .daily-quest-row{padding:9px 8px;gap:7px}
 }
+
+/* Connected act1/act2 choreography: move only the illustrated character, not the HP or card UI. */
+.action-screen .combat-stage .fighter.fx-motion{animation:none!important;transform-origin:50% 76%;will-change:transform;z-index:9}
+.action-screen .combat-stage .fighter.fx-motion .fighter-art{animation:none!important}
+.action-screen .combat-stage .fighter.fx-motion .visual-wrap{animation:none!important}
+.action-screen .combat-stage .fighter.fx-motion .fighter-art{backface-visibility:hidden}
+.fx-afterimage{position:absolute;z-index:7;display:block;object-fit:contain;pointer-events:none;opacity:0;filter:brightness(1.25) saturate(1.15);animation:fx-trail-fade .21s ease-out both}
+@keyframes fx-trail-fade{0%{opacity:.34;transform:translate3d(0,0,0) scale(1)}100%{opacity:0;transform:translate3d(var(--fx-trail-x,0px),0,0) scale(.98)}}
+.fx-projectile{position:absolute;z-index:12;display:block;pointer-events:none;will-change:transform;transform-origin:center}
+.fx-projectile-arrow{width:42px;height:5px;border-radius:100% 50% 50% 100%;background:linear-gradient(90deg,transparent,#b2e6ee 18%,#fff 70%,#71a8d0 100%);box-shadow:0 0 8px #73c6e2,0 0 16px #b9dff0}
+.fx-projectile-arrow::after{content:"";position:absolute;right:0;top:-5px;width:13px;height:13px;background:linear-gradient(135deg,#fff,#70b2d2);clip-path:polygon(0 0,100% 50%,0 100%)}
+.fx-projectile-magic{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle,#fff 0%,#eed1ff 24%,#b18de0 58%,transparent 75%);box-shadow:0 0 12px #bd9cf0,0 0 24px #9a7acb}
+@media(prefers-reduced-motion:reduce){.fx-afterimage{display:none}.fx-projectile{box-shadow:none}}
