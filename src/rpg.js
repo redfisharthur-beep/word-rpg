@@ -10,7 +10,7 @@ export function equipmentEnhanceInfo(item){
   const failures=Math.max(0,Math.min(20,Math.floor(Number(item?.enhanceFailures)||0)));
   const level=Math.min(EQUIPMENT_ENHANCE_MAX,Math.max(0,Math.floor(Number(item?.enhance)||0))),quality=EQUIPMENT_ENHANCE_COST[item?.quality]?item.quality:'common';
   const baseChance=Math.max(.20,EQUIPMENT_ENHANCE_CHANCE[quality]-level*.025);
-  return {level,max:EQUIPMENT_ENHANCE_MAX,cost:level>=EQUIPMENT_ENHANCE_MAX?0:EQUIPMENT_ENHANCE_COST[quality]*(level+1),failures,bonusChance:Math.min(ENHANCE_PITY_CAP,failures*ENHANCE_PITY_PER_FAILURE),chance:level>=EQUIPMENT_ENHANCE_MAX?1:Math.min(.95,baseChance+Math.min(ENHANCE_PITY_CAP,failures*ENHANCE_PITY_PER_FAILURE))};
+  return {level,max:EQUIPMENT_ENHANCE_MAX,cost:level>=EQUIPMENT_ENHANCE_MAX?0:EQUIPMENT_ENHANCE_COST[quality]*(level+1),failures,bonusChance:Math.min(ENHANCE_PITY_CAP,failures*ENHANCE_PITY_PER_FAILURE),chance:level>=EQUIPMENT_ENHANCE_MAX?1:Math.min(1,baseChance+Math.min(ENHANCE_PITY_CAP,failures*ENHANCE_PITY_PER_FAILURE))};
 }
 export function enhanceEquipment(rpg,itemId,random=Math.random){
   const clean=cleanRpg(rpg),index=clean.inventory.findIndex(item=>item.id===itemId);
