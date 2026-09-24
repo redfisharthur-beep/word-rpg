@@ -58,7 +58,7 @@ for(const name of ['Quest.png','Achievement.png','Community.png'])assert.ok(asse
 for(const [id,order] of [['pet-tree',13],['equipment',14],['quests',16],['achievements',17],['community',18]])assert.ok(assets.includes(`[data-action="${id}"]{order:${order}`),'wrong visual button row/order: '+id);
 assert.match(assets,/\.collection-entry\{order:15/,'collection must be the last button of row 2');
 document.querySelector('[data-action="pet-tree"]').click();
-assert.match(app.innerHTML,/寵物專屬技能樹/);
+assert.match(app.innerHTML,/選擇寵物/);
 assert.match(app.innerHTML,/迅影突襲/);
 assert.match(app.innerHTML,/pet-fork-options/,'each route leads to two specializations');
 assert.doesNotMatch(app.innerHTML,/已選擇 ·|九尾靈狐養成|三系技能養成/);
