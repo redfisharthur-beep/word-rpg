@@ -41,7 +41,7 @@ assert.equal(skillPointBudget(80),79,'Level 80 skill-point budget must be 79');
 const pk=maxedPkRpg();
 assert.equal(pk.inventory.length,6,'PK must have six max-quality equipment items');
 assert.ok(pk.inventory.every(item=>item.quality==='mythic'),'PK equipment must be mythic');
-assert.deepEqual(pk.petEnhance,{fox:4,owl:4,dragon:4},'PK pets must be fully enhanced');
+assert.deepEqual(pk.petEnhance,{fox:10,owl:10,dragon:10},'PK pets must be fully enhanced');
 assert.ok(Object.values(pk.petSkills).every(skills=>skills.length>0),'PK pet skills must be unlocked');
 
 console.log('v2 systems ok');
