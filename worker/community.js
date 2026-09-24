@@ -2,7 +2,8 @@ import {DurableObject} from 'cloudflare:workers';
 import {SOCIAL_HISTORY_LIMIT,SOCIAL_RATE_MS,SOCIAL_REQUEST_LIMIT,SOCIAL_FRIEND_LIMIT,safeMessage,canSend,socialName,validFriendCode,socialPublicMessage} from './social-rules.js';
 
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
-const identity=request=>({id:request.headers.get('X-Social-User')||'',code:request.headers.get('X-Social-Code')||''});
+const identity=request=>({id:request.headers.get('X-Social-User')||'',code:request.headers.get('X-Social-Code')||'',name:request.headers.get('X-Social-Name')||''});
+const chatName=value=>{const name=String(value||'').trim().replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,32);return name&&!/^冒險者-[A-Z0-9_-]+$/i.test(name)?name:'訪客'};
 const userKey=id=>'member:'+id;
 const codeKey=code=>'friend-code:'+code;
 const blank=()=>({friends:[],incoming:[],outgoing:[],blocked:[],lastRequestAt:0,lastMessageAt:0});
@@ -10,7 +11,7 @@ const unique=list=>[...new Set(Array.isArray(list)?list.filter(x=>typeof x==='st
 const cleanRecord=raw=>({...blank(),friends:unique(raw?.friends).slice(0,SOCIAL_FRIEND_LIMIT),incoming:unique(raw?.incoming).slice(0,SOCIAL_REQUEST_LIMIT),outgoing:unique(raw?.outgoing).slice(0,SOCIAL_REQUEST_LIMIT),blocked:unique(raw?.blocked).slice(0,150),lastRequestAt:Number(raw?.lastRequestAt)||0,lastMessageAt:Number(raw?.lastMessageAt)||0});
 const upsert=(items,id)=>unique([...items,id]);
 const drop=(items,id)=>items.filter(value=>value!==id);
-const publicChat=(m,blocked)=>m.filter(msg=>!blocked.includes(msg.authorId)).map(msg=>({...socialPublicMessage(msg),...(msg.kind==='duel'&&/^[0-9a-f-]{36}$/.test(msg.room||'')?{kind:'duel',room:msg.room}:{})}));
+const publicChat=(m,blocked)=>m.filter(msg=>!blocked.includes(msg.authorId)).map(msg=>({...socialPublicMessage(msg),name:chatName(msg.name),...(msg.kind==='duel'&&/^[0-9a-f-]{36}$/.test(msg.room||'')?{kind:'duel',room:msg.room}:{})}));
 const textLimit=(value,max)=>typeof value==='string'?value.slice(0,max):'';
 
 export class SocialHub extends DurableObject {
@@ -50,26 +51,26 @@ export class SocialHub extends DurableObject {
     if(url.pathname==='/records'&&request.method==='GET')return json({records:await this.ctx.storage.get('battles:'+id)||[]});
     if(request.method!=='POST')return json({error:'Method not allowed'},405);
     let body;try{body=await request.json()}catch{return json({error:'Invalid JSON'},400)}
-    if(url.pathname==='/chat')return this.sendChat(id,code,body);
-    if(url.pathname==='/duel')return this.postDuel(id,code);
+    if(url.pathname==='/chat')return this.sendChat(id,code,body,auth.name);
+    if(url.pathname==='/duel')return this.postDuel(id,code,auth.name);
     if(url.pathname==='/friends')return this.changeFriend(id,code,body);
     if(url.pathname==='/report')return this.report(id,body);
     return json({error:'Not found'},404);
   }
-  async sendChat(id,code,body){
+  async sendChat(id,code,body,displayName=''){
     const result=safeMessage(body?.text);if(result.error)return json(result,400);
     const member=await this.profile(id),now=Date.now();
     if(!canSend(member.lastMessageAt,now))return json({error:'發送過於頻繁，請稍後再試'},429);
     const messages=await this.ctx.storage.get('chat')||[];
-    const message={id:crypto.randomUUID(),authorId:id,name:socialName(code),text:result.text,at:now};
+    const message={id:crypto.randomUUID(),authorId:id,name:chatName(displayName),text:result.text,at:now};
     member.lastMessageAt=now;
     await this.ctx.storage.put({chat:[...messages,message].slice(-SOCIAL_HISTORY_LIMIT),[userKey(id)]:member});
     return json({message:socialPublicMessage(message)},201);
   }
-  async postDuel(id,code){
+  async postDuel(id,code,displayName=''){
     const member=await this.profile(id),now=Date.now();
     if(!canSend(member.lastMessageAt,now))return json({error:'請稍後再發送'},429);
-    const room=crypto.randomUUID(),message={id:crypto.randomUUID(),authorId:id,name:socialName(code),text:'邀請你一起 PK',kind:'duel',room,at:now};
+    const room=crypto.randomUUID(),message={id:crypto.randomUUID(),authorId:id,name:chatName(displayName),text:'邀請你一起 PK',kind:'duel',room,at:now};
     const messages=await this.ctx.storage.get('chat')||[];
     member.lastMessageAt=now;
     await this.ctx.storage.put({chat:[...messages,message].slice(-SOCIAL_HISTORY_LIMIT),[userKey(id)]:member});
