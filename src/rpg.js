@@ -4,8 +4,8 @@ export const QUALITY_ORDER=['common','rare','epic','legendary'];
 export const EQUIPMENT_ENHANCE_MAX=10;
 const EQUIPMENT_ENHANCE_COST={common:2,rare:3,epic:5,legendary:8,mythic:12};
 const EQUIPMENT_ENHANCE_CHANCE={common:.95,rare:.85,epic:.75,legendary:.65,mythic:.55};
-export const ENHANCE_PITY_PER_FAILURE=.01;
-export const ENHANCE_PITY_CAP=.20;
+export const ENHANCE_PITY_PER_FAILURE=.02;
+export const ENHANCE_PITY_CAP=.40;
 export function equipmentEnhanceInfo(item){
   const failures=Math.max(0,Math.min(20,Math.floor(Number(item?.enhanceFailures)||0)));
   const level=Math.min(EQUIPMENT_ENHANCE_MAX,Math.max(0,Math.floor(Number(item?.enhance)||0))),quality=EQUIPMENT_ENHANCE_COST[item?.quality]?item.quality:'common';
