@@ -58,15 +58,14 @@ for(const name of ['Quest.png','Achievement.png','Community.png'])assert.ok(asse
 for(const [id,order] of [['pet-tree',13],['equipment',14],['quests',16],['achievements',17],['community',18]])assert.ok(assets.includes(`[data-action="${id}"]{order:${order}`),'wrong visual button row/order: '+id);
 assert.match(assets,/\.collection-entry\{order:15/,'collection must be the last button of row 2');
 document.querySelector('[data-action="pet-tree"]').click();
-assert.match(app.innerHTML,/pet-flow-tree/,'single-root pet tree must render');
-assert.doesNotMatch(app.innerHTML,/<span class="pet-screen-title">選擇寵物<\/span>|pet-skill-tier-number|class="pet-branch-index"/);
-assert.equal((app.innerHTML.match(/data-pet-skill="fox[|]fox-/g)||[]).length,7,'one root, two mid-skills, four final routes');
-assert.equal((app.innerHTML.match(/class="pet-flow-branch pet-flow-branch-/g)||[]).length,2);
-assert.doesNotMatch(app.innerHTML,/data-pet-skill="owl[|]owl-/,'unselected owl hidden');
-document.querySelector('[data-pet="owl"]').click();
-assert.equal((app.innerHTML.match(/data-pet-skill="owl[|]owl-/g)||[]).length,7);
-document.querySelector('[data-pet="dragon"]').click();
-assert.equal((app.innerHTML.match(/data-pet-skill="dragon[|]dragon-/g)||[]).length,7);
+assert.match(app.innerHTML,/pet-flow-tree/,'nine-tier pet tree must render');
+assert.doesNotMatch(app.innerHTML,/<h2>技能路線<\/h2>|覺醒 Lv\.|強化 Lv\.|結晶 [0-9]+ · 強化完成/,'removed labels must stay gone');
+for(const [pet,next] of [['fox','owl'],['owl','dragon'],['dragon',null]]){
+  const rows=[...app.innerHTML.matchAll(/class="pet-flow-tier pet-flow-tier-(1|2|4) pet-flow-stage-([1-9])"/g)];
+  assert.deepEqual(rows.map(x=>Number(x[1])),[1,1,1,2,2,2,4,4,4],'skill rows must follow 1,1,1,2,2,2,4,4,4');
+  assert.equal((app.innerHTML.match(new RegExp('data-pet-skill="'+pet+'[|]'+pet+'-flow-','g'))||[]).length,21,'all 21 visible skill nodes belong to selected pet');
+  if(next)document.querySelector('[data-pet="'+next+'"]').click();
+}
 document.querySelector('[data-action="setup-back"]').click();
 assert.match(app.innerHTML,/data-action="pet-tree"/,'return from pet menu must preserve original home navigation');
 document.querySelector('[data-action="quests"]').click();
