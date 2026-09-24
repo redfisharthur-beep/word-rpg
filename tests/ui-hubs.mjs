@@ -42,6 +42,8 @@ assert.ok(home.indexOf('class="growth-art role-growth-art"')<home.indexOf('class
 const homeStyles=fs.readFileSync(new URL('../src/game-v2.css',import.meta.url),'utf8');
 assert.match(homeStyles,/\.role-feature \.role-growth-art\s*\{[^}]*height:325px/,'desktop character art must fit inside its own frame');
 assert.match(homeStyles,/\.role-feature \.role-growth-art img\s*\{[^}]*object-fit:contain;[^}]*transform:none/,'character art must not be scaled beyond frame');
+assert.match(homeStyles,/\.role-feature \.role-growth-art img\s*\{[^}]*width:84%;[^}]*height:84%;[^}]*object-fit:contain/,'desktop role artwork fits fully with smaller margins');
+assert.match(homeStyles,/@media\(max-width:700px\)[\s\S]*?\.role-feature \.role-growth-art img\s*\{[^}]*width:90%;[^}]*height:90%;[^}]*object-fit:contain/,'mobile role artwork shrinks slightly while remaining fully visible');
 assert.match(homeStyles,/@media\(max-width:700px\)[\s\S]*?\.role-feature \.role-growth-art\s*\{[^}]*height:260px/,'mobile character art must fit inside its own frame');
 assert.match(homeStyles,/\.role-feature \.role-growth-panel\s*\{[^}]*justify-items:center;[^}]*text-align:center/,'right-hand player info must be centered');
 assert.match(homeStyles,/\.role-feature \.growth-level\s*\{[^}]*justify-items:center;[^}]*text-align:center/,'all three identity lines must be centered');
