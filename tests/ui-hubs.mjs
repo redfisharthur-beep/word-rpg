@@ -91,11 +91,20 @@ document.querySelector('[data-action="setup-back"]').click();
 assert.match(app.innerHTML,/data-action="equipment"/,'return from equipment must preserve home navigation');
 
 document.querySelector('[data-action="quests"]').click();
+assert.match(app.innerHTML,/>周任務 /,'weekly quests appear beneath daily rewards');
+assert.match(app.innerHTML,/>終身任務 /,'lifetime quests appear beneath weekly quests');
+assert.match(app.innerHTML,/data-claim-weekly=/,'weekly claim buttons are wired');
+assert.match(app.innerHTML,/data-claim-lifetime=/,'lifetime claim buttons are wired');
+assert.ok(app.innerHTML.indexOf('data-daily-chest')<app.innerHTML.indexOf('>周任務 '),'weekly quests follow daily chest');
+assert.ok(app.innerHTML.indexOf('>周任務 ')<app.innerHTML.indexOf('>終身任務 '),'lifetime quests follow weekly quests');
 assert.doesNotMatch(app.innerHTML,/<h1>每日任務<\/h1>|今日 .*重置|<b>結晶 [0-9]+<\/b>/);
 assert.match(app.innerHTML,/data-daily-chest/);
 assert.doesNotMatch(app.innerHTML,/英文學習與冒險成就/,'achievement claims belong only to achievements');
 document.querySelector('[data-action="setup-back"]').click();
 document.querySelector('[data-action="achievements"]').click();
+assert.ok((app.innerHTML.match(/data-claim-achievement=/g)||[]).length>=16,'additional title achievements must render');
+assert.match(app.innerHTML,/morandi-tone-0/,'achievement cards receive a soft Morandi palette');
+
 for(const heading of ['單字精熟成就','裝備收集成就','稱號收藏'])assert.ok(app.innerHTML.includes(heading),heading+' missing');
 assert.doesNotMatch(app.innerHTML,/成就殿堂|英文學習與冒險成就|<b>識字冒險者<\/b><\/div>/,'removed achievement headings stay hidden');
 assert.match(app.innerHTML,/data-equip-title=/,'earned title must be equippable from achievement screen');
