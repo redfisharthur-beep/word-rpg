@@ -437,7 +437,8 @@
 .pet-upgrade-detail .awakening-note small{font-size:clamp(14px,2.5vw,18px);line-height:1.55;overflow-wrap:anywhere}
 .pet-flow-tree{display:grid;gap:13px;min-width:0;margin-top:18px;padding:5px 0 14px}
 .pet-flow-tier{min-width:0;display:grid;gap:11px;justify-self:center;position:relative;width:100%}
-.pet-flow-tier:not(:first-child)::before{content:'';position:absolute;width:2px;height:11px;top:-12px;left:50%;background:var(--pet-tone)}
+/* Pet skills intentionally have no inter-node connectors. */
+.pet-flow-tier:not(:first-child)::before,.pet-flow-node::before,.pet-flow-node::after{content:none!important;display:none!important}
 .pet-flow-tier-1{grid-template-columns:minmax(0,1fr);max-width:min(310px,100%)}
 .pet-flow-tier-2{grid-template-columns:repeat(2,minmax(0,1fr));max-width:min(650px,100%)}
 .pet-flow-tier-4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:100%}
@@ -456,7 +457,7 @@
   .pet-upgrade-detail .awakening-note small{font-size:14px}
   .pet-flow-tree{gap:9px}
   .pet-flow-tier{gap:5px}
-  .pet-flow-tier:not(:first-child)::before{height:8px;top:-9px}
+  .pet-flow-tier:not(:first-child)::before{content:none!important;display:none!important}
   .pet-flow-tier-1{max-width:min(230px,100%)}
   .pet-flow-tier-2{max-width:100%}
   .pet-flow-node>.pet-skill-node{min-height:100px;padding:8px 5px;gap:5px}
