@@ -88,10 +88,32 @@ const NEW_PET_SKILLS={
   ]
 };
 for(const pet of ['fox','owl','dragon'])PET_TREES[pet].push(...NEW_PET_SKILLS[pet]);
-export function petSkillPath(pet,nodeId){return (PET_PATHS[pet]||[]).find(path=>path.nodes.includes(nodeId))||null;}
+// Each primary pet path can develop into one of two mutually exclusive
+// specializations. Each specialization itself continues into an advanced skill.
+const PET_FORK_CHOICES={
+ fox:[[['迅風','firstCardAmp'],['獵魂','crit']],[['焰爪','redAmp'],['猛攻','atkPct']],[['生息','hpPct'],['鐵尾','defPct']]],
+ owl:[[['睿智','highAccuracy'],['星眼','crit']],[['守心','defPct'],['護羽','hpPct']],[['聖療','guardHeal'],['持久','hpPct']]],
+ dragon:[[['元素','yellowAmp'],['龍威','atkPct']],[['終焰','finisherAmp'],['龍瞳','crit']],[['龍鱗','defPct'],['龍息','hpPct']]]
+};
+const PET_BONUS_NAMES={firstCardAmp:'先手第一張牌效果',crit:'爆擊率',redAmp:'紅牌效果',atkPct:'攻擊力',hpPct:'最大生命',defPct:'防禦力',highAccuracy:'高答對率牌效果',guardHeal:'綠藍牌連攜回復',yellowAmp:'黃牌效果',finisherAmp:'終式效果'};
+for(const [pet,paths] of Object.entries(PET_PATHS)){
+  paths.forEach((path,index)=>{
+    path.forks=PET_FORK_CHOICES[pet][index].map(([name,effectKey],choiceIndex)=>{
+      const ids=[1,2].map(tier=>pet+'-'+path.id+'-'+(choiceIndex+1)+'-'+tier);
+      const bonus=choiceIndex===0?.03:.025;
+      ids.forEach((id,tier)=>{const value=bonus+(tier?.015:0);PET_TREES[pet].push({id,name:name+(tier?'·進階':'·專精'),cost:tier?6:4,desc:PET_BONUS_NAMES[effectKey]+' +'+Math.round(value*1000)/10+'%',effect:{[effectKey]:value}})});
+      return {id:path.id+'-'+(choiceIndex+1),name,subtitle:PET_BONUS_NAMES[effectKey],nodes:ids};
+    });
+  });
+}
+export function petSkillPath(pet,nodeId){return (PET_PATHS[pet]||[]).find(path=>path.nodes.includes(nodeId)||path.forks?.some(fork=>fork.nodes.includes(nodeId)))||null;}
 export function petSkillPrerequisite(pet,nodeId){
   const path=petSkillPath(pet,nodeId),at=path?.nodes.indexOf(nodeId)??-1;
-  return at>0?path.nodes[at-1]:null;
+  if(at>0)return path.nodes[at-1];
+  const fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));
+  if(!fork)return null;
+  const forkTier=fork.nodes.indexOf(nodeId);
+  return forkTier>0?fork.nodes[forkTier-1]:path.nodes[path.nodes.length-1];
 }
 
 const PET_IDS=['fox','owl','dragon'];
@@ -171,7 +193,7 @@ export function maxedPkRpg(){
     },
     crystals:999999,
     petEnhance:{fox:4,owl:4,dragon:4},
-    petSkills:Object.fromEntries(PET_IDS.map(id=>[id,PET_TREES[id].map(node=>node.id)])),
+    petSkills:Object.fromEntries(PET_IDS.map(id=>[id,PET_PATHS[id].flatMap(path=>[...path.nodes,...path.forks[0].nodes])])),
     collection:collectionEntries().map(item=>item.key),
     towerBest:20,
     weakWords:{}
@@ -185,7 +207,7 @@ export function weakWordProgress(rpg){const clean=cleanRpg(rpg),items=Object.val
 export function skillPointBudget(level=1){return Math.max(0,clamp(Math.round(Number(level)||1),1,80)-1);}
 export function spentSkillPoints(rpg){const clean=cleanRpg(rpg);let sum=0;for(const pet of PET_IDS){const owned=new Set(clean.petSkills[pet]);for(const node of PET_TREES[pet])if(owned.has(node.id))sum+=node.cost;}return sum;}
 export function availableSkillPoints(level,rpg){return Math.max(0,skillPointBudget(level)-spentSkillPoints(rpg));}
-export function canUnlockPetSkill(pet,nodeId,level,rpg){const tree=PET_TREES[pet]||[],at=tree.findIndex(x=>x.id===nodeId);if(at<0)return false;const clean=cleanRpg(rpg),owned=new Set(clean.petSkills[pet]);if(owned.has(nodeId))return false;const predecessor=petSkillPrerequisite(pet,nodeId);if(predecessor&&!owned.has(predecessor))return false;return availableSkillPoints(level,clean)>=tree[at].cost;}
+export function canUnlockPetSkill(pet,nodeId,level,rpg){const tree=PET_TREES[pet]||[],at=tree.findIndex(x=>x.id===nodeId);if(at<0)return false;const clean=cleanRpg(rpg),owned=new Set(clean.petSkills[pet]);if(owned.has(nodeId))return false;const predecessor=petSkillPrerequisite(pet,nodeId);if(predecessor&&!owned.has(predecessor))return false;const path=petSkillPath(pet,nodeId),fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));if(fork&&path.forks.some(choice=>choice!==fork&&choice.nodes.some(id=>owned.has(id))))return false;return availableSkillPoints(level,clean)>=tree[at].cost;}
 export function unlockPetSkill(pet,nodeId,level,rpg){const clean=cleanRpg(rpg);if(!canUnlockPetSkill(pet,nodeId,level,clean))return clean;clean.petSkills[pet]=[...clean.petSkills[pet],nodeId];return clean;}
 export function resetPetSkills(rpg){const clean=cleanRpg(rpg);clean.petSkills={fox:[],owl:[],dragon:[]};return clean;}
 export function petEnhanceLevel(pet,rpg){return cleanRpg(rpg).petEnhance?.[pet]||0;}
@@ -203,7 +225,7 @@ export function petSkillEffects(pet,rpg){
   if(pet==='fox'){if(owned.has('fox-1'))out.firstCardAmp+=.05;if(owned.has('fox-2'))out.chaseAmp+=.10;if(owned.has('fox-3'))out.redAmp+=.05;if(owned.has('fox-4'))out.crit+=.04;if(owned.has('fox-5')){out.firstCardAmp+=.10;out.chaseAmp+=.15;}}
   if(pet==='owl'){if(owned.has('owl-1'))out.highAccuracy+=.05;if(owned.has('owl-2'))out.guardHeal+=.02;if(owned.has('owl-3'))out.stableAmp+=.05;if(owned.has('owl-4'))out.highAccuracy+=.10;if(owned.has('owl-5')){out.hpPct+=.05;out.guardHeal+=.04;}}
   if(pet==='dragon'){if(owned.has('dragon-1'))out.yellowAmp+=.04;if(owned.has('dragon-2'))out.finisherAmp+=.05;if(owned.has('dragon-3'))out.atkPct+=.04;if(owned.has('dragon-4'))out.yellowAmp+=.06;if(owned.has('dragon-5')){out.finisherAmp+=.10;out.crit+=.03;}}
-  for(const node of NEW_PET_SKILLS[pet]||[])if(owned.has(node.id))for(const [key,bonus] of Object.entries(node.effect))out[key]+=bonus;
+  for(const node of PET_TREES[pet]||[])if(node.effect&&owned.has(node.id))for(const [key,bonus] of Object.entries(node.effect))out[key]+=bonus;
   if((clean.petEnhance?.[pet]||0)>=4){out.awakened=true;if(pet==='fox'){out.firstCardAmp+=.15;out.chaseAmp+=.10}if(pet==='owl'){out.highAccuracy+=.10;out.guardHeal+=.05}if(pet==='dragon'){out.yellowAmp+=.10;out.finisherAmp+=.10}}
   return out;
 }
