@@ -24,6 +24,8 @@ result=enhanceEquipment(scarce,'m',()=>0);assert.equal(result.ok,false);assert.e
 const encoded=JSON.parse(JSON.stringify(r));assert.equal(cleanRpg(encoded).inventory[0].enhance,10,'save/load preserves enhancement');
 const invalid=cleanRpg({...r,inventory:[{...r.inventory[0],enhance:900}]});assert.equal(invalid.inventory[0].enhance,10,'malformed save clamps enhancement');
 // Repeated failures on one item add 1 percentage point each, capped at +20 points.
+assert.ok(Math.abs(equipmentEnhanceInfo({...item('common','a'),enhanceFailures:1}).chance-.96)<1e-10,'even 95% common gear gains one percent from a failure');
+assert.equal(equipmentEnhanceInfo({...item('common','a'),enhanceFailures:20}).chance,1,'common gear can reach a guaranteed success after repeated failures');
 let pity=addLoot(emptyRpg(),item('mythic','pity'));pity.crystals=10000;
 const chance0=equipmentEnhanceInfo(pity.inventory[0]).chance;
 for(let n=1;n<=20;n++){
