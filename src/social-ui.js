@@ -85,7 +85,7 @@ export function createSocialUI({app,getMeta,onLogin,esc}){
     if(action==='line-invite'){
       if(!session?.code)return;
       const invite='一起玩 Word RPG！開啟邀請連結並使用 LINE 登入，即可送出好友邀請： https://word-rpg.redfisharthur.workers.dev/?friend='+encodeURIComponent(session.code);
-      globalThis.location?.assign?.('https://line.me/R/msg/text/?'+encodeURIComponent(invite));
+      globalThis.location?.assign?.('https://line.me/R/share?text='+encodeURIComponent(invite));
       return;
     }
     if(action==='copy-code'){
