@@ -4,6 +4,7 @@ import {SOCIAL_HISTORY_LIMIT,SOCIAL_RATE_MS,SOCIAL_REQUEST_LIMIT,SOCIAL_FRIEND_L
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 const identity=request=>({id:request.headers.get('X-Social-User')||'',code:request.headers.get('X-Social-Code')||'',name:request.headers.get('X-Social-Name')||''});
 const chatName=value=>{const name=String(value||'').trim().replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,32);return name&&!/^冒險者-[A-Z0-9_-]+$/i.test(name)?name:'訪客'};
+export const CHAT_RETENTION_MS=72*60*60*1000;
 const userKey=id=>'member:'+id;
 const codeKey=code=>'friend-code:'+code;
 const blank=()=>({friends:[],incoming:[],outgoing:[],blocked:[],lastRequestAt:0,lastMessageAt:0});
@@ -16,6 +17,22 @@ const textLimit=(value,max)=>typeof value==='string'?value.slice(0,max):'';
 
 export class SocialHub extends DurableObject {
   constructor(ctx,env){super(ctx,env);this.ctx=ctx;this.env=env}
+  // Server-side rolling retention: expire each message exactly 72h after it was posted.
+  // Durable Object alarms also remove data while nobody has the chat page open.
+  async pruneChat(now=Date.now()){
+    const stored=await this.ctx.storage.get('chat')||[];
+    const messages=stored.filter(m=>Number.isFinite(m?.at)&&m.at>now-CHAT_RETENTION_MS);
+    if(messages.length!==stored.length){
+      if(messages.length)await this.ctx.storage.put('chat',messages);
+      else await this.ctx.storage.delete('chat');
+    }
+    if(messages.length){
+      const next=Math.min(...messages.map(m=>m.at+CHAT_RETENTION_MS+1));
+      await this.ctx.storage.setAlarm(Math.max(now+1,next));
+    }else if(stored.length)await this.ctx.storage.deleteAlarm();
+    return messages;
+  }
+  async alarm(){await this.pruneChat();}
   async profile(id){return cleanRecord(await this.ctx.storage.get(userKey(id)))}
   async publicProfile(id){const code=await this.ctx.storage.get('code-for:'+id);return {code:code||'',name:socialName(code||'??????')}}
   async ensureIdentity(id,code){
@@ -40,7 +57,7 @@ export class SocialHub extends DurableObject {
     const url=new URL(request.url),auth=identity(request),id=auth.id,code=auth.code;
     if(url.pathname==='/record'&&request.method==='POST')return this.recordBattle(request);
     if(url.pathname==='/chat'&&request.method==='GET'){
-      const messages=await this.ctx.storage.get('chat')||[];
+      const messages=await this.pruneChat();
       const blocked=id?(await this.profile(id)).blocked:[];
       return json({messages:publicChat(messages,blocked),limit:SOCIAL_HISTORY_LIMIT,readOnly:!id});
     }
@@ -61,19 +78,21 @@ export class SocialHub extends DurableObject {
     const result=safeMessage(body?.text);if(result.error)return json(result,400);
     const member=await this.profile(id),now=Date.now();
     if(!canSend(member.lastMessageAt,now))return json({error:'發送過於頻繁，請稍後再試'},429);
-    const messages=await this.ctx.storage.get('chat')||[];
+    const messages=await this.pruneChat(now);
     const message={id:crypto.randomUUID(),authorId:id,name:chatName(displayName),text:result.text,at:now};
     member.lastMessageAt=now;
     await this.ctx.storage.put({chat:[...messages,message].slice(-SOCIAL_HISTORY_LIMIT),[userKey(id)]:member});
+    await this.ctx.storage.setAlarm(messages.length?Math.min(messages[0].at+CHAT_RETENTION_MS+1,now+CHAT_RETENTION_MS+1):now+CHAT_RETENTION_MS+1);
     return json({message:socialPublicMessage(message)},201);
   }
   async postDuel(id,code,displayName=''){
     const member=await this.profile(id),now=Date.now();
     if(!canSend(member.lastMessageAt,now))return json({error:'請稍後再發送'},429);
     const room=crypto.randomUUID(),message={id:crypto.randomUUID(),authorId:id,name:chatName(displayName),text:'邀請你一起 PK',kind:'duel',room,at:now};
-    const messages=await this.ctx.storage.get('chat')||[];
+    const messages=await this.pruneChat(now);
     member.lastMessageAt=now;
     await this.ctx.storage.put({chat:[...messages,message].slice(-SOCIAL_HISTORY_LIMIT),[userKey(id)]:member});
+    await this.ctx.storage.setAlarm(messages.length?Math.min(messages[0].at+CHAT_RETENTION_MS+1,now+CHAT_RETENTION_MS+1):now+CHAT_RETENTION_MS+1);
     return json({message:publicChat([message],[])[0]},201);
   }
   async recordBattle(request){
@@ -138,7 +157,7 @@ export class SocialHub extends DurableObject {
   async report(id,body){
     const messageId=textLimit(body?.messageId,80);
     if(!/^[0-9a-f-]{36}$/.test(messageId))return json({error:'Invalid message'},400);
-    const messages=await this.ctx.storage.get('chat')||[];
+    const messages=await this.pruneChat();
     const found=messages.find(m=>m.id===messageId);
     if(!found||found.authorId===id)return json({error:'找不到這則訊息'},404);
     const key='report:'+messageId+':'+id;
