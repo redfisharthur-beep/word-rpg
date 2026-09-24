@@ -426,26 +426,7 @@
   flex:0 0 auto;width:auto!important;min-width:0!important;max-width:85px!important;
   padding:7px 8px!important;font-size:13px!important;line-height:1.3;
 }
-.pet-flow-tree{display:grid;gap:20px;min-width:0;padding:6px 0 14px}
-.pet-flow-root{position:relative;width:min(260px,100%);justify-self:center}
-.pet-flow-root::after{content:'';position:absolute;width:2px;height:19px;background:var(--pet-tone);bottom:-20px;left:50%}
-.pet-flow-middle-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0;position:relative}
-.pet-flow-middle-row::before{content:'';position:absolute;top:-9px;left:25%;width:50%;height:2px;background:var(--pet-tone)}
-.pet-flow-branch{display:grid;gap:17px;min-width:0;align-content:start;position:relative}
-.pet-flow-middle{position:relative;max-width:300px;width:100%;justify-self:center}
-.pet-flow-middle::before{content:'';position:absolute;top:-10px;left:50%;height:10px;width:2px;background:var(--pet-tone)}
-.pet-flow-leaves{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;position:relative}
-.pet-flow-leaves::before{content:'';position:absolute;top:-9px;left:25%;right:25%;height:2px;background:var(--pet-tone)}
-.pet-flow-leaf{min-width:0;position:relative}
-.pet-flow-leaf::before{content:'';position:absolute;top:-10px;left:50%;height:10px;width:2px;background:var(--pet-tone)}
-.pet-flow-tree .pet-skill-node{width:100%;min-height:110px}
-.pet-flow-leaves .pet-skill-node{padding:10px 7px;min-height:128px}
-.pet-flow-leaves .pet-node-top{flex-wrap:wrap}
-.pet-flow-leaves .pet-node-top b{font-size:clamp(15px,2.8vw,19px)}
-.pet-flow-leaves .pet-skill-node>small{font-size:clamp(13px,2.3vw,16px)}
-.pet-flow-leaves .pet-node-status{font-size:clamp(12px,2.2vw,15px)}
-@media(max-width:700px){
- .pet-upgrade-detail{gap:9px;min-width:0}
+.pet-upgrade-detail{gap:9px;min-width:0}
 .pet-upgrade-detail .pet-stage-label{font-size:clamp(23px,4vw,31px);line-height:1.2;color:#354d3a;display:block}
 .pet-upgrade-detail .pet-power{font-size:clamp(16px,2.7vw,20px);line-height:1.4}
 .pet-upgrade-controls{display:grid;justify-items:start;gap:5px}
