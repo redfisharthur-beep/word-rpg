@@ -8,10 +8,10 @@ export const DAILY_QUESTS=[
   {id:'tower',name:'登塔試煉',target:1,reward:12,desc:'成功通過一層試煉塔'}
 ];
 export const LEARNING_ACHIEVEMENTS=[
-  {id:'words-100',name:'識字冒險者',desc:'累積答對 100 題',key:'correct',target:100,reward:10,title:'識字冒險者'},
-  {id:'words-500',name:'單字達人',desc:'累積答對 500 題',key:'correct',target:500,reward:35,title:'單字達人'},
-  {id:'wins-30',name:'百戰勇者',desc:'冒險勝利 30 場',key:'adventure',target:30,reward:25,title:'百戰勇者'},
-  {id:'tower-20',name:'登塔宗師',desc:'試煉塔通關 20 層',key:'towerBest',target:20,reward:50,title:'登塔宗師'}
+  {id:'words-100',name:'識字冒險者',desc:'累積答對 100 題',key:'correct',target:100,reward:150,title:'識字冒險者'},
+  {id:'words-500',name:'單字達人',desc:'累積答對 500 題',key:'correct',target:500,reward:400,title:'單字達人'},
+  {id:'wins-30',name:'百戰勇者',desc:'冒險勝利 30 場',key:'adventure',target:30,reward:300,title:'百戰勇者'},
+  {id:'tower-20',name:'登塔宗師',desc:'試煉塔通關 20 層',key:'towerBest',target:20,reward:600,title:'登塔宗師'}
 ];
 const keys=['adventure','correct','pk','tower'];
 const counter=(obj,key)=>Math.max(0,Math.min(10000000,Math.floor(Number(obj?.[key])||0)));
