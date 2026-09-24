@@ -106,26 +106,62 @@ for(const [pet,paths] of Object.entries(PET_PATHS)){
     });
   });
 }
-// One root → two middle skills → two final specializations per middle skill.
- // Keep all historical skills defined for existing saves, but only these seven appear in the new tree.
-export const PET_FLOW={
-  fox:{root:'fox-1',branches:[{node:'fox-4',leaves:['fox-wind-1-1','fox-wind-2-1']},{node:'fox-7',leaves:['fox-moon-1-1','fox-moon-2-1']}]},
-  owl:{root:'owl-1',branches:[{node:'owl-4',leaves:['owl-wisdom-1-1','owl-wisdom-2-1']},{node:'owl-3',leaves:['owl-ward-1-1','owl-ward-2-1']}]},
-  dragon:{root:'dragon-1',branches:[{node:'dragon-4',leaves:['dragon-element-1-1','dragon-element-2-1']},{node:'dragon-3',leaves:['dragon-scale-1-1','dragon-scale-2-1']}]}
+// Nine visible skill tiers: 1,1,1 → 2,2,2 → 4,4,4.
+// Historical nodes remain in PET_TREES and saved profiles; new tier IDs never overwrite them.
+const PET_FLOW_THEMES={
+  fox:{root:['靈狐直覺','firstCardAmp'],branches:[
+    {name:'迅影',effect:'redAmp',leaves:[['疾風','firstCardAmp'],['獵魂','crit']]},
+    {name:'月影',effect:'hpPct',leaves:[['生息','guardHeal'],['鐵尾','defPct']]}
+  ]},
+  owl:{root:['星夜感知','highAccuracy'],branches:[
+    {name:'星瞳',effect:'highAccuracy',leaves:[['睿智','highAccuracy'],['星眼','crit']]},
+    {name:'聖羽',effect:'guardHeal',leaves:[['守心','defPct'],['治癒','guardHeal']]}
+  ]},
+  dragon:{root:['元素感知','yellowAmp'],branches:[
+    {name:'炎龍',effect:'yellowAmp',leaves:[['元素','yellowAmp'],['終焰','finisherAmp']]},
+    {name:'龍鱗',effect:'hpPct',leaves:[['龍威','atkPct'],['護鱗','defPct']]}
+  ]}
 };
+const FLOW_TIERS=['初醒','進階','極意'];
+function flowNode(pet,id,name,key,tier,depth){
+  const bonus=[.02,.025,.03][tier]+depth*.005,cost=[2,3,4][tier]+depth;
+  const node={id,name:name+FLOW_TIERS[tier],cost,desc:PET_BONUS_NAMES[key]+' +'+Math.round(bonus*1000)/10+'%',effect:{[key]:bonus}};
+  PET_TREES[pet].push(node);return id;
+}
+export const PET_FLOW=Object.fromEntries(Object.entries(PET_FLOW_THEMES).map(([pet,theme])=>{
+  const root=FLOW_TIERS.map((_,tier)=>flowNode(pet,pet+'-flow-root-'+(tier+1),theme.root[0],theme.root[1],tier,0));
+  const branches=theme.branches.map((branch,branchIndex)=>{
+    const nodes=FLOW_TIERS.map((_,tier)=>flowNode(pet,pet+'-flow-mid-'+(branchIndex+1)+'-'+(tier+1),branch.name,branch.effect,tier,1));
+    const leaves=branch.leaves.map(([name,key],leafIndex)=>({
+      nodes:FLOW_TIERS.map((_,tier)=>flowNode(pet,pet+'-flow-end-'+(branchIndex+1)+'-'+(leafIndex+1)+'-'+(tier+1),name,key,tier,2))
+    }));
+    return {nodes,leaves};
+  });
+  return [pet,{root,branches}];
+}));
 function flowPosition(pet,nodeId){
   const flow=PET_FLOW[pet];if(!flow)return null;
-  if(nodeId===flow.root)return {tier:0};
-  for(const [index,branch] of flow.branches.entries()){
-    if(nodeId===branch.node)return {tier:1,branch:index};
-    const leaf=branch.leaves.indexOf(nodeId);if(leaf>=0)return {tier:2,branch:index,leaf};
+  const rootTier=flow.root.indexOf(nodeId);if(rootTier>=0)return {kind:'root',tier:rootTier};
+  for(const [branchIndex,branch] of flow.branches.entries()){
+    const middleTier=branch.nodes.indexOf(nodeId);
+    if(middleTier>=0)return {kind:'middle',tier:middleTier,branch:branchIndex};
+    for(const [leafIndex,leaf] of branch.leaves.entries()){
+      const finalTier=leaf.nodes.indexOf(nodeId);
+      if(finalTier>=0)return {kind:'final',tier:finalTier,branch:branchIndex,leaf:leafIndex};
+    }
   }
   return null;
 }
 export function petSkillPath(pet,nodeId){return (PET_PATHS[pet]||[]).find(path=>path.nodes.includes(nodeId)||path.forks?.some(fork=>fork.nodes.includes(nodeId)))||null;}
 export function petSkillPrerequisite(pet,nodeId){
   const flow=PET_FLOW[pet],position=flowPosition(pet,nodeId);
-  if(position)return position.tier===0?null:position.tier===1?flow.root:flow.branches[position.branch].node;
+  if(position){
+    if(position.kind==='root')return position.tier?flow.root[position.tier-1]:null;
+    const branch=flow.branches[position.branch];
+    if(position.kind==='middle')return position.tier?branch.nodes[position.tier-1]:flow.root.at(-1);
+    const leaf=branch.leaves[position.leaf];
+    return position.tier?leaf.nodes[position.tier-1]:branch.nodes.at(-1);
+  }
   const path=petSkillPath(pet,nodeId),at=path?.nodes.indexOf(nodeId)??-1;
   if(at>0)return path.nodes[at-1];
   const fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));
@@ -136,7 +172,8 @@ export function petSkillPrerequisite(pet,nodeId){
 
 const PET_IDS=['fox','owl','dragon'];
 export const CRYSTAL_VALUE={common:1,rare:3,epic:8,legendary:20,mythic:60};
-export const PET_ENHANCE_COST=[5,10,20,40];
+export const PET_ENHANCE_MAX=10;
+export const PET_ENHANCE_COST=[5,10,20,40,40,50,60,70,80,90];
 export const PET_AWAKENING={
   fox:{name:'九尾覺醒',desc:'先手第一張牌再 +15%，紅牌追擊再 +10%'},
   owl:{name:'星夜覺醒',desc:'答對 3/5 以上效果再 +10%，綠／藍牌續航再 +5%'},
@@ -186,7 +223,7 @@ export function cleanRpg(raw={}){
   const legacyRing=byId.get(eq.ring)?.type==='ring'?eq.ring:null,rawRings=Array.isArray(eq.rings)?eq.rings:(legacyRing?[legacyRing]:[]),rings=[...new Set(rawRings.filter(id=>byId.get(id)?.type==='ring'))].slice(0,2);
   const protectedIds=new Set([...gems,armor,...rings].filter(Boolean));let inventory=deduped;
   if(inventory.length>60){const recentFree=inventory.filter(x=>!protectedIds.has(x.id)).slice(-(60-protectedIds.size)),keep=new Set([...protectedIds,...recentFree.map(x=>x.id)]);inventory=inventory.filter(x=>keep.has(x.id));}
-  const crystals=Math.max(0,Math.round(Number(src.crystals)||0)),petEnhance={};for(const pet of PET_IDS)petEnhance[pet]=clamp(Math.round(Number(src.petEnhance?.[pet])||0),0,4);
+  const crystals=Math.max(0,Math.round(Number(src.crystals)||0)),petEnhance={};for(const pet of PET_IDS)petEnhance[pet]=clamp(Math.round(Number(src.petEnhance?.[pet])||0),0,PET_ENHANCE_MAX);
   const petSkills={};for(const pet of PET_IDS){const valid=new Set(PET_TREES[pet].map(x=>x.id)),list=Array.isArray(src.petSkills?.[pet])?src.petSkills[pet].filter(id=>valid.has(id)):[];petSkills[pet]=PET_TREES[pet].filter(x=>list.includes(x.id)).map(x=>x.id);}
   const collectionSet=new Set((Array.isArray(src.collection)?src.collection:[]).filter(validCollectionKey));for(const item of inventory){const key=collectionKey(item);if(key)collectionSet.add(key);}
   const collection=[...collectionSet],towerBest=clamp(Math.round(Number(src.towerBest)||0),0,20),weakWords=cleanWeakWords(src.weakWords);
@@ -210,8 +247,8 @@ export function maxedPkRpg(){
       rings:['pk-ring-warbreaker','pk-ring-battlesoul']
     },
     crystals:999999,
-    petEnhance:{fox:4,owl:4,dragon:4},
-    petSkills:Object.fromEntries(PET_IDS.map(id=>[id,PET_PATHS[id].flatMap(path=>[...path.nodes,...path.forks[0].nodes])])),
+    petEnhance:{fox:PET_ENHANCE_MAX,owl:PET_ENHANCE_MAX,dragon:PET_ENHANCE_MAX},
+    petSkills:Object.fromEntries(PET_IDS.map(id=>[id,[...PET_PATHS[id].flatMap(path=>[...path.nodes,...path.forks[0].nodes]),...PET_FLOW[id].root,...PET_FLOW[id].branches[0].nodes,...PET_FLOW[id].branches[0].leaves[0].nodes]])),
     collection:collectionEntries().map(item=>item.key),
     towerBest:20,
     weakWords:{}
@@ -225,13 +262,26 @@ export function weakWordProgress(rpg){const clean=cleanRpg(rpg),items=Object.val
 export function skillPointBudget(level=1){return Math.max(0,clamp(Math.round(Number(level)||1),1,80)-1);}
 export function spentSkillPoints(rpg){const clean=cleanRpg(rpg);let sum=0;for(const pet of PET_IDS){const owned=new Set(clean.petSkills[pet]);for(const node of PET_TREES[pet])if(owned.has(node.id))sum+=node.cost;}return sum;}
 export function availableSkillPoints(level,rpg){return Math.max(0,skillPointBudget(level)-spentSkillPoints(rpg));}
-export function canUnlockPetSkill(pet,nodeId,level,rpg){const tree=PET_TREES[pet]||[],at=tree.findIndex(x=>x.id===nodeId);if(at<0)return false;const clean=cleanRpg(rpg),owned=new Set(clean.petSkills[pet]);if(owned.has(nodeId))return false;const predecessor=petSkillPrerequisite(pet,nodeId);if(predecessor&&!owned.has(predecessor))return false;const position=flowPosition(pet,nodeId);if(position?.tier===1&&PET_FLOW[pet].branches.some((branch,index)=>index!==position.branch&&(owned.has(branch.node)||branch.leaves.some(id=>owned.has(id)))))return false;if(position?.tier===2){const branch=PET_FLOW[pet].branches[position.branch];if(branch.leaves.some((id,index)=>index!==position.leaf&&owned.has(id)))return false;}const path=petSkillPath(pet,nodeId),fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));if(fork&&!position&&path.forks.some(choice=>choice!==fork&&choice.nodes.some(id=>owned.has(id))))return false;return availableSkillPoints(level,clean)>=tree[at].cost;}
+export function canUnlockPetSkill(pet,nodeId,level,rpg){
+  const tree=PET_TREES[pet]||[],node=tree.find(x=>x.id===nodeId);if(!node)return false;
+  const clean=cleanRpg(rpg),owned=new Set(clean.petSkills[pet]);if(owned.has(nodeId))return false;
+  const prerequisite=petSkillPrerequisite(pet,nodeId);if(prerequisite&&!owned.has(prerequisite))return false;
+  const position=flowPosition(pet,nodeId);
+  if(position?.kind==='middle'&&PET_FLOW[pet].branches.some((branch,index)=>index!==position.branch&&(branch.nodes.some(id=>owned.has(id))||branch.leaves.some(leaf=>leaf.nodes.some(id=>owned.has(id))))))return false;
+  if(position?.kind==='final'){
+    const branch=PET_FLOW[pet].branches[position.branch];
+    if(branch.leaves.some((leaf,index)=>index!==position.leaf&&leaf.nodes.some(id=>owned.has(id))))return false;
+  }
+  const path=petSkillPath(pet,nodeId),fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));
+  if(fork&&!position&&path.forks.some(choice=>choice!==fork&&choice.nodes.some(id=>owned.has(id))))return false;
+  return availableSkillPoints(level,clean)>=node.cost;
+}
 export function unlockPetSkill(pet,nodeId,level,rpg){const clean=cleanRpg(rpg);if(!canUnlockPetSkill(pet,nodeId,level,clean))return clean;clean.petSkills[pet]=[...clean.petSkills[pet],nodeId];return clean;}
 export function resetPetSkills(rpg){const clean=cleanRpg(rpg);clean.petSkills={fox:[],owl:[],dragon:[]};return clean;}
 export function petEnhanceLevel(pet,rpg){return cleanRpg(rpg).petEnhance?.[pet]||0;}
 export function petAwakened(pet,rpg){return petEnhanceLevel(pet,rpg)>=4;}
-export function petEnhanceCost(pet,rpg){const level=petEnhanceLevel(pet,rpg);return level>=4?0:PET_ENHANCE_COST[level];}
-export function enhancePet(pet,rpg){const clean=cleanRpg(rpg);if(!PET_IDS.includes(pet))return clean;const level=clean.petEnhance[pet]||0;if(level>=4)return clean;const cost=PET_ENHANCE_COST[level];if(clean.crystals<cost)return clean;clean.crystals-=cost;clean.petEnhance[pet]=level+1;return cleanRpg(clean);}
+export function petEnhanceCost(pet,rpg){const level=petEnhanceLevel(pet,rpg);return level>=PET_ENHANCE_MAX?0:PET_ENHANCE_COST[level];}
+export function enhancePet(pet,rpg){const clean=cleanRpg(rpg);if(!PET_IDS.includes(pet))return clean;const level=clean.petEnhance[pet]||0;if(level>=PET_ENHANCE_MAX)return clean;const cost=PET_ENHANCE_COST[level];if(clean.crystals<cost)return clean;clean.crystals-=cost;clean.petEnhance[pet]=level+1;return cleanRpg(clean);}
 export function crystalValue(item){return CRYSTAL_VALUE[item?.quality]||0;}
 export function crystallizeItem(rpg,itemId){const clean=cleanRpg(rpg),equipped=new Set([...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean));if(equipped.has(itemId))return clean;const item=clean.inventory.find(x=>x.id===itemId);if(!item)return clean;const gain=crystalValue(item);if(!gain)return clean;clean.inventory=clean.inventory.filter(x=>x.id!==itemId);clean.crystals+=gain;return cleanRpg(clean);}
 export function synthesisInfo(rpg,itemId){const clean=cleanRpg(rpg),item=clean.inventory.find(x=>x.id===itemId),equipped=new Set([...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean));if(!item)return {can:false,count:0,nextQuality:null};const qi=QUALITY_ORDER.indexOf(item.quality);if(qi<0||qi>=QUALITY_ORDER.length-1)return {can:false,count:0,nextQuality:null};const matches=clean.inventory.filter(x=>!equipped.has(x.id)&&x.type===item.type&&x.subtype===item.subtype&&x.quality===item.quality);return {can:matches.length>=3,count:matches.length,nextQuality:QUALITY_ORDER[qi+1],consumeIds:matches.slice(0,3).map(x=>x.id)};}
