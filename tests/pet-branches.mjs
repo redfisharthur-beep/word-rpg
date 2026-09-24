@@ -5,15 +5,22 @@ import {progressionStats,applyPetRoundEnd} from '../src/cards.js';
 for(const pet of ['fox','owl','dragon']){
   const paths=PET_PATHS[pet],all=paths.flatMap(path=>path.nodes);
   assert.equal(paths.length,3,pet+' must have three independent paths');
-  assert.equal(PET_TREES[pet].length,9,pet+' must offer nine skills');
+  assert.equal(PET_TREES[pet].length,21,pet+' must offer nine base and twelve fork skills');
   assert.equal(new Set(all).size,9,'each skill must belong to exactly one path');
-  assert.deepEqual(new Set(all),new Set(PET_TREES[pet].map(node=>node.id)));
+  assert.deepEqual(new Set(all),new Set(PET_TREES[pet].slice(0,9).map(node=>node.id)));
   for(const path of paths){
     assert.equal(path.nodes.length,3,'each branch has three connected tiers');
     assert.equal(petSkillPrerequisite(pet,path.nodes[0]),null,'first skill requires no other path');
     assert.equal(petSkillPrerequisite(pet,path.nodes[1]),path.nodes[0]);
     assert.equal(petSkillPrerequisite(pet,path.nodes[2]),path.nodes[1]);
     for(const id of path.nodes)assert.equal(petSkillPath(pet,id)?.id,path.id);
+    assert.equal(path.forks.length,2,'each route offers two distinct specializations');
+    for(const fork of path.forks){
+      assert.equal(fork.nodes.length,2,'each specialization extends into a second skill');
+      assert.equal(petSkillPath(pet,fork.nodes[0])?.id,path.id);
+      assert.equal(petSkillPrerequisite(pet,fork.nodes[0]),path.nodes.at(-1));
+      assert.equal(petSkillPrerequisite(pet,fork.nodes[1]),fork.nodes[0]);
+    }
   }
 }
 let r=emptyRpg();
@@ -50,5 +57,16 @@ for(const pet of ['fox','owl','dragon'])assert.equal(legacy.petSkills[pet].lengt
 for(const [pet,node] of [['fox','fox-6'],['owl','owl-6'],['dragon','dragon-7']]){const isolated=cleanRpg({...emptyRpg(),petSkills:{fox:[],owl:[],dragon:[],[pet]:legacy.petSkills[pet]}});assert.ok(canUnlockPetSkill(pet,node,80,isolated),'original branch skills unlock new terminal skill: '+node)}
 assert.ok(Math.abs(petSkillEffects('fox',legacy).firstCardAmp-.15)<1e-10,'legacy first-card skill strength preserved');
 const maxed=maxedPkRpg();
-for(const pet of ['fox','owl','dragon'])assert.equal(maxed.petSkills[pet].length,9,'normalized PK retains all 3 max-level branches for every pet');
-console.log('Pet branching: 3 independent paths per pet, 27 skills, legacy saves, unlock gating, stats, healing and maxed PK: PASS');
+for(const pet of ['fox','owl','dragon'])assert.equal(maxed.petSkills[pet].length,15,'normalized PK uses one complete specialization per branch for fairness');
+let forkRpg=emptyRpg();
+const wind=PET_PATHS.fox[0];
+for(const id of wind.nodes)forkRpg=unlockPetSkill('fox',id,80,forkRpg);
+const [first,second]=wind.forks;
+assert.ok(canUnlockPetSkill('fox',first.nodes[0],80,forkRpg));
+forkRpg=unlockPetSkill('fox',first.nodes[0],80,forkRpg);
+assert.equal(canUnlockPetSkill('fox',first.nodes[1],80,forkRpg),true,'selected specialization continues further');
+assert.equal(canUnlockPetSkill('fox',second.nodes[0],80,forkRpg),false,'opposite fork becomes exclusive');
+forkRpg=unlockPetSkill('fox',first.nodes[1],80,forkRpg);
+assert.ok(petSkillEffects('fox',forkRpg).firstCardAmp>petSkillEffects('fox',legacy).firstCardAmp,'advanced fork alters live combat effects');
+assert.equal(cleanRpg(forkRpg).petSkills.fox.length,5,'new fork skills survive save normalization');
+console.log('Pet branching: 3 primary routes and two further specialization forks each, legacy saves, gating, live effects and maxed PK: PASS');
