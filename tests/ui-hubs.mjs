@@ -78,8 +78,7 @@ assert.match(app.innerHTML,/class="inventory-list"/,'warehouse remains visible')
 const equipmentMarkup=fs.readFileSync(new URL('../src/game-core.js',import.meta.url),'utf8');
 assert.match(equipmentMarkup,/class="loot-item equipment-inventory-item quality-border-/,'warehouse item cards need a stable image-left layout');
 assert.match(equipmentMarkup,/class="equipment-item-content"/,'item text and actions must share the right column');
-const inventoryPattern=equipmentMarkup.match(/class="equipment-item-actions"[\s\S]*?<\/div>/);
-assert.ok(inventoryPattern,'warehouse item action group is missing');
+assert.match(equipmentMarkup,/class="loot-item-actions equipment-item-actions"/,'warehouse item action group is missing');
 for(const action of ['data-enhance-equip','data-crystallize','data-equip'])assert.ok(equipmentMarkup.includes(action),'warehouse action missing: '+action);
 assert.ok(equipmentMarkup.indexOf('class="equipment-item-info"')<equipmentMarkup.indexOf('class="loot-item-actions equipment-item-actions"'),'name and detail must come before the actions');
 assert.match(homeStyles,/\.equipment-screen \.inventory-list \.equipment-inventory-item\s*\{[^}]*grid-template-columns:90px minmax\(0,1fr\)/,'desktop equipment inventory must have two columns');
