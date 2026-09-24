@@ -23,6 +23,24 @@ let scarce=addLoot(emptyRpg(),item('mythic','m'));scarce.crystals=1;
 result=enhanceEquipment(scarce,'m',()=>0);assert.equal(result.ok,false);assert.equal(result.reason,'結晶不足');
 const encoded=JSON.parse(JSON.stringify(r));assert.equal(cleanRpg(encoded).inventory[0].enhance,10,'save/load preserves enhancement');
 const invalid=cleanRpg({...r,inventory:[{...r.inventory[0],enhance:900}]});assert.equal(invalid.inventory[0].enhance,10,'malformed save clamps enhancement');
+// Repeated failures on one item add 1 percentage point each, capped at +20 points.
+let pity=addLoot(emptyRpg(),item('mythic','pity'));pity.crystals=10000;
+const chance0=equipmentEnhanceInfo(pity.inventory[0]).chance;
+for(let n=1;n<=20;n++){
+  const attempt=enhanceEquipment(pity,'pity',()=>.999);
+  assert.equal(attempt.success,false);
+  pity=attempt.rpg;
+  assert.equal(pity.inventory[0].enhanceFailures,n,'failed attempts accumulate on the same item');
+  assert.ok(Math.abs(equipmentEnhanceInfo(pity.inventory[0]).chance-(chance0+Math.min(n,20)*.01))<1e-10,'chance increases by one percentage point per failure');
+}
+const capped=enhanceEquipment(pity,'pity',()=>.999);pity=capped.rpg;
+assert.equal(pity.inventory[0].enhanceFailures,20,'pity bonus is capped');
+assert.equal(equipmentEnhanceInfo(pity.inventory[0]).chance,Math.min(.95,chance0+.20));
+assert.equal(cleanRpg(JSON.parse(JSON.stringify(pity))).inventory[0].enhanceFailures,20,'failure count persists across saves');
+const completed=enhanceEquipment(pity,'pity',()=>0);
+assert.equal(completed.success,true);
+assert.equal(completed.rpg.inventory[0].enhanceFailures,0,'successful enhancement resets the accumulated chance bonus');
+assert.equal(equipmentEnhanceInfo(completed.rpg.inventory[0]).chance,Math.max(.20,.55-.025));
 const pk=maxedPkRpg();assert.equal(pk.inventory.length,6);assert.ok(pk.inventory.every(gear=>gear.enhance===10),'PK has maxed enhancement for both players');
 const crystals=crystallizeItem(r,'a');assert.equal(crystals.inventory.length,1,'equipped upgraded items cannot be crystallized');
 console.log('Equipment upgrade: quality costs and odds, success and downgrade, +10 cap, stat gains, insufficient funds, save roundtrip and normalized PK: PASS');
