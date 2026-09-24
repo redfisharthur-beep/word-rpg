@@ -73,6 +73,8 @@ async function communityApi(request,env){
     const code='F-'+(await hmac(secret,'social:'+session.sub)).slice(0,12).toUpperCase();
     headers.set('X-Social-User',session.sub);
     headers.set('X-Social-Code',code);
+    // Only the verified LINE session may supply a public chat display name.
+    headers.set('X-Social-Name',String(session.name||'訪客').trim().replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,32)||'訪客');
   }
   let body;
   if(request.method==='POST'){
