@@ -92,12 +92,12 @@
 .pet-picker-art img{height:80px;width:min(100%,106px);object-fit:contain;filter:drop-shadow(0 5px 5px rgba(36,43,38,.12))}
 .pet-select-option b{font-size:15px;white-space:normal;overflow-wrap:anywhere}
 .pet-select-option small{font-size:11px;opacity:.85}
-.pet-upgrade-feature{display:grid;grid-template-columns:minmax(125px,30%) minmax(0,1fr);align-items:center;gap:13px;margin-top:14px;padding:12px 16px;background:linear-gradient(120deg,#f7eee2,#ede2d1);border:1px solid #dec4a0;border-radius:21px}
+.pet-upgrade-feature{display:grid;grid-template-columns:minmax(160px,39%) minmax(0,1fr);align-items:center;gap:13px;margin-top:14px;padding:12px 16px;background:linear-gradient(120deg,#f7eee2,#ede2d1);border:1px solid #dec4a0;border-radius:21px}
 .pet-upgrade-feature.theme-owl{background:linear-gradient(120deg,#eaf1f6,#e2e4ef);border-color:#b4cada}
 .pet-upgrade-feature.theme-dragon{background:linear-gradient(120deg,#e8f0e6,#d9e9e2);border-color:#b4cbbb}
 .pet-upgrade-portrait{min-width:0;display:grid;place-items:center}
-.pet-upgrade-art{width:100%;height:145px;display:grid;place-items:center}
-.pet-upgrade-art img{width:100%;height:140px;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(41,49,42,.17))}
+.pet-upgrade-art{width:100%;height:210px;display:grid;place-items:center}
+.pet-upgrade-art img{width:100%;height:205px;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(41,49,42,.17))}
 .pet-upgrade-detail{min-width:0;display:grid;align-content:center;gap:5px}
 .pet-upgrade-kicker{font-size:12px;color:#715d3c;font-weight:750}
 .pet-upgrade-detail h2{font-size:clamp(20px,4vw,27px);color:#3c493d;margin:0}
@@ -160,9 +160,9 @@
  .pet-picker-art img{height:58px;width:min(100%,76px)}
  .pet-select-option b{font-size:12px}
  .pet-select-option small{font-size:10px}
- .pet-upgrade-feature{grid-template-columns:95px minmax(0,1fr);gap:7px;padding:9px}
- .pet-upgrade-art{height:115px}
- .pet-upgrade-art img{height:110px}
+ .pet-upgrade-feature{grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:7px;padding:9px}
+ .pet-upgrade-art{height:165px}
+ .pet-upgrade-art img{height:160px}
  .pet-upgrade-detail h2{font-size:19px}
  .pet-upgrade-controls .pet-enhance-btn{font-size:12px;padding:7px}
  .pet-tree-heading h2{font-size:18px}
@@ -226,7 +226,7 @@
   min-height:0;
   width:100%;
   height:325px;
-  padding:8px;
+  padding:14px;
   overflow:hidden;
   align-self:center;
   display:grid;
@@ -234,10 +234,10 @@
 }
 .role-feature .role-growth-art img{
   display:block;
-  width:100%;
-  max-width:100%;
-  height:100%;
-  max-height:100%;
+  width:84%;
+  max-width:84%;
+  height:84%;
+  max-height:84%;
   object-fit:contain;
   object-position:center center;
   transform:none;
@@ -315,10 +315,11 @@
     align-self:center;
   }
   .role-feature .role-growth-art img{
-    width:100%;
-    max-width:100%;
-    height:100%;
-    max-height:100%;
+    width:90%;
+    max-width:90%;
+    height:90%;
+    max-height:90%;
+    object-fit:contain;
     transform:none;
   }
   .role-feature .role-growth-panel{
@@ -406,14 +407,14 @@
  .pet-upgrade-screen>.system-head{grid-template-columns:minmax(0,144px) minmax(0,1fr);min-height:112px}
  .daily-card>.system-head{grid-template-columns:minmax(0,160px) minmax(0,1fr);min-height:120px}
  .pet-upgrade-screen>.system-head>b{font-size:14px;max-width:78px}
- .pet-upgrade-feature{grid-template-columns:minmax(0,30%) minmax(0,1fr);gap:9px;padding:10px}
+ .pet-upgrade-feature{grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:9px;padding:10px}
  .pet-upgrade-controls{gap:7px}
  .pet-branch-board{grid-template-columns:repeat(3,278px);gap:10px}
  .pet-branch-options{gap:6px}
  .pet-node-top b{font-size:16px}
  .social-friends form .social-code button{font-size:14px}
 }
-@media(max-width:370px){.pet-branch-board{grid-template-columns:repeat(3,268px)}.pet-upgrade-feature{grid-template-columns:minmax(0,26%) minmax(0,1fr);padding:8px}}
+@media(max-width:370px){.pet-branch-board{grid-template-columns:repeat(3,268px)}.pet-upgrade-feature{grid-template-columns:minmax(0,41%) minmax(0,1fr);padding:8px}}
 
 
 /* Compact quests/achievements controls and a single 1→2→4 pet skill flow. */
@@ -444,14 +445,43 @@
 .pet-flow-leaves .pet-skill-node>small{font-size:clamp(13px,2.3vw,16px)}
 .pet-flow-leaves .pet-node-status{font-size:clamp(12px,2.2vw,15px)}
 @media(max-width:700px){
- .pet-flow-tree{gap:16px}
- .pet-flow-middle-row{gap:7px}
- .pet-flow-branch{gap:14px}
- .pet-flow-leaves{gap:5px}
- .pet-flow-middle-row::before{top:-8px}
- .pet-flow-leaves .pet-skill-node{min-height:138px}
- .pet-flow-leaves .pet-node-top b{font-size:15px}
- .pet-flow-leaves .pet-node-top em{font-size:12px}
- .pet-flow-leaves .pet-skill-node>small{font-size:13px}
- .pet-flow-leaves .pet-node-status{font-size:12px}
+ .pet-upgrade-detail{gap:9px;min-width:0}
+.pet-upgrade-detail .pet-stage-label{font-size:clamp(23px,4vw,31px);line-height:1.2;color:#354d3a;display:block}
+.pet-upgrade-detail .pet-power{font-size:clamp(16px,2.7vw,20px);line-height:1.4}
+.pet-upgrade-controls{display:grid;justify-items:start;gap:5px}
+.pet-upgrade-controls .pet-enhance-btn{font-size:clamp(15px,2.7vw,19px);line-height:1.3;white-space:normal;text-align:center;max-width:100%}
+.pet-upgrade-detail .awakening-note{display:grid;gap:5px;max-width:100%;padding:8px 10px}
+.pet-upgrade-detail .awakening-note b{font-size:clamp(17px,2.9vw,21px)}
+.pet-upgrade-detail .awakening-note small{font-size:clamp(14px,2.5vw,18px);line-height:1.55;overflow-wrap:anywhere}
+.pet-flow-tree{display:grid;gap:13px;min-width:0;margin-top:18px;padding:5px 0 14px}
+.pet-flow-tier{min-width:0;display:grid;gap:11px;justify-self:center;position:relative;width:100%}
+.pet-flow-tier:not(:first-child)::before{content:'';position:absolute;width:2px;height:11px;top:-12px;left:50%;background:var(--pet-tone)}
+.pet-flow-tier-1{grid-template-columns:minmax(0,1fr);max-width:min(310px,100%)}
+.pet-flow-tier-2{grid-template-columns:repeat(2,minmax(0,1fr));max-width:min(650px,100%)}
+.pet-flow-tier-4{grid-template-columns:repeat(4,minmax(0,1fr));max-width:100%}
+.pet-flow-node{min-width:0;position:relative}
+.pet-flow-node>.pet-skill-node{width:100%;height:100%;min-height:111px;display:grid;align-content:center;padding:10px 9px}
+.pet-flow-tier-4 .pet-flow-node>.pet-skill-node{min-height:127px}
+.pet-flow-tier-4 .pet-node-top{flex-wrap:wrap;gap:3px}
+.pet-flow-tier-4 .pet-node-top b{font-size:clamp(14px,2.7vw,17px);line-height:1.25}
+.pet-flow-tier-4 .pet-skill-node>small{font-size:clamp(13px,2.3vw,15px);line-height:1.35}
+.pet-flow-tier-4 .pet-node-status{font-size:clamp(12px,2.2vw,14px)}
+@media(max-width:700px){
+  .pet-upgrade-art{height:165px}
+  .pet-upgrade-art img{height:160px}
+  .pet-upgrade-detail .pet-stage-label{font-size:clamp(22px,5vw,27px)}
+  .pet-upgrade-detail .pet-power{font-size:15px}
+  .pet-upgrade-detail .awakening-note small{font-size:14px}
+  .pet-flow-tree{gap:9px}
+  .pet-flow-tier{gap:5px}
+  .pet-flow-tier:not(:first-child)::before{height:8px;top:-9px}
+  .pet-flow-tier-1{max-width:min(230px,100%)}
+  .pet-flow-tier-2{max-width:100%}
+  .pet-flow-node>.pet-skill-node{min-height:100px;padding:8px 5px;gap:5px}
+  .pet-flow-tier-4 .pet-flow-node>.pet-skill-node{min-height:134px;padding:7px 4px}
+  .pet-flow-tier-4 .pet-node-top{display:grid;gap:3px}
+  .pet-flow-tier-4 .pet-node-top b{font-size:13px}
+  .pet-flow-tier-4 .pet-node-top em{font-size:11px}
+  .pet-flow-tier-4 .pet-skill-node>small{font-size:12px}
+  .pet-flow-tier-4 .pet-node-status{font-size:11px}
 }
