@@ -106,8 +106,26 @@ for(const [pet,paths] of Object.entries(PET_PATHS)){
     });
   });
 }
+// One root → two middle skills → two final specializations per middle skill.
+ // Keep all historical skills defined for existing saves, but only these seven appear in the new tree.
+export const PET_FLOW={
+  fox:{root:'fox-1',branches:[{node:'fox-4',leaves:['fox-wind-1-1','fox-wind-2-1']},{node:'fox-7',leaves:['fox-moon-1-1','fox-moon-2-1']}]},
+  owl:{root:'owl-1',branches:[{node:'owl-4',leaves:['owl-wisdom-1-1','owl-wisdom-2-1']},{node:'owl-3',leaves:['owl-ward-1-1','owl-ward-2-1']}]},
+  dragon:{root:'dragon-1',branches:[{node:'dragon-4',leaves:['dragon-element-1-1','dragon-element-2-1']},{node:'dragon-3',leaves:['dragon-scale-1-1','dragon-scale-2-1']}]}
+};
+function flowPosition(pet,nodeId){
+  const flow=PET_FLOW[pet];if(!flow)return null;
+  if(nodeId===flow.root)return {tier:0};
+  for(const [index,branch] of flow.branches.entries()){
+    if(nodeId===branch.node)return {tier:1,branch:index};
+    const leaf=branch.leaves.indexOf(nodeId);if(leaf>=0)return {tier:2,branch:index,leaf};
+  }
+  return null;
+}
 export function petSkillPath(pet,nodeId){return (PET_PATHS[pet]||[]).find(path=>path.nodes.includes(nodeId)||path.forks?.some(fork=>fork.nodes.includes(nodeId)))||null;}
 export function petSkillPrerequisite(pet,nodeId){
+  const flow=PET_FLOW[pet],position=flowPosition(pet,nodeId);
+  if(position)return position.tier===0?null:position.tier===1?flow.root:flow.branches[position.branch].node;
   const path=petSkillPath(pet,nodeId),at=path?.nodes.indexOf(nodeId)??-1;
   if(at>0)return path.nodes[at-1];
   const fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));
@@ -207,7 +225,7 @@ export function weakWordProgress(rpg){const clean=cleanRpg(rpg),items=Object.val
 export function skillPointBudget(level=1){return Math.max(0,clamp(Math.round(Number(level)||1),1,80)-1);}
 export function spentSkillPoints(rpg){const clean=cleanRpg(rpg);let sum=0;for(const pet of PET_IDS){const owned=new Set(clean.petSkills[pet]);for(const node of PET_TREES[pet])if(owned.has(node.id))sum+=node.cost;}return sum;}
 export function availableSkillPoints(level,rpg){return Math.max(0,skillPointBudget(level)-spentSkillPoints(rpg));}
-export function canUnlockPetSkill(pet,nodeId,level,rpg){const tree=PET_TREES[pet]||[],at=tree.findIndex(x=>x.id===nodeId);if(at<0)return false;const clean=cleanRpg(rpg),owned=new Set(clean.petSkills[pet]);if(owned.has(nodeId))return false;const predecessor=petSkillPrerequisite(pet,nodeId);if(predecessor&&!owned.has(predecessor))return false;const path=petSkillPath(pet,nodeId),fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));if(fork&&path.forks.some(choice=>choice!==fork&&choice.nodes.some(id=>owned.has(id))))return false;return availableSkillPoints(level,clean)>=tree[at].cost;}
+export function canUnlockPetSkill(pet,nodeId,level,rpg){const tree=PET_TREES[pet]||[],at=tree.findIndex(x=>x.id===nodeId);if(at<0)return false;const clean=cleanRpg(rpg),owned=new Set(clean.petSkills[pet]);if(owned.has(nodeId))return false;const predecessor=petSkillPrerequisite(pet,nodeId);if(predecessor&&!owned.has(predecessor))return false;const position=flowPosition(pet,nodeId);if(position?.tier===1&&PET_FLOW[pet].branches.some((branch,index)=>index!==position.branch&&(owned.has(branch.node)||branch.leaves.some(id=>owned.has(id)))))return false;if(position?.tier===2){const branch=PET_FLOW[pet].branches[position.branch];if(branch.leaves.some((id,index)=>index!==position.leaf&&owned.has(id)))return false;}const path=petSkillPath(pet,nodeId),fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));if(fork&&!position&&path.forks.some(choice=>choice!==fork&&choice.nodes.some(id=>owned.has(id))))return false;return availableSkillPoints(level,clean)>=tree[at].cost;}
 export function unlockPetSkill(pet,nodeId,level,rpg){const clean=cleanRpg(rpg);if(!canUnlockPetSkill(pet,nodeId,level,clean))return clean;clean.petSkills[pet]=[...clean.petSkills[pet],nodeId];return clean;}
 export function resetPetSkills(rpg){const clean=cleanRpg(rpg);clean.petSkills={fox:[],owl:[],dragon:[]};return clean;}
 export function petEnhanceLevel(pet,rpg){return cleanRpg(rpg).petEnhance?.[pet]||0;}
