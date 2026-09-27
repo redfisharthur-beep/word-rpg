@@ -20,7 +20,11 @@ export function progressionStats(role='warrior',pet='fox',level=1,rpg=null){
   const total={maxHp:Math.round((roleStats.maxHp+petStats.maxHp)*(1+eq.hpPct+petFx.hpPct)),atk:Math.round((roleStats.atk+petStats.atk)*(1+eq.atkPct+petFx.atkPct)),def:Math.round((roleStats.def+petStats.def)*(1+eq.defPct+petFx.defPct)),crit:Math.min(.85,.10+tier.crit+eq.crit+petFx.crit)};
   return {level:lv,role:roleStats,pet:petStats,title:tier,total:{...total,hp:total.maxHp}};
 }
-export function makeFighter(extra={}){return {...clone(BASE),...extra};}
+export function makeFighter(extra={}){
+  const fighter={...clone(BASE),...extra},fx=mythicEquipmentEffects(fighter.rpg||{});
+  if(fx.startShieldPct>0)fighter.shield=Math.max(0,Number(fighter.shield)||0)+Math.max(1,Math.round((Number(fighter.maxHp)||0)*fx.startShieldPct));
+  return fighter;
+}
 export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(actor?.pet==='owl'){const fx=petSkillEffects(actor.pet,actor.rpg||{}),highBonus=n>=3?(fx?.highAccuracy||0):0;if(n===5)return 1.7+highBonus;if(n===4)return 1.5+highBonus;if(n===3)return 1.32+highBonus;if(n===2)return 1.15;if(n===1)return .9;return .65;}if(n===5)return 1.5;if(n===4)return 1.32;if(n===3)return 1.15;if(n===2)return .9;if(n===1)return .65;return 0;}
 export function randomCard(){
   const id=CARD_POOL[rnd(0,CARD_POOL.length-1)];
@@ -55,7 +59,7 @@ function consumeStun(f,logs){if(Number(f?.stun)>0){f.stun=Math.max(0,Number(f.st
 function hit(attacker,defender,mult,logs,label,canCrit=true,combat={}){
   const atkFx=mythicEquipmentEffects(attacker?.rpg||{}),defFx=mythicEquipmentEffects(defender?.rpg||{}),pvp=!!combat.pvp;
   if(defFx.blockChance>0&&Math.random()<defFx.blockChance){logs.push('神佑格擋：完全抵擋');return 0;}
-  const atk=effectiveAtk(attacker);let raw=atk*mult,crit=false;
+  const atk=effectiveAtk(attacker);let raw=atk*mult*(1+(Number(atkFx.damageAmp)||0)),crit=false;
   if(atkFx.berserk&&attacker.hp>0&&attacker.hp<attacker.maxHp*.5){raw*=2;logs.push('血怒狂戰：攻擊 ×2');}
   if(canCrit&&attacker.critLock<=0&&Math.random()<attacker.crit){
     raw*=pvp?1.6:2;crit=true;
@@ -64,7 +68,7 @@ function hit(attacker,defender,mult,logs,label,canCrit=true,combat={}){
       raw*=1+bonus;logs.push(`弒神暴擊 +${Math.round(bonus*100)}%`);
     }
   }
-  const baseDef=effectiveDef(defender),defense=atkFx.trueDamage?(pvp?baseDef*.70:0):baseDef;
+  const baseDef=effectiveDef(defender),penetratedDef=baseDef*(1-Math.min(.80,Math.max(0,Number(atkFx.defPenPct)||0))),defense=atkFx.trueDamage?(pvp?penetratedDef*.70:0):penetratedDef;
   let dmg=Math.max(1,Math.round(raw*100/(100+defense)));
   if(pvp){
     const hitCap=Math.max(1,Math.round(defender.maxHp*(combat.hitCapPct||.35)));
