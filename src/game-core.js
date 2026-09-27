@@ -7,7 +7,7 @@ import {createPkMode} from './pk.js';
 import {createSocialUI} from './social-ui.js';
 import {setMusic} from './audio.js';
 import {playBattleStep,playUltimateIntro,playLootReveal,cancelBattleFx} from './battle-fx.js';
-import {emptyRpg,cleanRpg,rollLoot,rollMythicLoot,addLoot,equipItem,unequipItem,itemBonusText,lootImage,QUALITY,equipmentEnhanceInfo,enhanceEquipment,PET_TREES,PET_PATHS,PET_FLOW,PET_ENHANCE_MAX,petSkillPrerequisite,availableSkillPoints,canUnlockPetSkill,unlockPetSkill,resetPetSkills,crystalValue,crystallizeItem,petEnhanceLevel,petEnhanceCost,enhancePet,synthesisInfo,synthesizeItem,equipmentResonance,collectionEntries,collectionProgress,PET_AWAKENING,recordTowerFloor,mythicEquipmentEffects,mythicAbilityText} from './rpg.js';
+import {emptyRpg,cleanRpg,rollLoot,rollMythicLoot,addLoot,equipItem,unequipItem,itemBonusText,lootImage,QUALITY,equipmentEnhanceInfo,enhanceEquipment,PET_TREES,PET_PATHS,PET_FLOW,PET_ENHANCE_MAX,PET_BREAKTHROUGHS,petEnhanceStatScale,petSkillPrerequisite,availableSkillPoints,canUnlockPetSkill,unlockPetSkill,resetPetSkills,crystalValue,crystallizeItem,petEnhanceLevel,petEnhanceCost,enhancePet,synthesisInfo,synthesizeItem,equipmentResonance,collectionEntries,collectionProgress,PET_AWAKENING,recordTowerFloor,mythicEquipmentEffects,mythicAbilityText} from './rpg.js';
 import {GAME_ROLES,GAME_PETS,GAME_STAGES} from './generated/game-data.js';
 import {recordQuestionResult,weaknessCandidates,weaknessSummary,recentWeaknessSummary,collectionUnlocks,collectionCosmetics,towerRule,applyTowerRuleAtStart,towerHealMultiplier,towerFirstCardMultiplier,seasonView,seasonOrdinal,recordSeasonResult} from './progression-v2.js';
 
@@ -111,8 +111,8 @@ function addXp(amount){if(meta.authMode==='guest')return {amount:0,old:1,newLeve
 function clearFlow(){flowToken++;clearTimeout(selectTimeout);clearInterval(selectTicker);clearTimeout(questionTimeout);selectTimeout=questionTimeout=null;selectTicker=null;cancelBattleFx();if(ultimateResolver){ultimateResolver(false);ultimateResolver=null}}
 function role(){return ROLES[meta.role]||ROLES.warrior}
 function pet(){return PETS[meta.pet]||PETS.fox}
-function petAwakened(id=meta.pet){return petEnhanceLevel(id,meta.rpg)>=4}
-function petDisplay(id=meta.pet){const p=PETS[id]||PETS.fox,awakened=petEnhanceLevel(id,meta.rpg)>=4;return {name:awakened?(p.awakening?.name||p.name):p.name,art:awakened?(p.awakening?.art||p.art):p.art,fallback:p.art,awakened}}
+function petAwakened(id=meta.pet){return petEnhanceLevel(id,meta.rpg)>=6}
+function petDisplay(id=meta.pet){const p=PETS[id]||PETS.fox,awakened=petEnhanceLevel(id,meta.rpg)>=6;return {name:awakened?(p.awakening?.name||p.name):p.name,art:awakened?(p.awakening?.art||p.art):p.art,fallback:p.art,awakened}}
 function petImg(id=meta.pet,className=''){const p=petDisplay(id),fallback=p.awakened?` onerror="this.onerror=null;this.src='${esc(p.fallback)}'"`:'';return `<div class="${p.awakened?'pet-awakened-art':''} ${esc(className)}"><img src="${esc(p.art)}" alt="${esc(p.name)}"${fallback}></div>`}
 function growth(){return progressionStats(meta.role,meta.pet,meta.authMode==='guest'?1:meta.level,meta.rpg)}
 function growthItem(src,value,label){return `<span class="growth-stat" title="${esc(label)}"><img src="${esc(src)}" alt=""><b>${esc(value)}</b></span>`}
@@ -165,7 +165,8 @@ function renderEquipment(){
 function renderPetTree(){
   const id=meta.pet,flow=PET_FLOW[id],tree=PET_TREES[id]||[],owned=new Set(meta.rpg.petSkills[id]||[]);
   const points=availableSkillPoints(meta.level,meta.rpg),crystals=meta.rpg.crystals||0,enhance=petEnhanceLevel(id,meta.rpg),cost=petEnhanceCost(id,meta.rpg);
-  const max=enhance>=PET_ENHANCE_MAX,awakened=enhance>=4,canEnhance=!max&&crystals>=cost,awakening=PET_AWAKENING[id];
+  const max=enhance>=PET_ENHANCE_MAX,awakened=enhance>=6,canEnhance=!max&&crystals>=cost,awakening=PET_AWAKENING[id],breakthroughs=PET_BREAKTHROUGHS[id]||[];
+  const currentBreak=[...breakthroughs].reverse().find(x=>enhance>=x.level),nextBreak=breakthroughs.find(x=>enhance<x.level),powerPct=Math.round((petEnhanceStatScale(enhance)-1)*100);
   const petPicker=Object.keys(PETS).map(petId=>{
     const choice=petDisplay(petId),selected=id===petId;
     return `<button type="button" class="pet-select-option ${selected?'active':''}" data-pet="${petId}" aria-pressed="${selected}"><b>${esc(choice.name)}</b></button>`;
@@ -173,16 +174,17 @@ function renderPetTree(){
   const skillButton=nodeId=>{
     const node=tree.find(item=>item.id===nodeId);if(!node)return '';
     const got=owned.has(nodeId),ok=canUnlockPetSkill(id,nodeId,meta.level,meta.rpg);
-    const required=petSkillPrerequisite(id,nodeId),status=got?'已習得':required&&!owned.has(required)?'先學前技':points<node.cost?'點數不足':!ok?'已選其他路線':'可解鎖';
+    const required=petSkillPrerequisite(id,nodeId),status=got?'已習得':required&&!owned.has(required)?'先學前技':points<node.cost?'點數不足':!ok?'已選其他流派':'可解鎖';
     return `<button type="button" class="pet-skill-node ${got?'unlocked':ok?'available':'locked'}" data-pet-skill="${id}|${node.id}" ${got||!ok?'disabled':''} aria-label="${esc(node.name+'：'+node.desc+'，'+status)}"><span class="pet-node-top"><b>${esc(node.name)}</b><em>${got?'':node.cost+' 點'}</em></span><small>${esc(node.desc)}</small><span class="pet-node-status">${esc(status)}</span></button>`;
   };
   const tier=(nodes,count,stage)=>`<div class="pet-flow-tier pet-flow-tier-${count} pet-flow-stage-${stage}" aria-label="${count} 條技能路線">${nodes.map(node=>`<div class="pet-flow-node">${skillButton(node)}</div>`).join('')}</div>`;
   const skillTiers=[
-    ...[0,1,2].map(stage=>tier([flow.root[stage]],1,stage+1)),
-    ...[0,1,2].map(stage=>tier(flow.branches.map(branch=>branch.nodes[stage]),2,stage+4)),
-    ...[0,1,2].map(stage=>tier(flow.branches.flatMap(branch=>branch.leaves.map(leaf=>leaf.nodes[stage])),4,stage+7))
+    ...flow.root.map((node,stage)=>tier([node],1,stage+1)),
+    ...[0,1,2,3].map(stage=>tier(flow.branches.map(branch=>branch.nodes[stage]),2,stage+4))
   ].join('');
-  return `<main class="setup-screen system-screen"><section class="system-card pet-upgrade-screen"><div class="system-head">${systemBackButton()}<span></span><b>${points} 點 · 結晶 ${crystals}</b></div><div class="pet-upgrade-picker" aria-label="選擇要養成的寵物">${petPicker}</div><section class="pet-upgrade-feature theme-${esc(id)}"><div class="pet-upgrade-portrait">${petImg(id,'pet-upgrade-art')}</div><div class="pet-upgrade-detail"><strong class="pet-stage-label">${awakened?'覺醒':'強化'} ${enhance}</strong><p class="pet-power">能力 +${enhance*10}%</p><div class="pet-upgrade-controls"><button class="mini-system-btn pet-enhance-btn" data-pet-enhance="${id}" ${canEnhance?'':'disabled'}>${max?'已滿級':`${awakened?'覺醒':'強化'} ${enhance+1} · ${cost} 晶`}</button></div>${awakened?`<div class="awakening-note"><b>${esc(awakening.name)}</b><small>${esc(awakening.desc).replace('，','<br>')}</small></div>`:''}</div></section><div class="pet-flow-tree" aria-label="技能樹：三層單一路線、三層雙路線、三層四路線">${skillTiers}</div><div class="pet-upgrade-footer"><small>重置可改選路線，強化與覺醒保留</small><button class="secondary-btn reset-tree-btn" data-action="reset-pet-tree">重置技能</button></div></section></main>`;
+  const milestone=currentBreak?`<div class="awakening-note"><b>${esc(currentBreak.name)}</b><small>${esc(currentBreak.desc)}</small></div>`:'';
+  const nextMilestone=nextBreak?`<small class="pet-next-break">下一階段：+${nextBreak.level} ${esc(nextBreak.name)}</small>`:'<small class="pet-next-break">已達終極型態</small>';
+  return `<main class="setup-screen system-screen"><section class="system-card pet-upgrade-screen"><div class="system-head">${systemBackButton()}<span></span><b>${points} 點 · 結晶 ${crystals}</b></div><div class="pet-upgrade-picker" aria-label="選擇要養成的寵物">${petPicker}</div><section class="pet-upgrade-feature theme-${esc(id)}"><div class="pet-upgrade-portrait">${petImg(id,'pet-upgrade-art')}</div><div class="pet-upgrade-detail"><strong class="pet-stage-label">${currentBreak?esc(currentBreak.name):'成長'} +${enhance}</strong><p class="pet-power">寵物基礎能力 +${powerPct}%</p>${nextMilestone}<div class="pet-upgrade-controls"><button class="mini-system-btn pet-enhance-btn" data-pet-enhance="${id}" ${canEnhance?'':'disabled'}>${max?'已滿級':`強化 +${enhance+1} · ${cost} 晶`}</button></div>${milestone}${awakened&&!currentBreak?`<div class="awakening-note"><b>${esc(awakening.name)}</b><small>${esc(awakening.desc)}</small></div>`:''}</div></section><div class="pet-flow-tree" aria-label="技能樹：三個共通核心後選擇兩條最終流派之一">${skillTiers}</div><div class="pet-upgrade-footer"><small>共通核心學完後只能選擇一條最終流派；重置會返還技能點，寵物強化保留</small><button class="secondary-btn reset-tree-btn" data-action="reset-pet-tree">重置技能</button></div></section></main>`;
 }
 function collectionTabs(){return `<nav class="collection-tabs" aria-label="圖鑑分類"><button data-collection-tab="equipment" class="${collectionTab==='equipment'?'active':''}">裝備圖鑑</button><button data-collection-tab="words" class="${collectionTab==='words'?'active':''}">單字圖鑑</button></nav>`}
 function speakCollectedWord(index){const word=WORDS[index]?.[0];if(!word||typeof window==='undefined'||!window.speechSynthesis||typeof SpeechSynthesisUtterance==='undefined')return;try{window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(word);utterance.lang='en-US';utterance.rate=.85;window.speechSynthesis.speak(utterance)}catch{}}
