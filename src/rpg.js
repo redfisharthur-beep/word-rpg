@@ -255,22 +255,6 @@ export function weakWordProgress(rpg){const clean=cleanRpg(rpg),items=Object.val
 export function skillPointBudget(level=1){return Math.max(0,clamp(Math.round(Number(level)||1),1,80)-1);}
 export function spentSkillPoints(rpg){const clean=cleanRpg(rpg);let sum=0;for(const pet of PET_IDS){const owned=new Set(clean.petSkills[pet]);for(const node of PET_TREES[pet])if(owned.has(node.id))sum+=node.cost;}return sum;}
 export function availableSkillPoints(level,rpg){return Math.max(0,skillPointBudget(level)-spentSkillPoints(rpg));}
-export function canUnlockPetSkill(pet,nodeId,level,rpg){
-  const tree=PET_TREES[pet]||[],node=tree.find(x=>x.id===nodeId);if(!node)return false;
-  const clean=cleanRpg(rpg),owned=new Set(clean.petSkills[pet]);if(owned.has(nodeId))return false;
-  const prerequisite=petSkillPrerequisite(pet,nodeId);if(prerequisite&&!owned.has(prerequisite))return false;
-  const position=flowPosition(pet,nodeId);
-  if(position?.kind==='middle'&&PET_FLOW[pet].branches.some((branch,index)=>index!==position.branch&&(branch.nodes.some(id=>owned.has(id))||branch.leaves.some(leaf=>leaf.nodes.some(id=>owned.has(id))))))return false;
-  if(position?.kind==='final'){
-    const branch=PET_FLOW[pet].branches[position.branch];
-    if(branch.leaves.some((leaf,index)=>index!==position.leaf&&leaf.nodes.some(id=>owned.has(id))))return false;
-  }
-  const path=petSkillPath(pet,nodeId),fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));
-  if(fork&&!position&&path.forks.some(choice=>choice!==fork&&choice.nodes.some(id=>owned.has(id))))return false;
-  return availableSkillPoints(level,clean)>=node.cost;
-}
-export function unlockPetSkill(pet,nodeId,level,rpg){const clean=cleanRpg(rpg);if(!canUnlockPetSkill(pet,nodeId,level,clean))return clean;clean.petSkills[pet]=[...clean.petSkills[pet],nodeId];return clean;}
-export function resetPetSkills(rpg){const clean=cleanRpg(rpg);clean.petSkills={fox:[],owl:[],dragon:[]};return clean;}
 export function petEnhanceLevel(pet,rpg){return cleanRpg(rpg).petEnhance?.[pet]||0;}
 export function petAwakened(pet,rpg){return petEnhanceLevel(pet,rpg)>=6;}
 export function petEnhanceCost(pet,rpg){const level=petEnhanceLevel(pet,rpg);return level>=PET_ENHANCE_MAX?0:PET_ENHANCE_COST[level];}
