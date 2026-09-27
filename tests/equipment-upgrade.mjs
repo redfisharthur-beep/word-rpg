@@ -66,7 +66,7 @@ for(let n=1;n<=20;n++){
   assert.equal(attempt.success,false);
   pity=attempt.rpg;
   assert.equal(pity.inventory[0].enhanceFailures,n);
-  assert.ok(Math.abs(equipmentEnhanceInfo(pity.inventory[0]).chance-(chance0+Math.min(n,20)*.02))<1e-10);
+  assert.ok(Math.abs(equipmentEnhanceInfo(pity.inventory[0]).chance-Math.min(1,chance0+Math.min(n,20)*.02))<1e-10);
 }
 assert.equal(equipmentEnhanceInfo(pity.inventory[0]).chance,Math.min(1,chance0+.40));
 const completed=enhanceEquipment(pity,'pity',()=>0);
