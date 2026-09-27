@@ -3,14 +3,16 @@ import {QUALITY_DEFS,EQUIPMENT_VALUES,COLLECTION_REWARDS} from './generated/game
 export const QUALITY_ORDER=['common','rare','epic','legendary'];
 export const EQUIPMENT_ENHANCE_MAX=10;
 const EQUIPMENT_ENHANCE_COST={common:2,rare:3,epic:5,legendary:8,mythic:12};
-const EQUIPMENT_ENHANCE_CHANCE={common:.95,rare:.85,epic:.75,legendary:.65,mythic:.55};
+const EQUIPMENT_ENHANCE_TARGET_CHANCE={1:.95,2:.95,3:.95,4:.85,5:.75,6:.65,7:.55,8:.45,9:.35,10:.25};
+const EQUIPMENT_ENHANCE_QUALITY_PENALTY={common:0,rare:.02,epic:.04,legendary:.06,mythic:.08};
 export const ENHANCE_PITY_PER_FAILURE=.02;
 export const ENHANCE_PITY_CAP=.40;
 export function equipmentEnhanceInfo(item){
   const failures=Math.max(0,Math.min(20,Math.floor(Number(item?.enhanceFailures)||0)));
-  const level=Math.min(EQUIPMENT_ENHANCE_MAX,Math.max(0,Math.floor(Number(item?.enhance)||0))),quality=EQUIPMENT_ENHANCE_COST[item?.quality]?item.quality:'common';
-  const baseChance=Math.max(.20,EQUIPMENT_ENHANCE_CHANCE[quality]-level*.025);
-  return {level,max:EQUIPMENT_ENHANCE_MAX,cost:level>=EQUIPMENT_ENHANCE_MAX?0:EQUIPMENT_ENHANCE_COST[quality]*(level+1),failures,bonusChance:Math.min(ENHANCE_PITY_CAP,failures*ENHANCE_PITY_PER_FAILURE),chance:level>=EQUIPMENT_ENHANCE_MAX?1:Math.min(1,baseChance+Math.min(ENHANCE_PITY_CAP,failures*ENHANCE_PITY_PER_FAILURE))};
+  const level=Math.min(EQUIPMENT_ENHANCE_MAX,Math.max(0,Math.floor(Number(item?.enhance)||0))),quality=EQUIPMENT_ENHANCE_COST[item?.quality]?item.quality:'common',target=Math.min(EQUIPMENT_ENHANCE_MAX,level+1);
+  const baseChance=Math.max(.05,(EQUIPMENT_ENHANCE_TARGET_CHANCE[target]??.25)-EQUIPMENT_ENHANCE_QUALITY_PENALTY[quality]);
+  const bonusChance=Math.min(ENHANCE_PITY_CAP,failures*ENHANCE_PITY_PER_FAILURE);
+  return {level,target,max:EQUIPMENT_ENHANCE_MAX,cost:level>=EQUIPMENT_ENHANCE_MAX?0:EQUIPMENT_ENHANCE_COST[quality]*(level+1),failures,baseChance,bonusChance,chance:level>=EQUIPMENT_ENHANCE_MAX?1:Math.min(1,baseChance+bonusChance)};
 }
 export function enhanceEquipment(rpg,itemId,random=Math.random){
   const clean=cleanRpg(rpg),index=clean.inventory.findIndex(item=>item.id===itemId);
