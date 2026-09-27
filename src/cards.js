@@ -52,14 +52,28 @@ function applyDamage(defender,amount){
 }
 function healPenalty(f){return Math.min(.95,Math.max(0,...(f.healBlock||[]).map(x=>Number(x.pct)||0)));}
 function consumeStun(f,logs){if(Number(f?.stun)>0){f.stun=Math.max(0,Number(f.stun)-1);logs.push('雷縛震擊：暈眩，跳過行動');return true}return false;}
-function hit(attacker,defender,mult,logs,label,canCrit=true){
-  const atkFx=mythicEquipmentEffects(attacker?.rpg||{}),defFx=mythicEquipmentEffects(defender?.rpg||{});
+function hit(attacker,defender,mult,logs,label,canCrit=true,combat={}){
+  const atkFx=mythicEquipmentEffects(attacker?.rpg||{}),defFx=mythicEquipmentEffects(defender?.rpg||{}),pvp=!!combat.pvp;
   if(defFx.blockChance>0&&Math.random()<defFx.blockChance){logs.push('神佑格擋：完全抵擋');return 0;}
   const atk=effectiveAtk(attacker);let raw=atk*mult,crit=false;
   if(atkFx.berserk&&attacker.hp>0&&attacker.hp<attacker.maxHp*.5){raw*=2;logs.push('血怒狂戰：攻擊 ×2');}
-  if(canCrit&&attacker.critLock<=0&&Math.random()<attacker.crit){raw*=2;crit=true;if(atkFx.critBonusMax>0){const bonus=atkFx.critBonusMin+Math.random()*(atkFx.critBonusMax-atkFx.critBonusMin);raw*=1+bonus;logs.push(`弒神暴擊 +${Math.round(bonus*100)}%`);}}
-  const defense=atkFx.trueDamage?0:effectiveDef(defender),dmg=Math.max(1,Math.round(raw*100/(100+defense))),result=applyDamage(defender,dmg);
-  logs.push(`${label}${crit?'（爆擊）':''}${atkFx.trueDamage?'（真傷）':''} ${result.dealt}`);
+  if(canCrit&&attacker.critLock<=0&&Math.random()<attacker.crit){
+    raw*=pvp?1.6:2;crit=true;
+    if(atkFx.critBonusMax>0){
+      const min=pvp?.20:atkFx.critBonusMin,max=pvp?.40:atkFx.critBonusMax,bonus=min+Math.random()*(max-min);
+      raw*=1+bonus;logs.push(`弒神暴擊 +${Math.round(bonus*100)}%`);
+    }
+  }
+  const baseDef=effectiveDef(defender),defense=atkFx.trueDamage?(pvp?baseDef*.70:0):baseDef;
+  let dmg=Math.max(1,Math.round(raw*100/(100+defense)));
+  if(pvp){
+    const hitCap=Math.max(1,Math.round(defender.maxHp*(combat.hitCapPct||.35)));
+    dmg=Math.min(dmg,hitCap);
+    if(combat.budget)dmg=Math.min(dmg,Math.max(0,combat.budget.remaining));
+  }
+  const result=applyDamage(defender,dmg);
+  if(pvp&&combat.budget)combat.budget.remaining=Math.max(0,combat.budget.remaining-result.dealt);
+  logs.push(`${label}${crit?'（爆擊）':''}${atkFx.trueDamage?(pvp?'（破界30%）':'（真傷）'):''} ${result.dealt}`);
   if(result.dealt>0){
     if(atkFx.lifesteal>0&&attacker.hp>0)healHpOnly(attacker,Math.max(1,Math.round(result.dealt*atkFx.lifesteal)),logs,'血契汲取');
     if(atkFx.sunderPct>0&&defender.hp>0){const stacks=(defender.armorBreak||[]).filter(x=>x.source==='mythic-sunder').length;if(stacks<atkFx.sunderMax){defender.armorBreak.push({pct:atkFx.sunderPct,turns:atkFx.sunderTurns,source:'mythic-sunder'});logs.push(`蝕甲魔晶：防禦 -${Math.round(atkFx.sunderPct*100)}%（${stacks+1}/${atkFx.sunderMax}）`);}}
@@ -93,10 +107,10 @@ function applyStat(card,actor,power,logs){
     }
   }
 }
-function applyExclusive(card,actor,target,power,logs){
+function applyExclusive(card,actor,target,power,logs,combat={}){
   const fx=card.fx||{},scale=Math.max(.1,Math.min(1.75,power)),turns=Math.max(1,Math.round(fx.turns||2));
-  if(Array.isArray(fx.hits)){for(const mult of fx.hits){if(target.hp<=0)break;hit(actor,target,mult*power,logs,card.name);}}
-  else if(fx.damage)hit(actor,target,fx.damage*power,logs,card.name);
+  if(Array.isArray(fx.hits)){for(const mult of fx.hits){if(target.hp<=0)break;hit(actor,target,mult*power,logs,card.name,true,combat);}}
+  else if(fx.damage)hit(actor,target,fx.damage*power,logs,card.name,true,combat);
   if(fx.healMax&&actor.hp>0)healHpOnly(actor,Math.round(actor.maxHp*fx.healMax*scale),logs,card.name);
   if(fx.shieldMax&&actor.hp>0){const v=Math.max(1,Math.round(actor.maxHp*fx.shieldMax*scale));actor.shield+=v;logs.push(`${card.name} 護盾 +${v}`);}
   if(fx.atkBuff&&actor.hp>0){const pct=fx.atkBuff*scale;actor.atk*=1+pct;logs.push(`${card.name} 攻擊 +${Math.round(pct*100)}%`);}
@@ -105,28 +119,28 @@ function applyExclusive(card,actor,target,power,logs){
   if(fx.armorBreak&&target.hp>0){const pct=Math.min(.65,fx.armorBreak*scale);target.armorBreak.push({pct,turns});logs.push(`${card.name} 破甲 ${Math.round(pct*100)}%`);}
   if(fx.atkDown&&target.hp>0){const pct=Math.min(.60,fx.atkDown*scale);target.atkDown.push({pct,turns});logs.push(`${card.name} 降攻 ${Math.round(pct*100)}%`);}
 }
-function applyCard(card,actor,target,power,logs){if(power<=0)return;if(card?.exclusive)return applyExclusive(card,actor,target,power,logs);if(card.kind==='stat')return applyStat(card,actor,power,logs);switch(card.id){
+function applyCard(card,actor,target,power,logs,combat={}){if(power<=0)return;if(card?.exclusive)return applyExclusive(card,actor,target,power,logs,combat);if(card.kind==='stat')return applyStat(card,actor,power,logs);switch(card.id){
   case'combo':{
     const hits=target?.monsterId==='rabbit'?[.5,.32,.32]:[.5,.5,.5];
-    for(const m of hits){if(target.hp<=0)break;hit(actor,target,m*power,logs,'瞬步連擊');}
+    for(const m of hits){if(target.hp<=0)break;hit(actor,target,m*power,logs,'瞬步連擊',true,combat);}
     if(target?.monsterId==='rabbit')logs.push('霧影卸力：後兩擊傷害降低');
     break;
   }
-  case'desperate':hit(actor,target,2*power,logs,'破釜沉舟');actor.defBoost.push({pct:-.5,turns:2,fresh:true});logs.push('自身防禦 -50%・2回合');break;
+  case'desperate':hit(actor,target,2*power,logs,'破釜沉舟',true,combat);actor.defBoost.push({pct:-.5,turns:2,fresh:true});logs.push('自身防禦 -50%・2回合');break;
   case'poison':{
-    hit(actor,target,.7*power,logs,'淬毒之刃');
+    hit(actor,target,.7*power,logs,'淬毒之刃',true,combat);
     const resist=target?.monsterId==='moss'?.5:1;
     target.poison.push({damage:Math.round(effectiveAtk(actor)*.3*power*resist),turns:3});
     if(resist<1)logs.push('苔殼抗毒：毒素傷害減半');
     break;
   }
-  case'break':hit(actor,target,.7*power,logs,'破甲一擊');target.armorBreak.push({pct:.3*power,turns:2});break;
-  case'sun':hit(actor,target,.8*power,logs,'熾陽閃');target.critLock+=2;break;
-  case'preempt':hit(actor,target,.9*power,logs,'制敵機先');target.atkDown.push({pct:.3*power,turns:2});break;
+  case'break':hit(actor,target,.7*power,logs,'破甲一擊',true,combat);target.armorBreak.push({pct:.3*power,turns:2});break;
+  case'sun':hit(actor,target,.8*power,logs,'熾陽閃',true,combat);target.critLock+=2;break;
+  case'preempt':hit(actor,target,.9*power,logs,'制敵機先',true,combat);target.atkDown.push({pct:.3*power,turns:2});break;
   case'regen':{
     const now=Math.max(1,Math.round(actor.maxHp*.15*power));healHpOnly(actor,now,logs,'生生不息');actor.regen=3;actor.regenFresh=true;logs.push('持續回血 3回合');break;
   }
-  case'sacrifice':hit(actor,target,3*power,logs,'玉石俱焚');actor.hp=Math.max(1,Math.round(actor.hp*.2));logs.push('自身生命大幅下降');break;
+  case'sacrifice':hit(actor,target,3*power,logs,'玉石俱焚',true,combat);actor.hp=Math.max(1,Math.round(actor.hp*.2));logs.push('自身生命大幅下降');break;
   case'restore':heal(actor,Math.round(actor.maxHp*.8*power),logs,'返本歸元');break;
   case'diamond':actor.defBoost.push({pct:2*power,turns:2,fresh:true});logs.push('金剛不壞');break;
   case'aegis':{const shield=Math.round(effectiveAtk(actor)*power);actor.shield+=shield;logs.push(`護盾 +${shield}`);break;}
@@ -136,7 +150,7 @@ function exclusiveOffensive(card){return !!(card?.fx?.damage||(Array.isArray(car
 export function isOffensive(card){return !!card&&(card.exclusive?exclusiveOffensive(card):OFFENSIVE.has(card.id));}
 export function bondMultiplier(cards=[],card){if(!card||card.color==='neutral')return 1;return cards.filter(x=>x?.color===card.color).length>=2?1.5:1;}
 export function supportBoost(card,actor){if(!card||card.id!=='boost')return 1;const extra=actor?.role==='mage'?20:0;return 1+(card.boost+extra)/100;}
-export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offensiveIndex=0,cards=[],slotIndex=0,speedWin=false}={}){
+export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offensiveIndex=0,cards=[],slotIndex=0,speedWin=false,pvp=false}={}){
   const logs=[];if(consumeStun(actor,logs))return logs;const acc=accuracyMultiplier(correct,actor),petFx=petSkillEffects(actor?.pet,actor?.rpg||{}),resonance=equipmentResonance(actor?.rpg||{});
   if(acc<=0){logs.push('失敗..凍結中');return logs;}
   if(card?.id==='boost'){
@@ -144,6 +158,7 @@ export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offe
     logs.push(`神功附體 +${card.boost+(actor.role==='mage'?20:0)}%`);logs.push(`護盾 +${shield}`);return logs;
   }
   if(!card){logs.push('沒有卡牌');return logs;}
+  if(pvp){bond=bond>1?1.25:bond;boost=Math.min(boost,1.4);}
   let roleAmp=1,petAmp=1,resAmp=1;
   if(actor.role==='warrior'&&card.color==='blue')roleAmp*=1.30;
   if(actor.role==='mage'&&card.color==='yellow')roleAmp*=1.25;
@@ -162,23 +177,25 @@ export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offe
   if(slotIndex===0&&resonance.firstCardAmp>0){resAmp*=1+resonance.firstCardAmp;logs.push(`烈戰共鳴 +${Math.round(resonance.firstCardAmp*100)}%`);}
   if(card.color==='green'&&resonance.greenAmp>0){resAmp*=1+resonance.greenAmp;logs.push(`血靈共鳴 +${Math.round(resonance.greenAmp*100)}%`);}
   if(card.color==='blue'&&resonance.blueAmp>0){resAmp*=1+resonance.blueAmp;logs.push(`鐵壁共鳴 +${Math.round(resonance.blueAmp*100)}%`);}
-  applyCard(card,actor,target,acc*bond*boost*roleAmp*petAmp*resAmp,logs);
+  const combat={pvp,hitCapPct:.35,budget:pvp?{remaining:Math.max(1,Math.round(target.maxHp*.55))}:null};
+  applyCard(card,actor,target,acc*bond*boost*roleAmp*petAmp*resAmp,logs,combat);
   if(actor.role==='warrior'&&card.color==='blue'&&actor.hp>0){const v=Math.max(1,Math.round(effectiveDef(actor)*.14));actor.shield+=v;logs.push(`戰士護盾 +${v}`);}
   const redCount=cards.filter(x=>x?.color==='red').length;
-  if(actor.pet==='fox'&&redCount>=2&&slotIndex===cards.length-1&&target.hp>0){hit(actor,target,(.40+petFx.chaseAmp)*acc,logs,'靈狐追擊');}
+  if(actor.pet==='fox'&&redCount>=2&&slotIndex===cards.length-1&&target.hp>0){hit(actor,target,(.40+petFx.chaseAmp)*acc,logs,'靈狐追擊',true,combat);}
   return logs;
 }
 export function applyPetRoundEnd(actor,cards=[],logs=[]){
   if(actor?.pet&&actor.hp>0){const stable=cards.filter(c=>c?.color==='green'||c?.color==='blue').length,fx=petSkillEffects(actor.pet,actor.rpg||{}),base=actor.pet==='owl'?.08:0;if(stable>=2&&(base+fx.guardHeal)>0)healHpOnly(actor,Math.round(actor.maxHp*(base+fx.guardHeal)),logs,actor.pet==='owl'?'夜梟守心':'寵物續航');}
   return logs;
 }
-function basicAttack(actor,target,mult,logs,label){
+function basicAttack(actor,target,mult,logs,label,{pvp=false}={}){
   const fx=mythicEquipmentEffects(actor?.rpg||{});let hits=1;
   if(fx.flurry3Chance>0){const roll=Math.random();if(roll<fx.flurry3Chance)hits=3;else if(roll<fx.flurry3Chance+fx.flurry2Chance)hits=2;if(hits>1)logs.push(`無盡連斬：${hits}連擊`);}
-  for(let i=0;i<hits&&actor.hp>0&&target.hp>0;i++)hit(actor,target,mult,logs,label,true);
+  const combat={pvp,hitCapPct:.18,budget:pvp?{remaining:Math.max(1,Math.round(target.maxHp*.36))}:null};
+  for(let i=0;i<hits&&actor.hp>0&&target.hp>0;i++)hit(actor,target,mult,logs,label,true,combat);
 }
-export function resolveBasic(actor,target,correct){const logs=[];if(consumeStun(actor,logs))return logs;const power=accuracyMultiplier(correct,actor);if(power<=0){logs.push('失敗..凍結中');return logs;}basicAttack(actor,target,power,logs,'基本攻擊');return logs;}
-export function resolveAutoBasic(actor,target){const logs=[];if(consumeStun(actor,logs))return logs;basicAttack(actor,target,1,logs,'普通攻擊');return logs;}
+export function resolveBasic(actor,target,correct,options={}){const logs=[];if(consumeStun(actor,logs))return logs;const power=accuracyMultiplier(correct,actor);if(power<=0){logs.push('失敗..凍結中');return logs;}basicAttack(actor,target,power,logs,'基本攻擊',options);return logs;}
+export function resolveAutoBasic(actor,target,options={}){const logs=[];if(consumeStun(actor,logs))return logs;basicAttack(actor,target,1,logs,'普通攻擊',options);return logs;}
 export function resolveUltimate(actor,target,role=actor?.role){
   const logs=[];if(consumeStun(actor,logs))return logs;
   const ultimate=GAME_ROLES[role]?.ultimate||GAME_ROLES.warrior.ultimate;
