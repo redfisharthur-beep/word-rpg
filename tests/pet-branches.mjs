@@ -1,66 +1,75 @@
 import assert from 'node:assert/strict';
-import {PET_TREES,PET_FLOW,PET_ENHANCE_MAX,petSkillPrerequisite,emptyRpg,cleanRpg,availableSkillPoints,canUnlockPetSkill,unlockPetSkill,resetPetSkills,petSkillEffects,maxedPkRpg,petEnhanceCost,enhancePet,petEnhanceLevel} from '../src/rpg.js';
+import {
+  PET_TREES,PET_FLOW,PET_ENHANCE_MAX,PET_BREAKTHROUGHS,petEnhanceStatScale,petSkillPrerequisite,
+  emptyRpg,cleanRpg,availableSkillPoints,canUnlockPetSkill,unlockPetSkill,resetPetSkills,
+  petSkillEffects,maxedPkRpg,petEnhanceCost,enhancePet,petEnhanceLevel,petAwakened
+} from '../src/rpg.js';
 import {progressionStats} from '../src/cards.js';
 
 for(const pet of ['fox','owl','dragon']){
   const flow=PET_FLOW[pet];
-  assert.equal(flow.root.length,3,'three single-node tiers');
-  assert.equal(flow.branches.length,2,'two mid-branches');
-  assert.equal(PET_TREES[pet].length,42,'old 21 nodes retained alongside 21 new nodes');
+  assert.equal(flow.root.length,3,'one shared three-node core');
+  assert.equal(flow.branches.length,2,'exactly two final playstyles');
+  assert.equal(PET_TREES[pet].length,11,'only one clean 11-node skill tree remains');
   assert.equal(petSkillPrerequisite(pet,flow.root[0]),null);
   for(let i=1;i<3;i++)assert.equal(petSkillPrerequisite(pet,flow.root[i]),flow.root[i-1]);
+
   let r=emptyRpg();
-  assert.equal(canUnlockPetSkill(pet,flow.branches[0].nodes[0],80,r),false,'mid-branch requires completed root');
+  assert.equal(canUnlockPetSkill(pet,flow.branches[0].nodes[0],80,r),false,'final paths require completed core');
   for(const node of flow.root)r=unlockPetSkill(pet,node,80,r);
   assert.equal(r.petSkills[pet].length,3);
-  const mid=flow.branches[0],otherMid=flow.branches[1];
-  r=unlockPetSkill(pet,mid.nodes[0],80,r);
-  assert.equal(canUnlockPetSkill(pet,otherMid.nodes[0],80,r),false,'opposite mid branch is exclusive');
-  assert.equal(canUnlockPetSkill(pet,mid.nodes[2],80,r),false,'cannot skip a middle tier');
-  for(const node of mid.nodes.slice(1))r=unlockPetSkill(pet,node,80,r);
-  assert.equal(r.petSkills[pet].length,6);
-  for(const branch of flow.branches){
-    assert.equal(branch.nodes.length,3,'three two-node tiers');
-    assert.equal(petSkillPrerequisite(pet,branch.nodes[0]),flow.root[2]);
-    for(let i=1;i<3;i++)assert.equal(petSkillPrerequisite(pet,branch.nodes[i]),branch.nodes[i-1]);
-    assert.equal(branch.leaves.length,2,'four final routes total');
-    for(const leaf of branch.leaves){
-      assert.equal(leaf.nodes.length,3,'three four-node tiers');
-      assert.equal(petSkillPrerequisite(pet,leaf.nodes[0]),branch.nodes[2]);
-      for(let i=1;i<3;i++)assert.equal(petSkillPrerequisite(pet,leaf.nodes[i]),leaf.nodes[i-1]);
-    }
-  }
-  const leaf=mid.leaves[0],otherLeaf=mid.leaves[1];
-  r=unlockPetSkill(pet,leaf.nodes[0],80,r);
-  assert.equal(canUnlockPetSkill(pet,otherLeaf.nodes[0],80,r),false,'other terminal route is exclusive');
-  assert.equal(canUnlockPetSkill(pet,leaf.nodes[2],80,r),false,'cannot skip final tier');
-  for(const node of leaf.nodes.slice(1))r=unlockPetSkill(pet,node,80,r);
-  assert.equal(r.petSkills[pet].length,9,'nine skills unlocked on one complete route');
-  assert.equal(cleanRpg(r).petSkills[pet].length,9,'selected route survives saved progress');
+
+  const path=flow.branches[0],other=flow.branches[1];
+  assert.equal(path.nodes.length,4);
+  r=unlockPetSkill(pet,path.nodes[0],80,r);
+  assert.equal(canUnlockPetSkill(pet,other.nodes[0],80,r),false,'the two final paths are mutually exclusive');
+  assert.equal(canUnlockPetSkill(pet,path.nodes[2],80,r),false,'cannot skip path tiers');
+  for(const node of path.nodes.slice(1))r=unlockPetSkill(pet,node,80,r);
+  assert.equal(r.petSkills[pet].length,7,'complete build is three core plus four path nodes');
+  assert.equal(cleanRpg(r).petSkills[pet].length,7);
   assert.ok(availableSkillPoints(80,r)<79);
-  assert.equal(availableSkillPoints(80,resetPetSkills(r)),79,'reset refunds purchased skills');
+  assert.equal(availableSkillPoints(80,resetPetSkills(r)),79,'reset refunds all pet skill points');
 }
-const fullFox=PET_FLOW.fox,foxNodes=[...fullFox.root,...fullFox.branches[1].nodes,...fullFox.branches[1].leaves[0].nodes];
-let fox=emptyRpg();for(const node of foxNodes)fox=unlockPetSkill('fox',node,80,fox);
-const base=progressionStats('warrior','fox',80,emptyRpg()).total,withSkills=progressionStats('warrior','fox',80,fox).total;
-assert.ok(withSkills.maxHp>base.maxHp,'final route modifies actual combat stats');
+
+// Old duplicated skills are deliberately retired; loading an old save refunds their points.
 let legacy=emptyRpg();
 legacy.petSkills.fox=['fox-1','fox-2','fox-3','fox-4','fox-5'];
 legacy.petSkills.owl=['owl-1','owl-2','owl-3','owl-4','owl-5'];
 legacy.petSkills.dragon=['dragon-1','dragon-2','dragon-3','dragon-4','dragon-5'];
 legacy=cleanRpg(legacy);
-for(const pet of ['fox','owl','dragon'])assert.equal(legacy.petSkills[pet].length,5,'legacy skills retained');
-assert.ok(Math.abs(petSkillEffects('fox',legacy).firstCardAmp-.15)<1e-10,'old effects unchanged');
+for(const pet of ['fox','owl','dragon'])assert.equal(legacy.petSkills[pet].length,0,'retired duplicate skill IDs are removed and points refunded');
+
+// Skill paths have meaningful stat/combat impact.
+let fox=emptyRpg();for(const node of [...PET_FLOW.fox.root,...PET_FLOW.fox.branches[1].nodes])fox=unlockPetSkill('fox',node,80,fox);
+const base=progressionStats('warrior','fox',80,emptyRpg()).total,withSkills=progressionStats('warrior','fox',80,fox).total;
+assert.ok(withSkills.maxHp>base.maxHp&&withSkills.def>base.def,'guardian fox path materially changes combat stats');
 
 assert.equal(PET_ENHANCE_MAX,10);
+assert.deepEqual(PET_BREAKTHROUGHS.fox.map(x=>x.level),[3,6,9,10]);
+assert.deepEqual([0,3,6,9,10].map(petEnhanceStatScale),[1,1.45,1.95,2.55,2.80]);
 let level=emptyRpg();level.crystals=10000;
 const costs=[];for(let n=0;n<10;n++){costs.push(petEnhanceCost('fox',level));level=enhancePet('fox',level);assert.equal(petEnhanceLevel('fox',level),n+1);}
-assert.equal(level.petEnhance.fox,10,'awakening cap is ten');
-assert.equal(petEnhanceCost('fox',level),0,'max level has no cost');
-assert.equal(enhancePet('fox',level).crystals,level.crystals,'max level does not consume crystals');
-assert.equal(cleanRpg({...level,petEnhance:{fox:999,owl:-1,dragon:4}}).petEnhance.fox,10,'out-of-range saves capped at ten');
-assert.deepEqual(costs,[5,10,20,40,40,50,60,70,80,90]);
-assert.ok(petSkillEffects('fox',{...level,petEnhance:{fox:4,owl:0,dragon:0}}).firstCardAmp>=.15,'awakening effect starts at level four');
-assert.ok(progressionStats('warrior','fox',80,level).total.maxHp>progressionStats('warrior','fox',80,{...level,petEnhance:{fox:4,owl:0,dragon:0}}).total.maxHp,'levels 5–10 improve pet stats');
-const pk=maxedPkRpg();for(const pet of ['fox','owl','dragon']){assert.equal(pk.petEnhance[pet],10,'PK uses highest awakening level');assert.ok(pk.petSkills[pet].length>=9);}
-console.log('Pet progression: nine 1-1-1/2-2-2/4-4-4 tiers, exclusive routes, legacy saves and awakening +10: PASS');
+assert.deepEqual(costs,[5,10,20,35,45,60,70,80,100,130]);
+assert.equal(level.petEnhance.fox,10);
+assert.equal(petEnhanceCost('fox',level),0);
+assert.equal(enhancePet('fox',level).crystals,level.crystals);
+assert.equal(petAwakened('fox',{...level,petEnhance:{fox:5,owl:0,dragon:0}}),false,'evolution begins at +6');
+assert.equal(petAwakened('fox',{...level,petEnhance:{fox:6,owl:0,dragon:0}}),true,'+6 is the evolution milestone');
+
+const f3=petSkillEffects('fox',{...level,petSkills:{fox:[],owl:[],dragon:[]},petEnhance:{fox:3,owl:0,dragon:0}});
+const f6=petSkillEffects('fox',{...level,petSkills:{fox:[],owl:[],dragon:[]},petEnhance:{fox:6,owl:0,dragon:0}});
+const f9=petSkillEffects('fox',{...level,petSkills:{fox:[],owl:[],dragon:[]},petEnhance:{fox:9,owl:0,dragon:0}});
+const f10=petSkillEffects('fox',{...level,petSkills:{fox:[],owl:[],dragon:[]},petEnhance:{fox:10,owl:0,dragon:0}});
+assert.ok(f3.firstCardAmp>0&&f6.firstCardAmp>f3.firstCardAmp&&f9.crit>0&&f10.ultimate,'breakthroughs add signature combat power');
+
+const stats3=progressionStats('warrior','fox',80,{...level,petSkills:{fox:[],owl:[],dragon:[]},petEnhance:{fox:3,owl:0,dragon:0}}).total;
+const stats6=progressionStats('warrior','fox',80,{...level,petSkills:{fox:[],owl:[],dragon:[]},petEnhance:{fox:6,owl:0,dragon:0}}).total;
+const stats9=progressionStats('warrior','fox',80,{...level,petSkills:{fox:[],owl:[],dragon:[]},petEnhance:{fox:9,owl:0,dragon:0}}).total;
+assert.ok(stats6.atk>stats3.atk&&stats9.atk>stats6.atk,'milestone scaling substantially increases pet contribution');
+
+const pk=maxedPkRpg();
+for(const pet of ['fox','owl','dragon']){
+  assert.equal(pk.petEnhance[pet],10,'PK keeps pets normalized at the highest enhancement');
+  assert.equal(pk.petSkills[pet].length,7,'PK uses one complete legal pet build');
+}
+console.log('Pet progression: +3/+6/+9/+10 breakthroughs, one clean tree, two exclusive final paths and larger combat impact: PASS');
