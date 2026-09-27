@@ -62,7 +62,7 @@ result=enhanceEquipment(scarce,'m',()=>0);assert.equal(result.ok,false);assert.e
 let pity=addLoot(emptyRpg(),item('mythic','pity'));pity.crystals=10000;
 const chance0=equipmentEnhanceInfo(pity.inventory[0]).chance;
 for(let n=1;n<=20;n++){
-  const attempt=enhanceEquipment(pity,'pity',()=>.999);
+  const attempt=enhanceEquipment(pity,'pity',()=>1);
   assert.equal(attempt.success,false);
   pity=attempt.rpg;
   assert.equal(pity.inventory[0].enhanceFailures,n);
