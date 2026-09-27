@@ -1,4 +1,4 @@
-import {equipmentBonuses,petSkillEffects,petEnhanceLevel,equipmentResonance,mythicEquipmentEffects} from './rpg.js';
+import {equipmentBonuses,petSkillEffects,petEnhanceLevel,petEnhanceStatScale,equipmentResonance,mythicEquipmentEffects} from './rpg.js';
 import {GAME_ROLES,GAME_PETS,TITLE_TIERS as SHARED_TITLE_TIERS,CARD_POOL,CARD_DEFS,ROLE_SKILLS as SHARED_ROLE_SKILLS} from './generated/game-data.js';
 
 export const COLORS={green:'綠色',blue:'藍色',red:'紅色',yellow:'黃色',neutral:'輔助'};
@@ -16,7 +16,7 @@ export function progressionStats(role='warrior',pet='fox',level=1,rpg=null){
   const lv=clamp(Math.round(Number(level)||1),1,80),rb=ROLE_BASE[role]||ROLE_BASE.warrior,pb=PET_BASE[pet]||PET_BASE.fox,tier=titleTier(lv),eq=equipmentBonuses(rpg||{}),petFx=petSkillEffects(pet,rpg||{});
   const rawRole={maxHp:rb.hp*(1+(lv-1)*.035),atk:rb.atk*(1+(lv-1)*.025),def:rb.def*(1+(lv-1)*.025)};
   const roleStats={maxHp:Math.round(rawRole.maxHp*(1+tier.hp)),atk:Math.round(rawRole.atk*(1+tier.atk)),def:Math.round(rawRole.def*(1+tier.def))};
-  const petEnhance=petEnhanceLevel(pet,rpg||{}),petScale=1+petEnhance*.10,petStats={maxHp:Math.round(pb.hp*(1+(lv-1)*.03)*petScale),atk:Math.round(pb.atk*(1+(lv-1)*.03)*petScale),def:Math.round(pb.def*(1+(lv-1)*.03)*petScale)};
+  const petEnhance=petEnhanceLevel(pet,rpg||{}),petScale=petEnhanceStatScale(petEnhance),petStats={maxHp:Math.round(pb.hp*(1+(lv-1)*.03)*petScale),atk:Math.round(pb.atk*(1+(lv-1)*.03)*petScale),def:Math.round(pb.def*(1+(lv-1)*.03)*petScale)};
   const total={maxHp:Math.round((roleStats.maxHp+petStats.maxHp)*(1+eq.hpPct+petFx.hpPct)),atk:Math.round((roleStats.atk+petStats.atk)*(1+eq.atkPct+petFx.atkPct)),def:Math.round((roleStats.def+petStats.def)*(1+eq.defPct+petFx.defPct)),crit:Math.min(.85,.10+tier.crit+eq.crit+petFx.crit)};
   return {level:lv,role:roleStats,pet:petStats,title:tier,total:{...total,hp:total.maxHp}};
 }
@@ -25,7 +25,7 @@ export function makeFighter(extra={}){
   if(fx.startShieldPct>0)fighter.shield=Math.max(0,Number(fighter.shield)||0)+Math.max(1,Math.round((Number(fighter.maxHp)||0)*fx.startShieldPct));
   return fighter;
 }
-export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(actor?.pet==='owl'){const fx=petSkillEffects(actor.pet,actor.rpg||{}),highBonus=n>=3?(fx?.highAccuracy||0):0;if(n===5)return 1.7+highBonus;if(n===4)return 1.5+highBonus;if(n===3)return 1.32+highBonus;if(n===2)return 1.15;if(n===1)return .9;return .65;}if(n===5)return 1.5;if(n===4)return 1.32;if(n===3)return 1.15;if(n===2)return .9;if(n===1)return .65;return 0;}
+export function accuracyMultiplier(correct,actor=null){const n=Math.max(0,Math.min(5,Math.round(Number(correct)||0)));if(actor?.pet==='owl'){const fx=petSkillEffects(actor.pet,actor.rpg||{}),highBonus=n>=3?(fx?.highAccuracy||0):0;if(n===5)return 1.8+highBonus;if(n===4)return 1.6+highBonus;if(n===3)return 1.4+highBonus;if(n===2)return 1.2;if(n===1)return .95;return .70;}if(n===5)return 1.5;if(n===4)return 1.32;if(n===3)return 1.15;if(n===2)return .9;if(n===1)return .65;return 0;}
 export function randomCard(){
   const id=CARD_POOL[rnd(0,CARD_POOL.length-1)];
   if(id==='stat'){
@@ -168,12 +168,12 @@ export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offe
   if(actor.role==='mage'&&card.color==='yellow')roleAmp*=1.25;
   if(actor.role==='archer'&&card.color==='red')roleAmp*=1.20;
   if(actor.role==='archer'&&isOffensive(card))roleAmp*=1+Math.min(2,offensiveIndex)*.15;
-  if(actor.pet==='fox'&&speedWin&&slotIndex===0){const amp=.20+petFx.firstCardAmp;petAmp*=1+amp;logs.push(`靈狐先機 +${Math.round(amp*100)}%`);}
+  if(actor.pet==='fox'&&speedWin&&slotIndex===0){const amp=.30+petFx.firstCardAmp;petAmp*=1+amp;logs.push(`靈狐先機 +${Math.round(amp*100)}%`);}
   if(actor.pet==='fox'&&card.color==='red'&&petFx.redAmp>0)petAmp*=1+petFx.redAmp;
   if(actor.pet==='owl'&&(card.color==='green'||card.color==='blue')&&petFx.stableAmp>0)petAmp*=1+petFx.stableAmp;
-  if(actor.pet==='dragon'&&card.color==='yellow'){const amp=.20+petFx.yellowAmp;petAmp*=1+amp;logs.push(`幼龍黃牌共鳴 +${Math.round(amp*100)}%`);}
+  if(actor.pet==='dragon'&&card.color==='yellow'){const amp=.30+petFx.yellowAmp;petAmp*=1+amp;logs.push(`幼龍黃牌共鳴 +${Math.round(amp*100)}%`);}
   const yellowCount=cards.filter(x=>x?.color==='yellow').length;
-  if(actor.pet==='dragon'&&yellowCount>=2&&slotIndex===cards.length-1){const amp=.30+petFx.finisherAmp;petAmp*=1+amp;logs.push(`幼龍終式爆發 +${Math.round(amp*100)}%`);}
+  if(actor.pet==='dragon'&&yellowCount>=2&&slotIndex===cards.length-1){const amp=.40+petFx.finisherAmp;petAmp*=1+amp;logs.push(`幼龍終式爆發 +${Math.round(amp*100)}%`);}
   // Cross-class pet bonds work identically in solo and normalized PK combat.
   if(actor.role==='warrior'&&actor.pet==='fox'&&slotIndex===0&&card.color==='red'){petAmp*=1.12;logs.push('戰士 × 靈狐：疾風開場 +12%');}
   if(actor.role==='mage'&&actor.pet==='owl'&&(card.color==='green'||card.color==='blue')){petAmp*=1.10;logs.push('法師 × 夜梟：賢者守護 +10%');}
@@ -185,11 +185,11 @@ export function resolveCardAction(actor,target,card,correct,{bond=1,boost=1,offe
   applyCard(card,actor,target,acc*bond*boost*roleAmp*petAmp*resAmp,logs,combat);
   if(actor.role==='warrior'&&card.color==='blue'&&actor.hp>0){const v=Math.max(1,Math.round(effectiveDef(actor)*.14));actor.shield+=v;logs.push(`戰士護盾 +${v}`);}
   const redCount=cards.filter(x=>x?.color==='red').length;
-  if(actor.pet==='fox'&&redCount>=2&&slotIndex===cards.length-1&&target.hp>0){hit(actor,target,(.40+petFx.chaseAmp)*acc,logs,'靈狐追擊',true,combat);}
+  if(actor.pet==='fox'&&redCount>=2&&slotIndex===cards.length-1&&target.hp>0){hit(actor,target,(.55+petFx.chaseAmp)*acc,logs,'靈狐追擊',true,combat);}
   return logs;
 }
 export function applyPetRoundEnd(actor,cards=[],logs=[]){
-  if(actor?.pet&&actor.hp>0){const stable=cards.filter(c=>c?.color==='green'||c?.color==='blue').length,fx=petSkillEffects(actor.pet,actor.rpg||{}),base=actor.pet==='owl'?.08:0;if(stable>=2&&(base+fx.guardHeal)>0)healHpOnly(actor,Math.round(actor.maxHp*(base+fx.guardHeal)),logs,actor.pet==='owl'?'夜梟守心':'寵物續航');}
+  if(actor?.pet&&actor.hp>0){const stable=cards.filter(c=>c?.color==='green'||c?.color==='blue').length,fx=petSkillEffects(actor.pet,actor.rpg||{}),base=actor.pet==='owl'?.10:0;if(stable>=2&&(base+fx.guardHeal)>0)healHpOnly(actor,Math.round(actor.maxHp*Math.min(.25,base+fx.guardHeal)),logs,actor.pet==='owl'?'夜梟守心':'寵物續航');}
   return logs;
 }
 function basicAttack(actor,target,mult,logs,label,{pvp=false}={}){
