@@ -40,4 +40,23 @@ try{
   let drain=rollMythicLoot({boss:true,level:50},seq([.01,.01,.01]));assert.equal(drain.mythicPower,'lifesteal');let dr=addLoot(emptyRpg(),drain);dr=equipItem(dr,drain.id);let da=makeFighter({maxHp:500,hp:250,atk:100,def:40,crit:0,rpg:dr}),dt=makeFighter({maxHp:500,hp:500,atk:80,def:40,crit:0,rpg:emptyRpg()});resolveAutoBasic(da,dt);assert.ok(da.hp>250);
   let fury=rollMythicLoot({boss:true,level:50},seq([.01,.85,.30]));assert.equal(fury.type,'ring');assert.equal(fury.mythicPower,'flurry');let fr=addLoot(emptyRpg(),fury);fr=equipItem(fr,fury.id);let fa=makeFighter({maxHp:500,hp:500,atk:100,def:40,crit:0,rpg:fr}),ft=makeFighter({maxHp:1000,hp:1000,atk:80,def:0,crit:0,rpg:emptyRpg()});Math.random=()=>.01;resolveAutoBasic(fa,ft);assert.ok(ft.hp<=700);
 }finally{Math.random=oldRandom;}
+
+// PK-only balance regression: PvE keeps original lethality, while PvP caps burst and basic attacks.
+{
+  const pveAttacker=makeFighter({maxHp:1000,hp:1000,atk:1000,def:0,crit:0,rpg:emptyRpg()});
+  const pveTarget=makeFighter({maxHp:1000,hp:1000,atk:1,def:0,crit:0,rpg:emptyRpg()});
+  resolveAutoBasic(pveAttacker,pveTarget);
+  assert.equal(pveTarget.hp,0,'PvE basic attack keeps the original uncapped damage model');
+
+  const pvpAttacker=makeFighter({maxHp:1000,hp:1000,atk:1000,def:0,crit:0,rpg:emptyRpg()});
+  const pvpTarget=makeFighter({maxHp:1000,hp:1000,atk:1,def:0,crit:0,rpg:emptyRpg()});
+  resolveAutoBasic(pvpAttacker,pvpTarget,{pvp:true});
+  assert.ok(pvpTarget.hp>=820,'PK normal attack cannot exceed 18% of target max HP per hit');
+
+  const burstAttacker=makeFighter({maxHp:1000,hp:1000,atk:1000,def:0,crit:0,role:'mage',pet:null,rpg:emptyRpg()});
+  const burstTarget=makeFighter({maxHp:1000,hp:1000,atk:1,def:0,crit:0,rpg:emptyRpg()});
+  const burstCard={id:'desperate',kind:'skill',name:'破釜沉舟',color:'blue'};
+  resolveCardAction(burstAttacker,burstTarget,burstCard,5,{cards:[burstCard],slotIndex:0,pvp:true});
+  assert.ok(burstTarget.hp>=650,'PK single-hit burst cannot exceed 35% of target max HP');
+}
 console.log('RPG systems OK');
