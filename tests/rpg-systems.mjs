@@ -8,7 +8,7 @@ let r=emptyRpg();const a=loot(),b=loot(),c=loot();r=addLoot(addLoot(addLoot(r,a)
 let keep=emptyRpg();const t=loot(.1,.1,.9);keep=addLoot(keep,t);const key=`${t.type}:${t.subtype}:${t.quality}`;keep=crystallizeItem(keep,t.id);assert.ok(keep.collection.includes(key));
 let res=emptyRpg();const r1=loot(),r2=loot(),wr=loot(.1,.9,.1);for(const x of [r1,r2,wr])res=addLoot(res,x);res=equipItem(res,r1.id);res=equipItem(res,r2.id);res=equipItem(res,wr.id);assert.equal(equipmentResonance(res).firstCardAmp,.12);
 const base=makeFighter({maxHp:500,hp:500,atk:100,def:50,crit:0,role:'mage',pet:null,rpg:emptyRpg()}),boosted=makeFighter({maxHp:500,hp:500,atk:100,def:50,crit:0,role:'mage',pet:null,rpg:res}),target1=makeFighter({maxHp:1000,hp:1000,def:50,crit:0}),target2=makeFighter({maxHp:1000,hp:1000,def:50,crit:0}),card={id:'stat-atk',kind:'stat',stat:'atk',pct:20,color:'red',name:'test'};resolveCardAction(base,target1,card,3,{cards:[card],slotIndex:0});resolveCardAction(boosted,target2,card,3,{cards:[card],slotIndex:0});assert.ok(boosted.atk>base.atk);
-let aw=emptyRpg();aw.petEnhance.fox=4;aw=cleanRpg(aw);assert.ok(petSkillEffects('fox',aw).firstCardAmp>=.15);
+let aw=emptyRpg();aw.petEnhance.fox=6;aw=cleanRpg(aw);assert.ok(petSkillEffects('fox',aw).firstCardAmp>=.15);
 // Legendary equipment always gets precisely one real combat affix, including migrated items.
 for(const [type,subtype,power,effect] of [
   ['gem','ruby','ember','lifesteal'],
