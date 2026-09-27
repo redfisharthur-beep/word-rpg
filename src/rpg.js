@@ -2,22 +2,30 @@ import {QUALITY_DEFS,EQUIPMENT_VALUES,COLLECTION_REWARDS} from './generated/game
 
 export const QUALITY_ORDER=['common','rare','epic','legendary'];
 export const EQUIPMENT_ENHANCE_MAX=10;
-const EQUIPMENT_ENHANCE_COST={common:2,rare:3,epic:5,legendary:8,mythic:12};
-const EQUIPMENT_ENHANCE_TARGET_CHANCE={1:.95,2:.95,3:.95,4:.85,5:.75,6:.65,7:.55,8:.45,9:.35,10:.25};
-const EQUIPMENT_ENHANCE_QUALITY_PENALTY={common:0,rare:.02,epic:.04,legendary:.06,mythic:.08};
+const EQUIPMENT_ENHANCE_COST={epic:5,legendary:8,mythic:12};
+const EQUIPMENT_ENHANCE_CHANCE={
+  epic:{low:.90,mid:.80,high:.70,max:.50},
+  legendary:{low:.80,mid:.70,high:.60,max:.40},
+  mythic:{low:.70,mid:.60,high:.50,max:.30}
+};
 export const ENHANCE_PITY_PER_FAILURE=.02;
 export const ENHANCE_PITY_CAP=.40;
+function enhanceBaseChance(quality,target){
+  const curve=EQUIPMENT_ENHANCE_CHANCE[quality];if(!curve)return 0;
+  if(target<=3)return curve.low;if(target<=6)return curve.mid;if(target<=9)return curve.high;return curve.max;
+}
 export function equipmentEnhanceInfo(item){
+  const quality=EQUIPMENT_ENHANCE_COST[item?.quality]?item.quality:String(item?.quality||'common'),eligible=!!EQUIPMENT_ENHANCE_COST[quality];
   const failures=Math.max(0,Math.min(20,Math.floor(Number(item?.enhanceFailures)||0)));
-  const level=Math.min(EQUIPMENT_ENHANCE_MAX,Math.max(0,Math.floor(Number(item?.enhance)||0))),quality=EQUIPMENT_ENHANCE_COST[item?.quality]?item.quality:'common',target=Math.min(EQUIPMENT_ENHANCE_MAX,level+1);
-  const baseChance=Math.max(.05,(EQUIPMENT_ENHANCE_TARGET_CHANCE[target]??.25)-EQUIPMENT_ENHANCE_QUALITY_PENALTY[quality]);
-  const bonusChance=Math.min(ENHANCE_PITY_CAP,failures*ENHANCE_PITY_PER_FAILURE);
-  return {level,target,max:EQUIPMENT_ENHANCE_MAX,cost:level>=EQUIPMENT_ENHANCE_MAX?0:EQUIPMENT_ENHANCE_COST[quality]*(level+1),failures,baseChance,bonusChance,chance:level>=EQUIPMENT_ENHANCE_MAX?1:Math.min(1,baseChance+bonusChance)};
+  const level=eligible?Math.min(EQUIPMENT_ENHANCE_MAX,Math.max(0,Math.floor(Number(item?.enhance)||0))):0,target=Math.min(EQUIPMENT_ENHANCE_MAX,level+1);
+  const baseChance=eligible?enhanceBaseChance(quality,target):0,bonusChance=eligible?Math.min(ENHANCE_PITY_CAP,failures*ENHANCE_PITY_PER_FAILURE):0;
+  return {eligible,level,target,max:EQUIPMENT_ENHANCE_MAX,cost:!eligible||level>=EQUIPMENT_ENHANCE_MAX?0:EQUIPMENT_ENHANCE_COST[quality]*(level+1),failures,baseChance,bonusChance,chance:level>=EQUIPMENT_ENHANCE_MAX&&eligible?1:Math.min(1,baseChance+bonusChance)};
 }
 export function enhanceEquipment(rpg,itemId,random=Math.random){
   const clean=cleanRpg(rpg),index=clean.inventory.findIndex(item=>item.id===itemId);
   if(index<0)return {rpg:clean,ok:false,reason:'找不到裝備'};
   const item=clean.inventory[index],info=equipmentEnhanceInfo(item);
+  if(!info.eligible)return {rpg:clean,ok:false,reason:'史詩以上裝備才可強化'};
   if(info.level>=10)return {rpg:clean,ok:false,reason:'已達 +10'};
   if(clean.crystals<info.cost)return {rpg:clean,ok:false,reason:'結晶不足'};
   clean.crystals-=info.cost;
@@ -221,7 +229,16 @@ const LEGACY_MAP={gem:{ruby:'ruby',emerald:'thunder',sapphire:'ruby',topaz:'thun
 
 export function lootImage(item){const type=item?.type,subtype=item?.subtype,quality=item?.quality;if(!VALID_LOOT[type]?.has(subtype)||!QUALITY[quality])return '';return `/images/loot-${type}-${subtype}-${quality}.png`;}
 function bonusesFor(type,subtype,quality){const v=QVAL[quality]?.[subtype];if(!v)return {};if(type==='gem'&&subtype==='ruby')return {atkPct:v.atk,defPct:v.def};if(type==='gem'&&subtype==='thunder')return {hpPct:v.hp,crit:v.crit};if(type==='armor'&&subtype==='guardian')return {defPct:v.def};if(type==='armor'&&subtype==='bloodspirit')return {hpPct:v.hp};if(type==='ring'&&subtype==='warbreaker')return {atkPct:v.atk,hpPct:v.hp};if(type==='ring'&&subtype==='battlesoul')return {defPct:v.def,crit:v.crit};return {};}
-function normalizeItem(item){if(!item||typeof item!=='object'||typeof item.id!=='string')return null;const type=['gem','armor','ring'].includes(item.type)?item.type:null;if(!type)return null;const quality=QUALITY[item.quality]?item.quality:'common';const subtype=LEGACY_MAP[type]?.[item.subtype]||null;if(!subtype||!VALID_LOOT[type].has(subtype))return null;const enhance=clamp(Math.floor(Number(item.enhance)||0),0,EQUIPMENT_ENHANCE_MAX),enhanceFailures=clamp(Math.floor(Number(item.enhanceFailures)||0),0,20),bonuses=bonusesFor(type,subtype,quality),scale=1+enhance*.10;const normalized={...item,type,subtype,quality,enhance,enhanceFailures,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:Object.fromEntries(Object.entries(bonuses).map(([key,val])=>[key,Math.round(val*scale*1000000)/1000000]))};if(quality==='mythic'){const power=String(item.mythicPower||'');normalized.mythicPower=MYTHIC_POWERS[power]?.type===type?power:MYTHIC_DEFAULT_BY_SUBTYPE[subtype];}else delete normalized.mythicPower;
+const EQUIPMENT_ENHANCE_SCALE=[1,1.10,1.20,1.30,1.60,1.70,1.80,2.20,2.30,2.70,3.00];
+export const ENHANCE10_POWERS={
+  ruby:{name:'赤曜霸體',desc:'攻擊傷害 +20%，吸血 +10%',effect:{damageAmp:.20,lifesteal:.10}},
+  thunder:{name:'雷霆神速',desc:'爆擊率 +12%，爆擊額外傷害 +25%',effect:{crit:.12,critBonus:.25}},
+  guardian:{name:'不滅神盾',desc:'戰鬥開始獲得最大生命 30% 護盾，格擋率 +12%',effect:{startShieldPct:.30,blockChance:.12}},
+  bloodspirit:{name:'血魂再生',desc:'最大生命 +25%，造成傷害回復 8% 實際傷害',effect:{hpPct:.25,lifesteal:.08}},
+  warbreaker:{name:'破軍極意',desc:'攻擊傷害 +25%，無視 20% 防禦',effect:{damageAmp:.25,defPenPct:.20}},
+  battlesoul:{name:'戰魂無雙',desc:'防禦 +25%，普通攻擊 15% 機率追加一次攻擊',effect:{defPct:.25,flurry2Chance:.15}}
+};
+function normalizeItem(item){if(!item||typeof item!=='object'||typeof item.id!=='string')return null;const type=['gem','armor','ring'].includes(item.type)?item.type:null;if(!type)return null;const quality=QUALITY[item.quality]?item.quality:'common';const subtype=LEGACY_MAP[type]?.[item.subtype]||null;if(!subtype||!VALID_LOOT[type].has(subtype))return null;const canEnhance=quality==='epic'||quality==='legendary'||quality==='mythic',enhance=canEnhance?clamp(Math.floor(Number(item.enhance)||0),0,EQUIPMENT_ENHANCE_MAX):0,enhanceFailures=canEnhance?clamp(Math.floor(Number(item.enhanceFailures)||0),0,20):0,bonuses=bonusesFor(type,subtype,quality),scale=EQUIPMENT_ENHANCE_SCALE[enhance]??1;const normalized={...item,type,subtype,quality,enhance,enhanceFailures,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:Object.fromEntries(Object.entries(bonuses).map(([key,val])=>[key,Math.round(val*scale*1000000)/1000000]))};if(quality==='mythic'){const power=String(item.mythicPower||'');normalized.mythicPower=MYTHIC_POWERS[power]?.type===type?power:MYTHIC_DEFAULT_BY_SUBTYPE[subtype];}else delete normalized.mythicPower;
 if(quality==='legendary'){const power=String(item.legendaryPower||'');normalized.legendaryPower=LEGENDARY_POWERS[power]?.type===type?power:LEGENDARY_DEFAULT_BY_SUBTYPE[subtype];}else delete normalized.legendaryPower;
 normalized.art=lootImage(normalized);return normalized;}
 
@@ -316,13 +333,15 @@ export function petSkillEffects(pet,rpg){
   return out;
 }
 export function mythicAbilityText(item){
-  if(item?.quality==='legendary'){const a=LEGENDARY_POWERS[item?.legendaryPower]||LEGENDARY_POWERS[LEGENDARY_DEFAULT_BY_SUBTYPE[item.subtype]];return a?`${a.name}｜${a.desc}`:'';}
-  if(item?.quality!=='mythic')return '';
-  const a=MYTHIC_POWERS[item?.mythicPower];return a?`${a.name}｜${a.desc}`:'神話能力｜掉落時隨機附加';
+  const parts=[];
+  if(item?.quality==='legendary'){const a=LEGENDARY_POWERS[item?.legendaryPower]||LEGENDARY_POWERS[LEGENDARY_DEFAULT_BY_SUBTYPE[item.subtype]];if(a)parts.push(`${a.name}｜${a.desc}`);}
+  if(item?.quality==='mythic'){const a=MYTHIC_POWERS[item?.mythicPower];parts.push(a?`${a.name}｜${a.desc}`:'神話能力｜掉落時隨機附加');}
+  if(Number(item?.enhance)>=10){const a=ENHANCE10_POWERS[item?.subtype];if(a)parts.push(`+10·${a.name}｜${a.desc}`);}
+  return parts.join('；');
 }
 export function mythicEquipmentEffects(rpg){
   const clean=cleanRpg(rpg),byId=new Map(clean.inventory.map(x=>[x.id,x])),ids=[...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean),items=ids.map(id=>byId.get(id)).filter(x=>x?.quality==='mythic'),powers=new Set(items.map(x=>x.mythicPower).filter(x=>MYTHIC_POWERS[x]));
-  const out={lifesteal:0,sunderPct:0,sunderTurns:3,sunderMax:3,stunChance:0,reflect:0,berserk:false,blockChance:0,critBonusMin:0,critBonusMax:0,flurry2Chance:0,flurry3Chance:0,fatalChance:0,fatalPct:0,trueDamage:false,antiHealPct:0,antiHealMinTurns:2,antiHealMaxTurns:3,startShieldPct:0,active:[]};
+  const out={lifesteal:0,sunderPct:0,sunderTurns:3,sunderMax:3,stunChance:0,reflect:0,berserk:false,blockChance:0,critBonusMin:0,critBonusMax:0,flurry2Chance:0,flurry3Chance:0,fatalChance:0,fatalPct:0,trueDamage:false,antiHealPct:0,antiHealMinTurns:2,antiHealMaxTurns:3,startShieldPct:0,damageAmp:0,defPenPct:0,hpPct:0,defPct:0,crit:0,active:[]};
   for(const power of powers){const a=MYTHIC_POWERS[power];out.active.push({id:power,name:a.name,desc:a.desc});}
   if(powers.has('lifesteal'))out.lifesteal=.18;if(powers.has('sunder'))out.sunderPct=.08;if(powers.has('stun'))out.stunChance=.12;if(powers.has('thorns'))out.reflect=.18;if(powers.has('berserk'))out.berserk=true;if(powers.has('ward'))out.blockChance=.18;if(powers.has('critburst')){out.critBonusMin=.50;out.critBonusMax=1.00;}if(powers.has('flurry')){out.flurry2Chance=.20;out.flurry3Chance=.08;}if(powers.has('fatal')){out.fatalChance=.03;out.fatalPct=.70;}if(powers.has('truehit'))out.trueDamage=true;if(powers.has('antiheal'))out.antiHealPct=.70;
   // Legendary affixes grant a smaller functional bonus and never grant mythic-only powers.
@@ -336,12 +355,17 @@ export function mythicEquipmentEffects(rpg){
     if(power==='keenedge'){out.critBonusMin+=.15;out.critBonusMax+=.25;}
     if(power==='quickblade'){out.flurry2Chance+=.08;out.flurry3Chance+=.02;}
   }
+  for(const item of ids.map(id=>byId.get(id)).filter(item=>Number(item?.enhance)>=10)){
+    const affix=ENHANCE10_POWERS[item.subtype];if(!affix)continue;
+    out.active.push({id:'enhance10-'+item.subtype,name:affix.name,desc:affix.desc});
+    for(const [key,value] of Object.entries(affix.effect||{}))out[key]=(Number(out[key])||0)+value;
+  }
   out.lifesteal=Math.min(.55,out.lifesteal);out.stunChance=Math.min(.45,out.stunChance);out.blockChance=Math.min(.60,out.blockChance);out.reflect=Math.min(.55,out.reflect);
   out.flurry2Chance=Math.min(.50,out.flurry2Chance);out.flurry3Chance=Math.min(.25,out.flurry3Chance);
   return out;
 }
 export function equipmentResonance(rpg){const clean=cleanRpg(rpg),byId=new Map(clean.inventory.map(x=>[x.id,x])),ids=[...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean),items=ids.map(id=>byId.get(id)).filter(Boolean),count=sub=>items.filter(x=>x.subtype===sub).length;const recipes=[{id:'war',name:'烈戰共鳴',desc:'2 紅曜石＋破軍戒｜每回合第一張牌 +12%',active:count('ruby')>=2&&count('warbreaker')>=1},{id:'blood',name:'血靈共鳴',desc:'2 雷光石＋血靈甲｜綠牌效果 +15%',active:count('thunder')>=2&&count('bloodspirit')>=1},{id:'guard',name:'鐵壁共鳴',desc:'守護甲＋戰魂戒｜藍牌效果 +15%',active:count('guardian')>=1&&count('battlesoul')>=1}];const out={recipes,active:recipes.filter(x=>x.active),firstCardAmp:0,greenAmp:0,blueAmp:0};if(recipes[0].active)out.firstCardAmp=.12;if(recipes[1].active)out.greenAmp=.15;if(recipes[2].active)out.blueAmp=.15;return out;}
-export function equipmentBonuses(rpg){const clean=cleanRpg(rpg),byId=new Map(clean.inventory.map(x=>[x.id,x])),ids=[...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean),out={hpPct:0,atkPct:0,defPct:0,crit:0};for(const id of ids){const item=byId.get(id);if(!item?.bonuses)continue;out.hpPct+=Number(item.bonuses.hpPct)||0;out.atkPct+=Number(item.bonuses.atkPct)||0;out.defPct+=Number(item.bonuses.defPct)||0;out.crit+=Number(item.bonuses.crit)||0;}return out;}
+export function equipmentBonuses(rpg){const clean=cleanRpg(rpg),byId=new Map(clean.inventory.map(x=>[x.id,x])),ids=[...clean.equipped.gems,clean.equipped.armor,...clean.equipped.rings].filter(Boolean),out={hpPct:0,atkPct:0,defPct:0,crit:0};for(const id of ids){const item=byId.get(id);if(!item?.bonuses)continue;out.hpPct+=Number(item.bonuses.hpPct)||0;out.atkPct+=Number(item.bonuses.atkPct)||0;out.defPct+=Number(item.bonuses.defPct)||0;out.crit+=Number(item.bonuses.crit)||0;if(Number(item.enhance)>=10){const fx=ENHANCE10_POWERS[item.subtype]?.effect||{};out.hpPct+=Number(fx.hpPct)||0;out.atkPct+=Number(fx.atkPct)||0;out.defPct+=Number(fx.defPct)||0;out.crit+=Number(fx.crit)||0;}}return out;}
 function weightedQuality(stageIndex,r=Math.random){const tables=[[70,25,4,1],[60,30,8,2],[50,34,12,4],[35,40,18,7]],weights=tables[clamp(stageIndex,0,3)],roll=r()*100;let acc=0;for(let i=0;i<weights.length;i++){acc+=weights[i];if(roll<acc)return QUALITY_ORDER[i];}return 'common';}
 function makeItem(type,subtype,quality){const item={id:uid(),type,subtype,quality,name:`${QUALITY[quality].name}${ITEM_NAME[subtype]}`,bonuses:bonusesFor(type,subtype,quality)};if(quality==='legendary')item.legendaryPower=LEGENDARY_DEFAULT_BY_SUBTYPE[subtype];return {...item,art:lootImage(item)};}
 function makeGem(quality,r){return makeItem('gem',pick(['ruby','thunder'],r),quality);}function makeArmor(quality,r){return makeItem('armor',pick(['guardian','bloodspirit'],r),quality);}function makeRing(quality,r){return makeItem('ring',pick(['warbreaker','battlesoul'],r),quality);}
