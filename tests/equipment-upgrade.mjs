@@ -4,6 +4,9 @@ const item=(quality,id)=>({id,type:'gem',subtype:'ruby',quality});
 const qualities=['common','rare','epic','legendary','mythic'];
 const rates=qualities.map((quality,i)=>equipmentEnhanceInfo(item(quality,'q'+i)));
 assert.deepEqual(rates.map(x=>x.cost),[2,3,5,8,12],'reduced first-level costs by quality');
+assert.deepEqual(rates.map(x=>x.chance),[.95,.93,.91,.89,.87],'quality slightly lowers the same enhancement target chance');
+assert.deepEqual([0,1,2,3,4,5,6,7,8,9].map(level=>equipmentEnhanceInfo({...item('common','curve'),enhance:level}).chance),[.95,.95,.95,.85,.75,.65,.55,.45,.35,.25],'common gear follows the requested +1 through +10 target curve');
+assert.deepEqual([0,3,9].map(level=>equipmentEnhanceInfo({...item('mythic','curve-m'),enhance:level}).chance),[.87,.77,.17],'mythic gear uses the same curve with an eight-point quality penalty');
 assert.deepEqual(qualities.map((quality,i)=>equipmentEnhanceInfo({...item(quality,'q'+i),enhance:9}).cost),[20,30,50,80,120],'higher upgrade levels retain predictable reduced costs');
 for(let i=1;i<rates.length;i++){assert.ok(rates[i].cost>rates[i-1].cost,'higher gear quality needs more crystals');assert.ok(rates[i].chance<rates[i-1].chance,'higher gear quality is less likely to succeed')}
 let r=addLoot(emptyRpg(),item('common','a'));r.crystals=10000;r=equipItem(r,'a');
@@ -23,7 +26,7 @@ let scarce=addLoot(emptyRpg(),item('mythic','m'));scarce.crystals=1;
 result=enhanceEquipment(scarce,'m',()=>0);assert.equal(result.ok,false);assert.equal(result.reason,'結晶不足');
 const encoded=JSON.parse(JSON.stringify(r));assert.equal(cleanRpg(encoded).inventory[0].enhance,10,'save/load preserves enhancement');
 const invalid=cleanRpg({...r,inventory:[{...r.inventory[0],enhance:900}]});assert.equal(invalid.inventory[0].enhance,10,'malformed save clamps enhancement');
-// Repeated failures on one item add 1 percentage point each, capped at +20 points.
+// Repeated failures on one item add 2 percentage points each, capped at +40 points.
 assert.ok(Math.abs(equipmentEnhanceInfo({...item('common','a'),enhanceFailures:1}).chance-.97)<1e-10,'even 95% common gear gains two percentage points from a failure');
 assert.equal(equipmentEnhanceInfo({...item('common','a'),enhanceFailures:20}).chance,1,'common gear can reach a guaranteed success after repeated failures');
 let pity=addLoot(emptyRpg(),item('mythic','pity'));pity.crystals=10000;
@@ -42,7 +45,7 @@ assert.equal(cleanRpg(JSON.parse(JSON.stringify(pity))).inventory[0].enhanceFail
 const completed=enhanceEquipment(pity,'pity',()=>0);
 assert.equal(completed.success,true);
 assert.equal(completed.rpg.inventory[0].enhanceFailures,0,'successful enhancement resets the accumulated chance bonus');
-assert.equal(equipmentEnhanceInfo(completed.rpg.inventory[0]).chance,Math.max(.20,.55-.025));
+assert.equal(equipmentEnhanceInfo(completed.rpg.inventory[0]).chance,.87);
 const pk=maxedPkRpg();assert.equal(pk.inventory.length,6);assert.ok(pk.inventory.every(gear=>gear.enhance===10),'PK has maxed enhancement for both players');
 const crystals=crystallizeItem(r,'a');assert.equal(crystals.inventory.length,1,'equipped upgraded items cannot be crystallized');
 console.log('Equipment upgrade: quality costs and odds, success and downgrade, +10 cap, stat gains, insufficient funds, save roundtrip and normalized PK: PASS');
