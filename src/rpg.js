@@ -39,159 +39,117 @@ export const QUALITY=QUALITY_DEFS;
 
 export const PET_TREES={
   fox:[
-    {id:'fox-1',name:'疾風感知',cost:2,desc:'先手第一張牌效果 +5%'},
-    {id:'fox-2',name:'赤焰爪痕',cost:4,desc:'紅牌連攜追擊 +10%'},
-    {id:'fox-3',name:'獵風本能',cost:6,desc:'紅牌效果 +5%'},
-    {id:'fox-4',name:'靈狐敏銳',cost:8,desc:'爆擊率 +4%'},
-    {id:'fox-5',name:'九尾先機',cost:10,desc:'先手第一張再 +10%，追擊再 +15%'}
+    {id:'fox-core-1',name:'靈狐先機',cost:2,desc:'先手第一張牌效果 +8%',effect:{firstCardAmp:.08}},
+    {id:'fox-core-2',name:'赤焰本能',cost:3,desc:'紅牌效果 +8%',effect:{redAmp:.08}},
+    {id:'fox-core-3',name:'九尾之力',cost:4,desc:'攻擊力 +8%',effect:{atkPct:.08}},
+    {id:'fox-off-1',name:'疾風獵殺',cost:4,desc:'先手第一張牌再 +10%',effect:{firstCardAmp:.10}},
+    {id:'fox-off-2',name:'赤焰追魂',cost:5,desc:'靈狐追擊 +15%',effect:{chaseAmp:.15}},
+    {id:'fox-off-3',name:'獵魂之瞳',cost:6,desc:'爆擊率 +6%',effect:{crit:.06}},
+    {id:'fox-off-4',name:'九尾連獵',cost:8,desc:'紅牌 +12%，追擊再 +10%',effect:{redAmp:.12,chaseAmp:.10}},
+    {id:'fox-guard-1',name:'月華生息',cost:4,desc:'最大生命 +10%',effect:{hpPct:.10}},
+    {id:'fox-guard-2',name:'靈尾屏障',cost:5,desc:'防禦力 +10%',effect:{defPct:.10}},
+    {id:'fox-guard-3',name:'月影回春',cost:6,desc:'兩張綠／藍牌時額外回復 5%',effect:{guardHeal:.05}},
+    {id:'fox-guard-4',name:'九尾守護',cost:8,desc:'最大生命 +10%，防禦 +10%',effect:{hpPct:.10,defPct:.10}}
   ],
   owl:[
-    {id:'owl-1',name:'夜視洞察',cost:2,desc:'答對 3/5 以上時效果 +5%'},
-    {id:'owl-2',name:'守心之羽',cost:4,desc:'綠／藍牌組合回復再 +2%'},
-    {id:'owl-3',name:'靜謐護佑',cost:6,desc:'綠／藍牌效果 +5%'},
-    {id:'owl-4',name:'智者回響',cost:8,desc:'答對 3/5 以上時效果再 +10%'},
-    {id:'owl-5',name:'蒼穹守護',cost:10,desc:'最大生命 +5%，回復再 +4%'}
+    {id:'owl-core-1',name:'星夜洞察',cost:2,desc:'答對 3/5 以上牌效果 +8%',effect:{highAccuracy:.08}},
+    {id:'owl-core-2',name:'靜謐守心',cost:3,desc:'綠／藍牌效果 +8%',effect:{stableAmp:.08}},
+    {id:'owl-core-3',name:'聖羽回復',cost:4,desc:'綠藍連攜回復 +4%',effect:{guardHeal:.04}},
+    {id:'owl-off-1',name:'睿智增幅',cost:4,desc:'答對 3/5 以上再 +10%',effect:{highAccuracy:.10}},
+    {id:'owl-off-2',name:'星瞳破綻',cost:5,desc:'爆擊率 +5%',effect:{crit:.05}},
+    {id:'owl-off-3',name:'賢者共鳴',cost:6,desc:'綠／藍牌效果再 +10%',effect:{stableAmp:.10}},
+    {id:'owl-off-4',name:'星夜預見',cost:8,desc:'答對 3/5 以上再 +12%',effect:{highAccuracy:.12}},
+    {id:'owl-guard-1',name:'蒼穹庇護',cost:4,desc:'最大生命 +10%',effect:{hpPct:.10}},
+    {id:'owl-guard-2',name:'羽翼壁壘',cost:5,desc:'防禦力 +12%',effect:{defPct:.12}},
+    {id:'owl-guard-3',name:'聖羽甘霖',cost:6,desc:'綠藍連攜回復再 +5%',effect:{guardHeal:.05}},
+    {id:'owl-guard-4',name:'不息聖羽',cost:8,desc:'最大生命 +10%，連攜回復再 +5%',effect:{hpPct:.10,guardHeal:.05}}
   ],
   dragon:[
-    {id:'dragon-1',name:'元素共鳴',cost:2,desc:'黃牌效果 +4%'},
-    {id:'dragon-2',name:'龍息蓄能',cost:4,desc:'黃牌終式爆發 +5%'},
-    {id:'dragon-3',name:'幼龍之力',cost:6,desc:'攻擊力 +4%'},
-    {id:'dragon-4',name:'元素昇華',cost:8,desc:'黃牌效果再 +6%'},
-    {id:'dragon-5',name:'真龍爆發',cost:10,desc:'終式再 +10%，爆擊率 +3%'}
+    {id:'dragon-core-1',name:'元素共鳴',cost:2,desc:'黃牌效果 +8%',effect:{yellowAmp:.08}},
+    {id:'dragon-core-2',name:'真龍之力',cost:3,desc:'攻擊力 +8%',effect:{atkPct:.08}},
+    {id:'dragon-core-3',name:'龍息蓄能',cost:4,desc:'黃牌終式 +8%',effect:{finisherAmp:.08}},
+    {id:'dragon-off-1',name:'炎龍昇華',cost:4,desc:'黃牌效果再 +10%',effect:{yellowAmp:.10}},
+    {id:'dragon-off-2',name:'滅星龍瞳',cost:5,desc:'爆擊率 +5%',effect:{crit:.05}},
+    {id:'dragon-off-3',name:'龍威爆發',cost:6,desc:'攻擊力再 +10%',effect:{atkPct:.10}},
+    {id:'dragon-off-4',name:'終焉龍息',cost:8,desc:'黃牌終式再 +15%',effect:{finisherAmp:.15}},
+    {id:'dragon-guard-1',name:'龍鱗再生',cost:4,desc:'最大生命 +10%',effect:{hpPct:.10}},
+    {id:'dragon-guard-2',name:'蒼鋼龍甲',cost:5,desc:'防禦力 +10%',effect:{defPct:.10}},
+    {id:'dragon-guard-3',name:'龍血戰意',cost:6,desc:'攻擊力 +6%',effect:{atkPct:.06}},
+    {id:'dragon-guard-4',name:'真龍護體',cost:8,desc:'最大生命 +10%，防禦 +10%',effect:{hpPct:.10,defPct:.10}}
   ]
 };
 
-
-/* Three independent routes per pet. The original five skill IDs remain intact,
-   so previously purchased nodes continue to work with existing saves. */
-export const PET_PATHS={
-  fox:[
-    {id:'wind',name:'迅影突襲',subtitle:'速度・先手・爆擊',description:'搶先出手，讓開場優勢與爆擊爆發成形。',nodes:['fox-1','fox-4','fox-5']},
-    {id:'flame',name:'赤焰獵手',subtitle:'紅牌・連擊・攻擊',description:'強化紅牌追擊，以連續進攻壓制對手。',nodes:['fox-2','fox-3','fox-6']},
-    {id:'moon',name:'月影守護',subtitle:'生命・防禦・續航',description:'增加生存能力，讓靈狐也能走穩健路線。',nodes:['fox-7','fox-8','fox-9']}
-  ],
-  owl:[
-    {id:'wisdom',name:'星夜智識',subtitle:'答題・洞察・爆擊',description:'答題越穩定，技能與爆擊收益越明顯。',nodes:['owl-1','owl-4','owl-6']},
-    {id:'ward',name:'蒼穹壁壘',subtitle:'綠藍牌・防禦・生命',description:'加強綠藍牌組合與隊伍防禦。',nodes:['owl-3','owl-7','owl-8']},
-    {id:'renewal',name:'聖羽療癒',subtitle:'回復・續航・守心',description:'以綠藍牌連攜換取穩定的回合回復。',nodes:['owl-2','owl-5','owl-9']}
-  ],
-  dragon:[
-    {id:'element',name:'元素術式',subtitle:'黃牌・共鳴・增幅',description:'堆疊黃牌增幅，打造持續的元素輸出。',nodes:['dragon-1','dragon-4','dragon-6']},
-    {id:'burst',name:'真龍滅擊',subtitle:'終式・爆擊・爆發',description:'藉由雙黃牌終式打出高強度爆發。',nodes:['dragon-2','dragon-5','dragon-7']},
-    {id:'scale',name:'龍鱗護體',subtitle:'攻擊・生命・防禦',description:'兼顧攻擊基礎與承傷能力。',nodes:['dragon-3','dragon-8','dragon-9']}
-  ]
-};
-const NEW_PET_SKILLS={
-  fox:[
-    {id:'fox-6',name:'焰影撕裂',cost:5,desc:'攻擊力 +4%',effect:{atkPct:.04}},
-    {id:'fox-7',name:'月華生息',cost:2,desc:'最大生命 +4%',effect:{hpPct:.04}},
-    {id:'fox-8',name:'靈尾屏障',cost:4,desc:'防禦力 +5%',effect:{defPct:.05}},
-    {id:'fox-9',name:'月影回春',cost:6,desc:'每回合使用至少 2 張綠／藍牌時，回復最大生命 4%',effect:{guardHeal:.04}}
-  ],
-  owl:[
-    {id:'owl-6',name:'星瞳定策',cost:5,desc:'爆擊率 +3%',effect:{crit:.03}},
-    {id:'owl-7',name:'羽翼壁壘',cost:3,desc:'防禦力 +4%',effect:{defPct:.04}},
-    {id:'owl-8',name:'蒼穹庇護',cost:5,desc:'最大生命 +5%',effect:{hpPct:.05}},
-    {id:'owl-9',name:'聖羽甘霖',cost:6,desc:'綠／藍牌組合回復再 +4%',effect:{guardHeal:.04}}
-  ],
-  dragon:[
-    {id:'dragon-6',name:'極光共鳴',cost:5,desc:'黃牌效果再 +5%',effect:{yellowAmp:.05}},
-    {id:'dragon-7',name:'滅星龍瞳',cost:5,desc:'爆擊率 +4%',effect:{crit:.04}},
-    {id:'dragon-8',name:'龍鱗再生',cost:3,desc:'最大生命 +5%',effect:{hpPct:.05}},
-    {id:'dragon-9',name:'蒼鋼龍甲',cost:5,desc:'防禦力 +4%',effect:{defPct:.04}}
-  ]
-};
-for(const pet of ['fox','owl','dragon'])PET_TREES[pet].push(...NEW_PET_SKILLS[pet]);
-// Each primary pet path can develop into one of two mutually exclusive
-// specializations. Each specialization itself continues into an advanced skill.
-const PET_FORK_CHOICES={
- fox:[[['迅風','firstCardAmp'],['獵魂','crit']],[['焰爪','redAmp'],['猛攻','atkPct']],[['生息','hpPct'],['鐵尾','defPct']]],
- owl:[[['睿智','highAccuracy'],['星眼','crit']],[['守心','defPct'],['護羽','hpPct']],[['聖療','guardHeal'],['持久','hpPct']]],
- dragon:[[['元素','yellowAmp'],['龍威','atkPct']],[['終焰','finisherAmp'],['龍瞳','crit']],[['龍鱗','defPct'],['龍息','hpPct']]]
-};
-const PET_BONUS_NAMES={firstCardAmp:'先手第一張牌效果',crit:'爆擊率',redAmp:'紅牌效果',atkPct:'攻擊力',hpPct:'最大生命',defPct:'防禦力',highAccuracy:'高答對率牌效果',guardHeal:'綠藍牌連攜回復',yellowAmp:'黃牌效果',finisherAmp:'終式效果'};
-for(const [pet,paths] of Object.entries(PET_PATHS)){
-  paths.forEach((path,index)=>{
-    path.forks=PET_FORK_CHOICES[pet][index].map(([name,effectKey],choiceIndex)=>{
-      const ids=[1,2].map(tier=>pet+'-'+path.id+'-'+(choiceIndex+1)+'-'+tier);
-      const bonus=choiceIndex===0?.03:.025;
-      ids.forEach((id,tier)=>{const value=bonus+(tier?.015:0);PET_TREES[pet].push({id,name:name+(tier?'·進階':'·專精'),cost:tier?6:4,desc:PET_BONUS_NAMES[effectKey]+' +'+Math.round(value*1000)/10+'%',effect:{[effectKey]:value}})});
-      return {id:path.id+'-'+(choiceIndex+1),name,subtitle:PET_BONUS_NAMES[effectKey],nodes:ids};
-    });
-  });
-}
-// Nine visible skill tiers: 1,1,1 → 2,2,2 → 4,4,4.
-// Historical nodes remain in PET_TREES and saved profiles; new tier IDs never overwrite them.
-const PET_FLOW_THEMES={
-  fox:{root:['靈狐直覺','firstCardAmp'],branches:[
-    {name:'迅影',effect:'redAmp',leaves:[['疾風','firstCardAmp'],['獵魂','crit']]},
-    {name:'月影',effect:'hpPct',leaves:[['生息','guardHeal'],['鐵尾','defPct']]}
+export const PET_FLOW={
+  fox:{root:['fox-core-1','fox-core-2','fox-core-3'],branches:[
+    {id:'offense',name:'赤焰獵殺',subtitle:'先手・紅牌・追擊・爆擊',nodes:['fox-off-1','fox-off-2','fox-off-3','fox-off-4']},
+    {id:'guardian',name:'月影守護',subtitle:'生命・防禦・續航',nodes:['fox-guard-1','fox-guard-2','fox-guard-3','fox-guard-4']}
   ]},
-  owl:{root:['星夜感知','highAccuracy'],branches:[
-    {name:'星瞳',effect:'highAccuracy',leaves:[['睿智','highAccuracy'],['星眼','crit']]},
-    {name:'聖羽',effect:'guardHeal',leaves:[['守心','defPct'],['治癒','guardHeal']]}
+  owl:{root:['owl-core-1','owl-core-2','owl-core-3'],branches:[
+    {id:'wisdom',name:'星夜賢者',subtitle:'答題・增幅・爆擊',nodes:['owl-off-1','owl-off-2','owl-off-3','owl-off-4']},
+    {id:'guardian',name:'聖羽守護',subtitle:'生命・防禦・回復',nodes:['owl-guard-1','owl-guard-2','owl-guard-3','owl-guard-4']}
   ]},
-  dragon:{root:['元素感知','yellowAmp'],branches:[
-    {name:'炎龍',effect:'yellowAmp',leaves:[['元素','yellowAmp'],['終焰','finisherAmp']]},
-    {name:'龍鱗',effect:'hpPct',leaves:[['龍威','atkPct'],['護鱗','defPct']]}
+  dragon:{root:['dragon-core-1','dragon-core-2','dragon-core-3'],branches:[
+    {id:'burst',name:'炎龍滅擊',subtitle:'黃牌・攻擊・終式',nodes:['dragon-off-1','dragon-off-2','dragon-off-3','dragon-off-4']},
+    {id:'guardian',name:'龍鱗戰體',subtitle:'生命・防禦・穩定輸出',nodes:['dragon-guard-1','dragon-guard-2','dragon-guard-3','dragon-guard-4']}
   ]}
 };
-const FLOW_TIERS=['初醒','進階','極意'];
-function flowNode(pet,id,name,key,tier,depth){
-  const bonus=[.02,.025,.03][tier]+depth*.005,cost=[2,3,4][tier]+depth;
-  const node={id,name:name+FLOW_TIERS[tier],cost,desc:PET_BONUS_NAMES[key]+' +'+Math.round(bonus*1000)/10+'%',effect:{[key]:bonus}};
-  PET_TREES[pet].push(node);return id;
-}
-export const PET_FLOW=Object.fromEntries(Object.entries(PET_FLOW_THEMES).map(([pet,theme])=>{
-  const root=FLOW_TIERS.map((_,tier)=>flowNode(pet,pet+'-flow-root-'+(tier+1),theme.root[0],theme.root[1],tier,0));
-  const branches=theme.branches.map((branch,branchIndex)=>{
-    const nodes=FLOW_TIERS.map((_,tier)=>flowNode(pet,pet+'-flow-mid-'+(branchIndex+1)+'-'+(tier+1),branch.name,branch.effect,tier,1));
-    const leaves=branch.leaves.map(([name,key],leafIndex)=>({
-      nodes:FLOW_TIERS.map((_,tier)=>flowNode(pet,pet+'-flow-end-'+(branchIndex+1)+'-'+(leafIndex+1)+'-'+(tier+1),name,key,tier,2))
-    }));
-    return {nodes,leaves};
-  });
-  return [pet,{root,branches}];
-}));
+export const PET_PATHS=Object.fromEntries(Object.entries(PET_FLOW).map(([pet,flow])=>[pet,flow.branches.map(branch=>({...branch,description:branch.subtitle}))]));
+
+const PET_BONUS_NAMES={firstCardAmp:'先手第一張牌效果',crit:'爆擊率',redAmp:'紅牌效果',atkPct:'攻擊力',hpPct:'最大生命',defPct:'防禦力',highAccuracy:'高答對率牌效果',guardHeal:'綠藍牌連攜回復',stableAmp:'綠／藍牌效果',yellowAmp:'黃牌效果',finisherAmp:'終式效果',chaseAmp:'追擊效果'};
 function flowPosition(pet,nodeId){
   const flow=PET_FLOW[pet];if(!flow)return null;
-  const rootTier=flow.root.indexOf(nodeId);if(rootTier>=0)return {kind:'root',tier:rootTier};
-  for(const [branchIndex,branch] of flow.branches.entries()){
-    const middleTier=branch.nodes.indexOf(nodeId);
-    if(middleTier>=0)return {kind:'middle',tier:middleTier,branch:branchIndex};
-    for(const [leafIndex,leaf] of branch.leaves.entries()){
-      const finalTier=leaf.nodes.indexOf(nodeId);
-      if(finalTier>=0)return {kind:'final',tier:finalTier,branch:branchIndex,leaf:leafIndex};
-    }
-  }
+  const root=flow.root.indexOf(nodeId);if(root>=0)return {kind:'root',index:root};
+  for(const [branchIndex,branch] of flow.branches.entries()){const index=branch.nodes.indexOf(nodeId);if(index>=0)return {kind:'branch',branch:branchIndex,index};}
   return null;
 }
-export function petSkillPath(pet,nodeId){return (PET_PATHS[pet]||[]).find(path=>path.nodes.includes(nodeId)||path.forks?.some(fork=>fork.nodes.includes(nodeId)))||null;}
+export function petSkillPath(pet,nodeId){const flow=PET_FLOW[pet];return flow?.branches.find(branch=>branch.nodes.includes(nodeId))||null;}
 export function petSkillPrerequisite(pet,nodeId){
-  const flow=PET_FLOW[pet],position=flowPosition(pet,nodeId);
-  if(position){
-    if(position.kind==='root')return position.tier?flow.root[position.tier-1]:null;
-    const branch=flow.branches[position.branch];
-    if(position.kind==='middle')return position.tier?branch.nodes[position.tier-1]:flow.root.at(-1);
-    const leaf=branch.leaves[position.leaf];
-    return position.tier?leaf.nodes[position.tier-1]:branch.nodes.at(-1);
-  }
-  const path=petSkillPath(pet,nodeId),at=path?.nodes.indexOf(nodeId)??-1;
-  if(at>0)return path.nodes[at-1];
-  const fork=path?.forks?.find(choice=>choice.nodes.includes(nodeId));
-  if(!fork)return null;
-  const forkTier=fork.nodes.indexOf(nodeId);
-  return forkTier>0?fork.nodes[forkTier-1]:path.nodes[path.nodes.length-1];
+  const flow=PET_FLOW[pet],position=flowPosition(pet,nodeId);if(!flow||!position)return null;
+  if(position.kind==='root')return position.index?flow.root[position.index-1]:null;
+  const branch=flow.branches[position.branch];
+  return position.index?branch.nodes[position.index-1]:flow.root.at(-1);
 }
+export function canUnlockPetSkill(pet,nodeId,level,rpg){
+  const tree=PET_TREES[pet]||[],node=tree.find(x=>x.id===nodeId);if(!node)return false;
+  const clean=cleanRpg(rpg),owned=new Set(clean.petSkills[pet]);if(owned.has(nodeId))return false;
+  const prerequisite=petSkillPrerequisite(pet,nodeId);if(prerequisite&&!owned.has(prerequisite))return false;
+  const position=flowPosition(pet,nodeId);
+  if(position?.kind==='branch'&&PET_FLOW[pet].branches.some((branch,index)=>index!==position.branch&&branch.nodes.some(id=>owned.has(id))))return false;
+  return availableSkillPoints(level,clean)>=node.cost;
+}
+export function unlockPetSkill(pet,nodeId,level,rpg){const clean=cleanRpg(rpg);if(!canUnlockPetSkill(pet,nodeId,level,clean))return clean;clean.petSkills[pet]=[...clean.petSkills[pet],nodeId];return clean;}
+export function resetPetSkills(rpg){const clean=cleanRpg(rpg);clean.petSkills={fox:[],owl:[],dragon:[]};return clean;}
 
 const PET_IDS=['fox','owl','dragon'];
 export const CRYSTAL_VALUE={common:1,rare:3,epic:8,legendary:20,mythic:60};
 export const PET_ENHANCE_MAX=10;
-export const PET_ENHANCE_COST=[5,10,20,40,40,50,60,70,80,90];
+export const PET_ENHANCE_COST=[5,10,20,35,45,60,70,80,100,130];
+const PET_ENHANCE_STAT_SCALE=[1,1.12,1.24,1.45,1.57,1.69,1.95,2.07,2.19,2.55,2.80];
+export function petEnhanceStatScale(level=0){return PET_ENHANCE_STAT_SCALE[clamp(Math.round(Number(level)||0),0,PET_ENHANCE_MAX)]||1;}
+export const PET_BREAKTHROUGHS={
+  fox:[
+    {level:3,name:'小突破・三尾',desc:'先手與追擊開始強化'},
+    {level:6,name:'進化・六尾靈狐',desc:'先手、追擊與紅牌全面提升'},
+    {level:9,name:'大突破・九尾靈狐',desc:'爆擊與紅牌輸出大幅提高'},
+    {level:10,name:'終極・天狐降臨',desc:'第一張牌與追擊進入終極型態'}
+  ],
+  owl:[
+    {level:3,name:'小突破・靈羽',desc:'答題增幅與回復能力提升'},
+    {level:6,name:'進化・星夜智梟',desc:'綠藍牌與回復全面提升'},
+    {level:9,name:'大突破・聖羽智梟',desc:'生命、防禦與穩定性大幅提高'},
+    {level:10,name:'終極・星界賢者',desc:'高答對增幅與回復進入終極型態'}
+  ],
+  dragon:[
+    {level:3,name:'小突破・龍息',desc:'黃牌與終式開始強化'},
+    {level:6,name:'進化・真龍型態',desc:'黃牌與終式爆發全面提升'},
+    {level:9,name:'大突破・滅星真龍',desc:'攻擊與爆擊能力大幅提高'},
+    {level:10,name:'終極・天穹龍神',desc:'黃牌與終式進入終極型態'}
+  ]
+};
 export const PET_AWAKENING={
-  fox:{name:'九尾覺醒',desc:'先手第一張牌再 +15%，紅牌追擊再 +10%'},
-  owl:{name:'星夜覺醒',desc:'答對 3/5 以上效果再 +10%，綠／藍牌續航再 +5%'},
-  dragon:{name:'真龍覺醒',desc:'黃牌效果再 +10%，終式爆發再 +10%'}
+  fox:{name:'六尾靈狐',desc:'強化 +6 完成進化，寵物核心能力全面提升'},
+  owl:{name:'星夜智梟',desc:'強化 +6 完成進化，守護與答題增幅全面提升'},
+  dragon:{name:'真龍型態',desc:'強化 +6 完成進化，元素與終式爆發全面提升'}
 };
 const VALID_LOOT={gem:new Set(['ruby','thunder']),armor:new Set(['guardian','bloodspirit']),ring:new Set(['warbreaker','battlesoul'])};
 const uid=()=>globalThis.crypto?.randomUUID?.()||`loot-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -283,7 +241,7 @@ export function maxedPkRpg(){
     },
     crystals:999999,
     petEnhance:{fox:PET_ENHANCE_MAX,owl:PET_ENHANCE_MAX,dragon:PET_ENHANCE_MAX},
-    petSkills:Object.fromEntries(PET_IDS.map(id=>[id,[...PET_PATHS[id].flatMap(path=>[...path.nodes,...path.forks[0].nodes]),...PET_FLOW[id].root,...PET_FLOW[id].branches[0].nodes,...PET_FLOW[id].branches[0].leaves[0].nodes]])),
+    petSkills:Object.fromEntries(PET_IDS.map(id=>[id,[...PET_FLOW[id].root,...PET_FLOW[id].branches[0].nodes]])),
     collection:collectionEntries().map(item=>item.key),
     towerBest:20,
     weakWords:{}
@@ -314,7 +272,7 @@ export function canUnlockPetSkill(pet,nodeId,level,rpg){
 export function unlockPetSkill(pet,nodeId,level,rpg){const clean=cleanRpg(rpg);if(!canUnlockPetSkill(pet,nodeId,level,clean))return clean;clean.petSkills[pet]=[...clean.petSkills[pet],nodeId];return clean;}
 export function resetPetSkills(rpg){const clean=cleanRpg(rpg);clean.petSkills={fox:[],owl:[],dragon:[]};return clean;}
 export function petEnhanceLevel(pet,rpg){return cleanRpg(rpg).petEnhance?.[pet]||0;}
-export function petAwakened(pet,rpg){return petEnhanceLevel(pet,rpg)>=4;}
+export function petAwakened(pet,rpg){return petEnhanceLevel(pet,rpg)>=6;}
 export function petEnhanceCost(pet,rpg){const level=petEnhanceLevel(pet,rpg);return level>=PET_ENHANCE_MAX?0:PET_ENHANCE_COST[level];}
 export function enhancePet(pet,rpg){const clean=cleanRpg(rpg);if(!PET_IDS.includes(pet))return clean;const level=clean.petEnhance[pet]||0;if(level>=PET_ENHANCE_MAX)return clean;const cost=PET_ENHANCE_COST[level];if(clean.crystals<cost)return clean;clean.crystals-=cost;clean.petEnhance[pet]=level+1;return cleanRpg(clean);}
 export function crystalValue(item){return CRYSTAL_VALUE[item?.quality]||0;}
@@ -324,12 +282,27 @@ export function synthesizeItem(rpg,itemId){const clean=cleanRpg(rpg),info=synthe
 export function recordTowerFloor(rpg,floor){const clean=cleanRpg(rpg);clean.towerBest=Math.max(clean.towerBest,clamp(Math.round(Number(floor)||0),0,20));return cleanRpg(clean);}
 
 export function petSkillEffects(pet,rpg){
-  const clean=cleanRpg(rpg),owned=new Set(clean.petSkills?.[pet]||[]),out={firstCardAmp:0,chaseAmp:0,redAmp:0,highAccuracy:0,guardHeal:0,stableAmp:0,yellowAmp:0,finisherAmp:0,hpPct:0,atkPct:0,defPct:0,crit:0};
-  if(pet==='fox'){if(owned.has('fox-1'))out.firstCardAmp+=.05;if(owned.has('fox-2'))out.chaseAmp+=.10;if(owned.has('fox-3'))out.redAmp+=.05;if(owned.has('fox-4'))out.crit+=.04;if(owned.has('fox-5')){out.firstCardAmp+=.10;out.chaseAmp+=.15;}}
-  if(pet==='owl'){if(owned.has('owl-1'))out.highAccuracy+=.05;if(owned.has('owl-2'))out.guardHeal+=.02;if(owned.has('owl-3'))out.stableAmp+=.05;if(owned.has('owl-4'))out.highAccuracy+=.10;if(owned.has('owl-5')){out.hpPct+=.05;out.guardHeal+=.04;}}
-  if(pet==='dragon'){if(owned.has('dragon-1'))out.yellowAmp+=.04;if(owned.has('dragon-2'))out.finisherAmp+=.05;if(owned.has('dragon-3'))out.atkPct+=.04;if(owned.has('dragon-4'))out.yellowAmp+=.06;if(owned.has('dragon-5')){out.finisherAmp+=.10;out.crit+=.03;}}
-  for(const node of PET_TREES[pet]||[])if(node.effect&&owned.has(node.id))for(const [key,bonus] of Object.entries(node.effect))out[key]+=bonus;
-  if((clean.petEnhance?.[pet]||0)>=4){out.awakened=true;if(pet==='fox'){out.firstCardAmp+=.15;out.chaseAmp+=.10}if(pet==='owl'){out.highAccuracy+=.10;out.guardHeal+=.05}if(pet==='dragon'){out.yellowAmp+=.10;out.finisherAmp+=.10}}
+  const clean=cleanRpg(rpg),owned=new Set(clean.petSkills?.[pet]||[]),level=clean.petEnhance?.[pet]||0;
+  const out={firstCardAmp:0,chaseAmp:0,redAmp:0,highAccuracy:0,guardHeal:0,stableAmp:0,yellowAmp:0,finisherAmp:0,hpPct:0,atkPct:0,defPct:0,crit:0};
+  for(const node of PET_TREES[pet]||[])if(node.effect&&owned.has(node.id))for(const [key,bonus] of Object.entries(node.effect))out[key]+=(Number(bonus)||0);
+  if(pet==='fox'){
+    if(level>=3){out.firstCardAmp+=.05;out.chaseAmp+=.05;}
+    if(level>=6){out.firstCardAmp+=.10;out.chaseAmp+=.10;out.redAmp+=.08;out.awakened=true;}
+    if(level>=9){out.redAmp+=.10;out.crit+=.05;}
+    if(level>=10){out.firstCardAmp+=.15;out.chaseAmp+=.15;out.redAmp+=.10;out.ultimate=true;}
+  }
+  if(pet==='owl'){
+    if(level>=3){out.highAccuracy+=.05;out.guardHeal+=.02;}
+    if(level>=6){out.highAccuracy+=.08;out.stableAmp+=.08;out.guardHeal+=.04;out.awakened=true;}
+    if(level>=9){out.hpPct+=.10;out.defPct+=.10;out.stableAmp+=.08;}
+    if(level>=10){out.highAccuracy+=.15;out.guardHeal+=.06;out.stableAmp+=.10;out.ultimate=true;}
+  }
+  if(pet==='dragon'){
+    if(level>=3){out.yellowAmp+=.05;out.finisherAmp+=.05;}
+    if(level>=6){out.yellowAmp+=.10;out.finisherAmp+=.10;out.awakened=true;}
+    if(level>=9){out.atkPct+=.10;out.crit+=.05;out.yellowAmp+=.08;}
+    if(level>=10){out.yellowAmp+=.15;out.finisherAmp+=.15;out.atkPct+=.10;out.ultimate=true;}
+  }
   return out;
 }
 export function mythicAbilityText(item){
